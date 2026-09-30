@@ -103,6 +103,11 @@ jobs:
       - name: Migrate (npm run db:sql)
         run: npm run db:sql
 
+      # The demo tutor (yassine-math) that ui-a-plus.spec.ts and ui:audit expect.
+      # Local DBs have it; the CI DB starts empty. db:seed refuses NODE_ENV=production.
+      - name: Seed demo tutor (npm run db:seed)
+        run: npm run db:seed
+
       # typecheck (every workspace + e2e) + eslint --max-warnings=0 + the contrast
       # and guardrail audits. Not ui:audit: nojs/a11y/keyboard need a running server.
       - name: Verify (typecheck, lint, contrast)
