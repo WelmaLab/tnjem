@@ -62,12 +62,15 @@ module.exports = {
       node_args: ["--enable-source-maps"],
       ...common,
       ...log("api"),
-      env: { NODE_ENV: "development" },
+      /* API_FORCE_START: server.ts only listens when process.argv[1] is server.js.
+         Under pm2, argv[1] is pm2's ProcessContainerFork.js, so without this the API
+         loads, never binds :4000 and logs nothing (first deploy, 30 Sept 2026). */
+      env: { NODE_ENV: "development", API_FORCE_START: "1" },
       /* The API treats an UNSET NODE_ENV as production, so this line is belt and
          braces rather than the guard itself — but npm, Next and everything else on
          the box read NODE_ENV too, and the pm2-managed environment is the one place
          a human looks first. */
-      env_production: { NODE_ENV: "production" },
+      env_production: { NODE_ENV: "production", API_FORCE_START: "1" },
     },
     {
       /* Web — the standalone runner, NOT `next start` (which logs "Ready", binds the
