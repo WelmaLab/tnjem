@@ -1,6 +1,6 @@
 # Tnajem — تنجّم
 
-*"Shopify for Tunisian tutors."* Every verified tutor gets a public storefront at `tnajem.tn/<slug>` — their live classes, their packs, their **real** reviews — and a link they can paste on WhatsApp, TikTok or Insta. Students book a seat.
+*"Shopify for Tunisian tutors."* Every verified tutor gets a public storefront at `tnajem.com/<slug>` — their live classes, their packs, their **real** reviews — and a link they can paste on WhatsApp, TikTok or Insta. Students book a seat.
 
 Mobile-first, bilingual **FR / العربية with full RTL**, on the cobalt/sand/ochre design system.
 
@@ -151,7 +151,7 @@ route yet.
   `Domain` attribute, which is the tighter option. `COOKIE_DOMAIN` on the API side
   configures the `Set-Cookie` the API sends on its *own* responses; through the
   server-side proxy that header is discarded, so it does nothing today. It starts
-  mattering the moment a browser calls `api.tnajem.tn` directly — at which point
+  mattering the moment a browser calls `api.tnajem.com` directly — at which point
   the web writer has to grow the same `Domain` or the two will disagree.
 - **`TRUSTED_PROXIES` is load-bearing.** It keys the per-IP OTP limiter now that
   the browser no longer talks to the throttling process. Unset in production the
@@ -304,7 +304,7 @@ gun — so it is never silent and never production:
 - [ ] Leave `PAYMENTS_ENABLED` unset until legal sign-off. The payout UI is gated
       on it.
 - [ ] INPDP declaration; EU/Tunisia data residency confirmed with counsel.
-- [ ] Buy `tnajem.tn`; deploy per DEPLOY.md.
+- [ ] Buy `tnajem.com`; deploy per DEPLOY.md.
 
 ## Honest status
 

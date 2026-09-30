@@ -6,7 +6,7 @@ import { clientIpFrom } from "../apps/web/lib/client-ip";
    The middleware's tutor lookup, without a server: TTLs, the per-IP budget, the
    in-flight cap and the fail-open log, with an injected clock and fetch.
 
-   Why it matters: every request to tnajem.tn/<anything> that looks like a slug
+   Why it matters: every request to tnajem.com/<anything> that looks like a slug
    runs this. Before 15 Sept a "missing" answer was never remembered, so a crawler
    walking nonsense slugs cost one internal HTTP call and one storefront read each;
    and a failure passed silently. ADDED, never edited into an existing spec. */

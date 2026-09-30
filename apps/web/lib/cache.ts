@@ -19,7 +19,7 @@ import type { Storefront } from "@tnajem/shared";
    but do not rely on the framework to enforce your privacy model.)
 
    ── WHY IT EXISTS ───────────────────────────────────────────────────────────
-   A tutor pastes tnajem.tn/<slug> into a WhatsApp group. Thousands of phones
+   A tutor pastes tnajem.com/<slug> into a WhatsApp group. Thousands of phones
    open the same URL within minutes. Uncached, each one costs 3 sequential round
    trips to Postgres (tutor → classes → packs) plus a 4th for reviews, and a full
    React render. Cached, the whole storm collapses to ONE database read per slug

@@ -83,7 +83,7 @@ tnajem/
 
 **Why Fastify and not NestJS:** you are one engineer. Fastify + Zod is ~200 lines of setup, TypeScript-native, and fast. NestJS brings decorators and DI you don't need yet. If you disagree, say so before Step 2 — not during Step 8.
 
-**Auth across the boundary:** keep **HttpOnly cookies**, scoped to `.tnajem.tn` so `tnajem.tn` and `api.tnajem.tn` share them. **Do not move to JWT-in-localStorage** — it is strictly worse (XSS-readable) and a bigger diff.
+**Auth across the boundary:** keep **HttpOnly cookies**, scoped to `.tnajem.com` so `tnajem.com` and `api.tnajem.com` share them. **Do not move to JWT-in-localStorage** — it is strictly worse (XSS-readable) and a bigger diff.
 
 **Server actions stay, as a thin proxy.** `app/actions.ts` keeps its function signatures; each body becomes a `fetch` to the API, forwarding the cookie. This keeps SSR and every call-site intact, so the refactor diff is small and provable. **Do not rewrite the whole frontend to client-side fetching.**
 

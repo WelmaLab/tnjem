@@ -7,7 +7,7 @@ import { SESSION_COOKIE } from "@tnajem/shared/auth-core";
    This is now a STREAMING PASS-THROUGH to apps/api. The URL does not change, and
    that is deliberate: e2e/admin.spec.ts asserts this exact path, and it is the URL
    the admin console links to. Moving it would have been a behaviour change dressed
-   up as plumbing. It moves in Step 5, when the browser talks to api.tnajem.tn
+   up as plumbing. It moves in Step 5, when the browser talks to api.tnajem.com
    directly — and that is a new file with its own gate.
 
    THE AUTHORISATION LIVES IN apps/api. This handler deliberately makes NO access

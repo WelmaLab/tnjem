@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { getCachedPublicTutorRefs } from "@/lib/cache";
 import { LOCALES } from "@/lib/locale";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.tn";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.com";
 
 /* Regenerate at most once an hour. Without this, every crawler hit would run an
    unbounded scan of verified tutors; cached, it runs once an hour no matter who

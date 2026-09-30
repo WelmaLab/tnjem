@@ -63,14 +63,14 @@ ADMIN_EMAILS=you@example.com               # who may approve tutors at /admin/ve
 STORAGE_DIR=/var/lib/tnajem/storage        # PERSISTENT, ABSOLUTE — see below
 CRON_SECRET=<run: openssl rand -hex 32>    # protects /cron/purge — see §7
 DOC_ENCRYPTION_KEY=<run: openssl rand -hex 32>  # seals ID scans at rest — see below; LOSE IT = scans unreadable
-CORS_ORIGINS=https://tnajem.tn,https://www.tnajem.tn
+CORS_ORIGINS=https://tnajem.com,https://www.tnajem.com
 TRUSTED_PROXIES=127.0.0.1                  # the web tier's address — REQUIRED, see below
 API_PORT=4000
 API_HOST=127.0.0.1                         # loopback only; nginx is the front door
 
 # ── Required by the web app ────────────────────────────────────────────────
 API_URL=http://127.0.0.1:4000              # server-side only, NEVER NEXT_PUBLIC_
-NEXT_PUBLIC_SITE_URL=https://tnajem.tn     # canonical origin
+NEXT_PUBLIC_SITE_URL=https://tnajem.com     # canonical origin
 NEXT_PUBLIC_SUPPORT_WHATSAPP=              # optional: support number, digits only (e.g. country code + number, no "+"); empty = the /account support row is hidden
 ALLOW_MINORS=                              # leave EMPTY: the pilot is adults only (Phase A, D6). "1" re-opens minor sign-up + booking with guardian consent — only after Phase D
 
@@ -80,7 +80,7 @@ MAIL_HOST=smtp.example.com
 MAIL_PORT=465
 MAIL_USER=...
 MAIL_PASS=...
-MAIL_FROM_ADDRESS=no-reply@tnajem.tn
+MAIL_FROM_ADDRESS=no-reply@tnajem.com
 MAIL_FROM_NAME=Tnajem
 
 # ── Database tuning (optional — the defaults are right for a single VPS) ───
@@ -480,7 +480,7 @@ Three changes, all cheap, all before the pilot: **nginx serves the static assets
 `/etc/nginx/sites-available/tnajem`:
 ```nginx
 server {
-  server_name tnajem.tn www.tnajem.tn;
+  server_name tnajem.com www.tnajem.com;
   # 15M, and the number is set by NEXT, not by nginx or the API.
   # There are three ceilings on a verification upload and they do not agree:
   #   Next   serverActions.bodySizeLimit = 12mb   (next.config.mjs) ← BINDING
@@ -552,9 +552,9 @@ server {
 }
 ```
 `sudo ln -s … /etc/nginx/sites-enabled/ && sudo nginx -t && sudo systemctl reload nginx`
-Then HTTPS: `sudo certbot --nginx -d tnajem.tn -d www.tnajem.tn`.
+Then HTTPS: `sudo certbot --nginx -d tnajem.com -d www.tnajem.com`.
 
-> **Do NOT expose port 4000.** There is no `api.tnajem.tn` vhost above and that is
+> **Do NOT expose port 4000.** There is no `api.tnajem.com` vhost above and that is
 > deliberate: the browser never calls the API. Every request reaches it through the
 > web app, which forwards the session cookie server-side. Publishing the API would
 > add a second, publicly reachable authentication surface with a different CORS
@@ -565,9 +565,9 @@ Then HTTPS: `sudo certbot --nginx -d tnajem.tn -d www.tnajem.tn`.
 
 **Check it actually works** — the header must come from nginx, not Node:
 ```
-curl -sI https://tnajem.tn/_next/static/… | grep -i cache-control
+curl -sI https://tnajem.com/_next/static/… | grep -i cache-control
 # → cache-control: public, max-age=31536000, immutable
-curl -sH 'Accept-Encoding: gzip' -o /dev/null -w '%{size_download}\n' https://tnajem.tn/
+curl -sH 'Accept-Encoding: gzip' -o /dev/null -w '%{size_download}\n' https://tnajem.com/
 ```
 If `nginx -t` passes but assets 404, the `alias` path is wrong — it must end in a
 `/` and point at the real `apps/web/.next/static` of the build you are running.
@@ -684,7 +684,7 @@ so overlapping runs are harmless. Pick **one**.
 > **The endpoint moved.** It used to be `POST /api/cron/purge` on the *web* app.
 > That route no longer exists — the web app owns no database. It is now
 > **`GET|POST /cron/purge` on the API, port 4000**. An old crontab pointing at
-> `https://tnajem.tn/api/cron/purge` will 404 every night, silently, while the
+> `https://tnajem.com/api/cron/purge` will 404 every night, silently, while the
 > privacy page keeps promising deletion. Check yours.
 
 ### Option A — HTTP route

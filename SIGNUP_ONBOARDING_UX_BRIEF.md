@@ -118,7 +118,7 @@ Go through each step and fix what a real user would stumble on.
 
 ### `/onboarding` — create the storefront
 - **Show progress.** "Étape 1 sur 2" / "الخطوة 1 من 2". People abandon flows of unknown length.
-- **The slug field is the important one.** Show the live URL preview (`tnajem.tn/ton-nom`),
+- **The slug field is the important one.** Show the live URL preview (`tnajem.com/ton-nom`),
   validate availability as they type, and explain that this is the link they'll share.
 - **The bio field:** give a real example, not just a placeholder. Most tutors won't know what to
   write. A one-tap example fills the biggest drop-off point in the form.

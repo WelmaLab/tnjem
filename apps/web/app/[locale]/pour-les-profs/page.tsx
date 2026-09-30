@@ -99,7 +99,7 @@ const copy = bilingual({
     sessionMeta: "Sam 14h · 90 min",
     priceExample: "20 TND",
     shareLinkLabel: "Ton lien",
-    shareLinkExample: "tnajem.tn/ta-page",
+    shareLinkExample: "tnajem.com/ta-page",
     classFilling: "Classe en cours de remplissage",
     phoneBadges: ["0 % aujourd'hui", "Ton tarif"], // phase-a lane L3 (A22)
     heroSceneLabel: "Illustration : une page de prof Tnajem — nom, matière, un cours en direct et le lien à partager.",
@@ -185,7 +185,7 @@ const copy = bilingual({
     sessionMeta: "السبت 14س · 90 دقيقة",
     priceExample: "20 دينار",
     shareLinkLabel: "اللينك متاعك",
-    shareLinkExample: "tnajem.tn/صفحتك",
+    shareLinkExample: "tnajem.com/صفحتك",
     classFilling: "القسم في طور التعمير",
     phoneBadges: ["0 % اليوم", "ثمنك إنتي"], // phase-a lane L3 (A22)
     heroSceneLabel: "رسم توضيحي : صفحة أستاذ في Tnajem — إسم، مادة، درس مباشر واللينك اللي تشاركو.",

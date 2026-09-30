@@ -78,7 +78,7 @@ function transport(): Transporter | null {
   return t;
 }
 
-/** Sender header, e.g. `Tnajem <support@tnajem.tn>`. Gmail rewrites From to the
+/** Sender header, e.g. `Tnajem <support@tnajem.com>`. Gmail rewrites From to the
     authenticated account unless the address is a verified alias, so MAIL_FROM_ADDRESS
     should equal MAIL_USER — see .env.example. */
 function fromHeader(): string {

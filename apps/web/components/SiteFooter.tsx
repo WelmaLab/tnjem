@@ -10,7 +10,7 @@ import { useLocale } from "./LocaleProvider";
    Page-scoped CSS is prefixed `qf-` and injected with dangerouslySetInnerHTML
    (inline <style>{`…`}</style> in a client component triggers hydration errors). */
 
-const CONTACT_EMAIL = "contact@tnajem.tn";
+const CONTACT_EMAIL = "contact@tnajem.com";
 
 /* Footer link labels are page-local (lib/i18n.ts is shared/read-only). */
 const F = {

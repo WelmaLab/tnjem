@@ -376,7 +376,7 @@ export function AuthInner({
                 {isEmail ? <Mail className="" /> : <Phone className="" />}
                 {/* Tunisia's country code as a real affix rather than placeholder
                     text that vanishes the moment you type — the same `.pre` slot
-                    the slug field uses for "tnajem.tn/". */}
+                    the slug field uses for "tnajem.com/". */}
                 {!isEmail && (
                   <span className="pre whitespace-nowrap shrink-0" dir="ltr">+216</span>
                 )}

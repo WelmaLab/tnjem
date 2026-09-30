@@ -64,7 +64,7 @@ export async function proxy(req: NextRequest) {
 
   /* 1. No locale in the URL → serve the preferred one.
 
-     THE ROOT IS REWRITTEN, NOT REDIRECTED. "tnajem.tn" is the URL people type,
+     THE ROOT IS REWRITTEN, NOT REDIRECTED. "tnajem.com" is the URL people type,
      read out loud and print; a 307 there costs a whole extra round trip before
      the first byte of HTML — 0.5-1s on Tunisian 3G — on the single most common
      entry point in the product. A rewrite serves /<locale> under the typed URL

@@ -41,7 +41,7 @@ sudo install -m 644 /tmp/nginx-tnajem.conf /etc/nginx/sites-available/tnajem
 sudo bash /tmp/cloudflare-realip.sh          # visitor IPs behind Cloudflare; also runs nginx -t + reload
 
 # 3. HTTPS. Cloudflare must still be on the GREY cloud (DNS only) for this step.
-sudo certbot --nginx -d tnajem.tn -d www.tnajem.tn --redirect -m YOUR_EMAIL --agree-tos
+sudo certbot --nginx -d tnajem.com -d www.tnajem.com --redirect -m YOUR_EMAIL --agree-tos
 #    Then in Cloudflare: orange cloud, SSL/TLS = Full (strict), Brotli + HTTP/3 on.
 
 # 4. Generate the three app secrets. Run it three times, one value each for
@@ -56,7 +56,7 @@ Until the first deploy, the site answers **502**: nginx is waiting for the app. 
 ## C · GitHub: the `deploy` environment + secrets
 **Web:** Repo → Settings → Environments → **New environment** → `deploy`
 → *Deployment branches and tags* → **Selected branches** → add `production`
-→ **Add environment secret** for each row below.
+→ credentials under **Environment secrets**, plain settings under **Environment variables**. The workflow reads either tab, and the split is listed in the chat answer of 26 Sept.
 
 | Secret | Value |
 |---|---|
@@ -68,8 +68,8 @@ Until the first deploy, the site answers **502**: nginx is waiting for the app. 
 | `DATABASE_URL` | the **APP RUNTIME (limited)** URL, `tnajem_app`, from `/root/tnajem-secrets.txt` |
 | `MIGRATION_DATABASE_URL` | the **MIGRATIONS (owner)** URL, `tnajem_owner` |
 | `AUTH_SECRET` · `DOC_ENCRYPTION_KEY` · `CRON_SECRET` | the three `openssl rand -hex 32` values (**`DOC_ENCRYPTION_KEY` also into your password manager**) |
-| `NEXT_PUBLIC_SITE_URL` | `https://tnajem.tn` |
-| `CORS_ORIGINS` | `https://tnajem.tn,https://www.tnajem.tn` |
+| `NEXT_PUBLIC_SITE_URL` | `https://tnajem.com` |
+| `CORS_ORIGINS` | `https://tnajem.com,https://www.tnajem.com` |
 | `TRUSTED_PROXIES` | `127.0.0.1` |
 | `ADMIN_EMAILS` | your admin e-mail(s), comma-separated |
 | `OTP_CHANNEL` · `LOG_LEVEL` | `email` · `info` |
@@ -77,7 +77,7 @@ Until the first deploy, the site answers **502**: nginx is waiting for the app. 
 | `BACKUP_DIR` · `PG_BIN` | `/var/backups/tnajem` · `/usr/lib/postgresql/18/bin` |
 | `MAIL_HOST` · `MAIL_PORT` · `MAIL_SECURE` | e.g. Resend: `smtp.resend.com` · `587` · `false` |
 | `MAIL_USER` · `MAIL_PASS` | e.g. Resend: `resend` · your API key |
-| `MAIL_FROM_NAME` · `MAIL_FROM_ADDRESS` · `MAIL_REPLY_TO` | `Tnajem` · `no-reply@tnajem.tn` · your support address |
+| `MAIL_FROM_NAME` · `MAIL_FROM_ADDRESS` · `MAIL_REPLY_TO` | `Tnajem` · `no-reply@tnajem.com` · your support address |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | InnoviaBurst's number, digits only (e.g. `216XXXXXXXX`) |
 | `SENTRY_DSN` · `SENTRY_ENVIRONMENT` | optional (EU region) · `production` |
 | **leave unset** | `PAYMENTS_ENABLED`, `ALLOW_MINORS`, `COOKIE_DOMAIN` |
@@ -118,8 +118,8 @@ From now on, to deploy: merge into `production` and push.
 ```bash
 pm2 status                                   # tnajem-api + tnajem-web online
 curl -s http://127.0.0.1:4000/health         # {"ok":true,"db":true,...}
-curl -sI https://tnajem.tn | head -1         # HTTP/2 200
-curl -sI "https://tnajem.tn$(curl -s https://tnajem.tn/fr | grep -o '/_next/static/[^"]*\.js' | head -1)" | grep -i cache-control
+curl -sI https://tnajem.com | head -1         # HTTP/2 200
+curl -sI "https://tnajem.com$(curl -s https://tnajem.com/fr | grep -o '/_next/static/[^"]*\.js' | head -1)" | grep -i cache-control
 #                                            # → public, max-age=31536000, immutable
 ```
 - Log in with your admin e-mail. The code arrives by e-mail, which proves the mail setup.

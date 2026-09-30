@@ -89,7 +89,7 @@ const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8">
   <div class="chips">
     <span class="chip c-free">Profs vérifiés</span>
     <span class="chip c-ar">أساتذة متثبّت منهم</span>
-    <span class="chip c-url">tnajem.tn</span>
+    <span class="chip c-url">tnajem.com</span>
   </div>
   <div class="bar"></div>
 </body></html>`;

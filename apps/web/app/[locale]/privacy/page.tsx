@@ -283,7 +283,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         h: "11. Nous contacter",
         p: [
           `Questions sur tes données, demande d'accès : ${PRIVACY_CONTACT_EMAIL}.`,
-          "Autres questions : contact@tnajem.tn.",
+          "Autres questions : contact@tnajem.com.",
         ],
       },
     ],
@@ -454,7 +454,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         h: "11. اتصل بينا",
         p: [
           `أسئلة على معطياتك، طلب نفاذ: ${PRIVACY_CONTACT_EMAIL}.`,
-          "أسئلة أخرى: contact@tnajem.tn.",
+          "أسئلة أخرى: contact@tnajem.com.",
         ],
       },
     ],

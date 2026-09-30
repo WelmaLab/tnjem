@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 /* THE PUBLIC HEALTH SURFACE — what an uptime monitor watches.
  *
  * It did not exist. PRODUCTION_READINESS.md's Stage 6 gate
- * (`curl -sf https://tnajem.tn/api/health | jq -e '.ok'`) and Stage 7's "uptime
+ * (`curl -sf https://tnajem.com/api/health | jq -e '.ok'`) and Stage 7's "uptime
  * monitoring on / and /api/health" both named this URL, and nothing served it:
  * the only health endpoint was the API's, on loopback port 4000, which nginx
  * deliberately does not expose. So the documented check was a 404 and the

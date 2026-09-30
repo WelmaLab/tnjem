@@ -42,7 +42,7 @@ import { OTP_MAIL } from "../lib/otp-copy";
    same trust boundary the cookie itself crosses, so it is no new exposure —
    PROVIDED that body is never logged. lib/logging.ts redacts `token`.
 
-   At Step 5, when the browser talks to api.tnajem.tn directly, the API will set
+   At Step 5, when the browser talks to api.tnajem.com directly, the API will set
    cookies itself and Set-Cookie pass-through becomes the natural design.
 
    ROLE_HINT_COOKIE stays 100% on the web side. It is a forgeable UI hint that

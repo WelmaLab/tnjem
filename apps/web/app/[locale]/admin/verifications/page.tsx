@@ -347,7 +347,7 @@ export default function AdminVerificationsPage() {
                         <UserText as="h2" className="av-name">{t.name}</UserText>
                         <div className="av-sub">
                           <UserText className="chip chip-soft">{t.subject}</UserText>
-                          <span className="av-slug">tnajem.tn/{t.slug}</span>
+                          <span className="av-slug">tnajem.com/{t.slug}</span>
                         </div>
                       </div>
                       <div className="av-date">

@@ -1,7 +1,9 @@
 name: Deploy to production
 
 # Push to the `production` branch and the box rebuilds, migrates and restarts.
-# Everything the server needs lives in the GitHub Environment named "deploy"
+# Everything the server needs lives in the GitHub Environment named "deploy":
+# SECRETS for credentials, VARIABLES for plain settings (each setting also accepts a
+# secret of the same name, so either tab works). See ops/PIPELINE_SETUP.md.
 #   (Settings > Environments > New environment > "deploy"), never in this file.
 #
 # The full secret list is in DEPLOY.md §5. Nothing here prints a value.
@@ -70,57 +72,57 @@ jobs:
           DOC_ENCRYPTION_KEY=${{ secrets.DOC_ENCRYPTION_KEY }}
           CRON_SECRET=${{ secrets.CRON_SECRET }}
 
-          NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
-          NEXT_PUBLIC_DEFAULT_MEET_BASE=${{ secrets.NEXT_PUBLIC_DEFAULT_MEET_BASE }}
-          NEXT_PUBLIC_SUPPORT_WHATSAPP=${{ secrets.NEXT_PUBLIC_SUPPORT_WHATSAPP }}
-          CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
-          TRUSTED_PROXIES=${{ secrets.TRUSTED_PROXIES }}
-          COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN }}
+          NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL || secrets.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_DEFAULT_MEET_BASE=${{ vars.NEXT_PUBLIC_DEFAULT_MEET_BASE || secrets.NEXT_PUBLIC_DEFAULT_MEET_BASE }}
+          NEXT_PUBLIC_SUPPORT_WHATSAPP=${{ vars.NEXT_PUBLIC_SUPPORT_WHATSAPP || secrets.NEXT_PUBLIC_SUPPORT_WHATSAPP }}
+          CORS_ORIGINS=${{ vars.CORS_ORIGINS || secrets.CORS_ORIGINS }}
+          TRUSTED_PROXIES=${{ vars.TRUSTED_PROXIES || secrets.TRUSTED_PROXIES }}
+          COOKIE_DOMAIN=${{ vars.COOKIE_DOMAIN || secrets.COOKIE_DOMAIN }}
 
           ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}
-          OTP_CHANNEL=${{ secrets.OTP_CHANNEL }}
-          PAYMENTS_ENABLED=${{ secrets.PAYMENTS_ENABLED }}
-          ALLOW_MINORS=${{ secrets.ALLOW_MINORS }}
-          LOG_LEVEL=${{ secrets.LOG_LEVEL }}
+          OTP_CHANNEL=${{ vars.OTP_CHANNEL || secrets.OTP_CHANNEL }}
+          PAYMENTS_ENABLED=${{ vars.PAYMENTS_ENABLED || secrets.PAYMENTS_ENABLED }}
+          ALLOW_MINORS=${{ vars.ALLOW_MINORS || secrets.ALLOW_MINORS }}
+          LOG_LEVEL=${{ vars.LOG_LEVEL || secrets.LOG_LEVEL }}
 
-          STORAGE_DRIVER=${{ secrets.STORAGE_DRIVER }}
-          STORAGE_DIR=${{ secrets.STORAGE_DIR }}
+          STORAGE_DRIVER=${{ vars.STORAGE_DRIVER || secrets.STORAGE_DRIVER }}
+          STORAGE_DIR=${{ vars.STORAGE_DIR || secrets.STORAGE_DIR }}
 
           # Error tracking. Optional and deliberately NOT in the required list
           # below: unset means the SDK is never initialised, which is a supported
           # state, not a broken deploy. SENTRY_RELEASE is set by deploy.sh from the
           # commit sha, so it is not written here.
           SENTRY_DSN=${{ secrets.SENTRY_DSN }}
-          SENTRY_ENVIRONMENT=${{ secrets.SENTRY_ENVIRONMENT }}
+          SENTRY_ENVIRONMENT=${{ vars.SENTRY_ENVIRONMENT || secrets.SENTRY_ENVIRONMENT }}
 
-          MAIL_HOST=${{ secrets.MAIL_HOST }}
-          MAIL_PORT=${{ secrets.MAIL_PORT }}
-          MAIL_SECURE=${{ secrets.MAIL_SECURE }}
+          MAIL_HOST=${{ vars.MAIL_HOST || secrets.MAIL_HOST }}
+          MAIL_PORT=${{ vars.MAIL_PORT || secrets.MAIL_PORT }}
+          MAIL_SECURE=${{ vars.MAIL_SECURE || secrets.MAIL_SECURE }}
           MAIL_USER=${{ secrets.MAIL_USER }}
           MAIL_PASS=${{ secrets.MAIL_PASS }}
-          MAIL_FROM_NAME=${{ secrets.MAIL_FROM_NAME }}
-          MAIL_FROM_ADDRESS=${{ secrets.MAIL_FROM_ADDRESS }}
-          MAIL_REPLY_TO=${{ secrets.MAIL_REPLY_TO }}
+          MAIL_FROM_NAME=${{ vars.MAIL_FROM_NAME || secrets.MAIL_FROM_NAME }}
+          MAIL_FROM_ADDRESS=${{ vars.MAIL_FROM_ADDRESS || secrets.MAIL_FROM_ADDRESS }}
+          MAIL_REPLY_TO=${{ vars.MAIL_REPLY_TO || secrets.MAIL_REPLY_TO }}
 
           # Object storage — only read when STORAGE_DRIVER=s3 (the API refuses to boot
           # on s3 with any of these missing; it never falls back to local disk).
-          S3_BUCKET=${{ secrets.S3_BUCKET }}
+          S3_BUCKET=${{ vars.S3_BUCKET || secrets.S3_BUCKET }}
           S3_ACCESS_KEY_ID=${{ secrets.S3_ACCESS_KEY_ID }}
           S3_SECRET_ACCESS_KEY=${{ secrets.S3_SECRET_ACCESS_KEY }}
-          S3_ENDPOINT=${{ secrets.S3_ENDPOINT }}
-          S3_REGION=${{ secrets.S3_REGION }}
-          S3_FORCE_PATH_STYLE=${{ secrets.S3_FORCE_PATH_STYLE }}
-          S3_PREFIX=${{ secrets.S3_PREFIX }}
+          S3_ENDPOINT=${{ vars.S3_ENDPOINT || secrets.S3_ENDPOINT }}
+          S3_REGION=${{ vars.S3_REGION || secrets.S3_REGION }}
+          S3_FORCE_PATH_STYLE=${{ vars.S3_FORCE_PATH_STYLE || secrets.S3_FORCE_PATH_STYLE }}
+          S3_PREFIX=${{ vars.S3_PREFIX || secrets.S3_PREFIX }}
 
           # SMS — the OTP_CHANNEL=sms path, and the second notification channel.
           TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}
-          TWILIO_FROM=${{ secrets.TWILIO_FROM }}
-          TWILIO_MESSAGING_SERVICE_SID=${{ secrets.TWILIO_MESSAGING_SERVICE_SID }}
+          TWILIO_FROM=${{ vars.TWILIO_FROM || secrets.TWILIO_FROM }}
+          TWILIO_MESSAGING_SERVICE_SID=${{ vars.TWILIO_MESSAGING_SERVICE_SID || secrets.TWILIO_MESSAGING_SERVICE_SID }}
 
           # Backups (DEPLOY.md §8) and the Postgres client tools, if not on PATH.
-          BACKUP_DIR=${{ secrets.BACKUP_DIR }}
-          PG_BIN=${{ secrets.PG_BIN }}
+          BACKUP_DIR=${{ vars.BACKUP_DIR || secrets.BACKUP_DIR }}
+          PG_BIN=${{ vars.PG_BIN || secrets.PG_BIN }}
           EOF
           chmod 600 tnajem.env
 
@@ -157,9 +159,9 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
+          username: ${{ vars.SERVER_USER || secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT }}
+          port: ${{ vars.SERVER_PORT || secrets.SERVER_PORT }}
           source: "tnajem.env"
           target: "/tmp"
 
@@ -171,9 +173,9 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
+          username: ${{ vars.SERVER_USER || secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT }}
+          port: ${{ vars.SERVER_PORT || secrets.SERVER_PORT }}
           command_timeout: 30m
           script: |
             # set -eu, NOT -o pipefail: this runs in the login user's shell, and
@@ -181,7 +183,7 @@ jobs:
             # on line 1 with a message about the option rather than about the app.
             set -eu
 
-            APP_DIR="${{ secrets.APP_DIR }}"
+            APP_DIR="${{ vars.APP_DIR || secrets.APP_DIR }}"
             APP_DIR="${APP_DIR:-/var/www/tnajem}"
 
             # This shell is NON-LOGIN and NON-INTERACTIVE: ~/.bashrc is never read, so

@@ -251,7 +251,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
       },
       {
         h: "17. Nous contacter",
-        p: ["Une question sur ces conditions : contact@tnajem.tn."],
+        p: ["Une question sur ces conditions : contact@tnajem.com."],
       },
     ],
     seeAlso: "Voir aussi : politique de confidentialité",
@@ -419,7 +419,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
       },
       {
         h: "17. اتصل بينا",
-        p: ["عندك سؤال على الشروط هاذي: contact@tnajem.tn."],
+        p: ["عندك سؤال على الشروط هاذي: contact@tnajem.com."],
       },
     ],
     seeAlso: "شوف زادة: سياسة الخصوصية",

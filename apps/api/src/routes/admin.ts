@@ -292,7 +292,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     if (to.length && mailEnabled()) {
       const subject = `Tnajem — nouvelle demande de vérification : ${mine.fullName}`;
       const body =
-        `${mine.fullName} (tnajem.tn/${mine.slug}) a soumis ses documents.\n\n` +
+        `${mine.fullName} (tnajem.com/${mine.slug}) a soumis ses documents.\n\n` +
         `File d'attente : /admin/verifications`;
       await Promise.all(to.map((addr) => sendMail(addr, subject, body)));
     } else if (!to.length) {
@@ -559,7 +559,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         title: "Profil vérifié ✅",
         body: "Ton profil est validé. Ta page est en ligne et visible dans Explorer.",
         href: "/dashboard",
-        sms: `Tnajem : ton profil est vérifié ✅ Ta page tnajem.tn/${t.slug} est en ligne.`,
+        sms: `Tnajem : ton profil est vérifié ✅ Ta page tnajem.com/${t.slug} est en ligne.`,
       });
     }
 

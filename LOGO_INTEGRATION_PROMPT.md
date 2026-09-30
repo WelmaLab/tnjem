@@ -143,7 +143,7 @@ the workspace). Shipping a Tnajem logo onto a Tnajem site is incoherent.
 addresses, slugs and the database — it needs its own careful pass.
 
 Instead: **when you finish the logo work, tell me how big the rename is.** Grep for `Tnajem`,
-`تنجّم` and `tnajem.tn` across the whole repo (including `.md` docs, `.env.example`, legal pages
+`تنجّم` and `tnajem.com` across the whole repo (including `.md` docs, `.env.example`, legal pages
 and `lib/i18n.ts`) and give me a count by file. Then I'll decide whether to do it now or next.
 
 ---

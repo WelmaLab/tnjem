@@ -92,8 +92,8 @@ export const CORS_ORIGINS: string[] = (process.env.CORS_ORIGINS ?? "")
   .map((s) => s.trim())
   .filter((s) => s.length > 0);
 
-/* Cookie domain. Scoped to .tnajem.tn in production so tnajem.tn and
-   api.tnajem.tn share the session cookie. Unset in dev, where both are
+/* Cookie domain. Scoped to .tnajem.com in production so tnajem.com and
+   api.tnajem.com share the session cookie. Unset in dev, where both are
    localhost and a domain attribute would break it. */
 export const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN?.trim() || undefined;
 

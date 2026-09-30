@@ -7,7 +7,7 @@ import { seedTutor } from "./support/seed";
 /* ════════════════════════════════════════════════════════════════════════════
    An unknown tutor slug is a REAL 404 — with a page a person can read.
 
-   The distribution model is a tutor pasting tnajem.tn/<their-name> into
+   The distribution model is a tutor pasting tnajem.com/<their-name> into
    WhatsApp. On 14 Sept a nonsense slug answered 200 with another tutor's full
    storefront and a working "Réserver". Two things are pinned here, and neither
    is allowed to buy the other:

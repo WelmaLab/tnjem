@@ -13,7 +13,7 @@ import { advertisesFreeFirst } from "@tnajem/shared"; // phase-a lane L3 (A5)
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.tn";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.com";
 
 /** hreflang alternates for a locale-agnostic subpath (relative → resolved by metadataBase). */
 function altLanguages(subpath: string): Record<string, string> {
@@ -23,7 +23,7 @@ function altLanguages(subpath: string): Record<string, string> {
 /* ══════════════════════════════════════════════════════════════════════════════
    RENDERING STRATEGY — this is the page that goes viral.
 
-   A tutor drops tnajem.tn/<slug> in a WhatsApp group; thousands of mid-range
+   A tutor drops tnajem.com/<slug> in a WhatsApp group; thousands of mid-range
    Androids on 3G open it inside a few minutes. Before this change, EVERY one of
    those hits ran four sequential Postgres queries (tutor, classes, packs,
    reviews) and re-rendered the whole React tree — the database was the first
@@ -166,7 +166,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   };
 }
 
-// Public tutor storefront (tnajem.tn/<slug>). Server component: fetches from Postgres
+// Public tutor storefront (tnajem.com/<slug>). Server component: fetches from Postgres
 // via the cached data layer (falls back to demo data when no API_URL is set).
 // Reviews are fetched here (server-side) so the storefront ships them in the first
 // paint — no client round-trip on a 3G phone.

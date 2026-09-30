@@ -129,8 +129,8 @@ Also worth a rule, lower urgency:
 
 ### Uptime monitoring (you)
 Point any monitor (Better Stack, Uptime Robot, Cloudflare) at:
-- `https://tnajem.tn/fr` — expect 200 and the text `<h1`
-- `https://tnajem.tn/api/health` — expect **200**; it answers 503 the moment the
+- `https://tnajem.com/fr` — expect 200 and the text `<h1`
+- `https://tnajem.com/api/health` — expect **200**; it answers 503 the moment the
   API, the database or the document store is unreachable
 
 Interval 1-5 min from at least two regions. Do **not** monitor port 4000: it is

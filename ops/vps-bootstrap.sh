@@ -12,7 +12,7 @@
 #     5. Postgres 18, tuned to this server's RAM, reachable from localhost only,
 #        with a `tnajem` database and TWO roles (owner for migrations, limited
 #        app role for runtime — the Phase A+ requirement for the admin log)
-#     6. nginx with a temporary "bientôt" page for tnajem.tn, + certbot
+#     6. nginx with a temporary "bientôt" page for tnajem.com, + certbot
 #     7. Folders for ID scans and backups; a GitHub deploy key for `ubuntu`
 #
 #   Safe to re-run: every step checks before it changes anything.
@@ -21,7 +21,7 @@
 set -euo pipefail
 
 DEPLOY_USER="${DEPLOY_USER:-ubuntu}"   # the account everything runs as
-DOMAIN="tnajem.tn"
+DOMAIN="tnajem.com"
 DB_NAME="tnajem"
 DB_OWNER="tnajem_owner"
 DB_APP="tnajem_app"

@@ -33,7 +33,7 @@ const arabicFont = IBM_Plex_Sans_Arabic({ subsets: ["arabic"], weight: ["400", "
    Arabic user text (globals.css: [dir="auto"]:dir(rtl) on LTR pages). */
 const arabicMark = IBM_Plex_Sans_Arabic({ subsets: ["arabic"], weight: ["400"], variable: "--font-ar" });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.tn";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.com";
 /* NO FREE-SESSION CLAIM HERE. This is the SITE-WIDE description — it lands on
    every page Google indexes, including the storefronts of tutors who do not offer
    a free first session (which, since Step 6, is all of them until they opt in).

@@ -173,7 +173,7 @@ export function sessionCookieOptions(expiresAt: Date) {
     secure: IS_PROD,
     path: "/",
     expires: expiresAt,
-    /* Scoped to .tnajem.tn in production so tnajem.tn and api.tnajem.tn share it.
+    /* Scoped to .tnajem.com in production so tnajem.com and api.tnajem.com share it.
        Unset in dev — both are localhost, where a domain attribute breaks it. */
     domain: COOKIE_DOMAIN,
   };

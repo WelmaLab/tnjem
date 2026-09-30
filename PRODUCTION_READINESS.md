@@ -301,7 +301,7 @@ actually gone from storage** · an erased user's name appears in no response.
 
 # STAGE 6 — Deploy  `prod-06`
 
-- Register **tnajem.tn**. Configure DNS, TLS, redirects (`www`, apex, `http→https`).
+- Register **tnajem.com**. Configure DNS, TLS, redirects (`www`, apex, `http→https`).
 - **Staging first**, identical to production. Never test a migration in production.
 - CI: build, typecheck, lint, the full test suite, and the static gates on every push.
 - A documented, **reversible** migration path. `db:sql` only.
@@ -312,9 +312,9 @@ actually gone from storage** · an erased user's name appears in no response.
 
 ### GATE 6
 ```bash
-curl -sf https://tnajem.tn/fr | grep -q "<h1"
-curl -sf https://tnajem.tn/api/health | jq -e '.ok'
-curl -s -o /dev/null -w "%{http_code}\n" https://tnajem.tn/fr/unknown-slug   # 404
+curl -sf https://tnajem.com/fr | grep -q "<h1"
+curl -sf https://tnajem.com/api/health | jq -e '.ok'
+curl -s -o /dev/null -w "%{http_code}\n" https://tnajem.com/fr/unknown-slug   # 404
 npx playwright test --config=e2e/production.config.ts
 ```
 Paste the restore-test output and the SSL grade.

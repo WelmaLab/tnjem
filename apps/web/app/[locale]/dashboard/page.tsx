@@ -473,7 +473,7 @@ function HowItWorks({ c, paymentsOn = false }: { c: CopyDict; paymentsOn?: boole
 function StoreLinkBox({ slug }: { slug: string }) {
   const { t } = useLocale();
   const [copied, setCopied] = useState(false);
-  const url = `tnajem.tn/${slug}`;
+  const url = `tnajem.com/${slug}`;
   function handleCopy() {
     navigator.clipboard.writeText(`https://${url}`).catch(() => {});
     setCopied(true);

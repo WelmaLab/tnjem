@@ -117,7 +117,7 @@ function checkEnv() {
     if (process.env.NODE_ENV === "production") ok("NODE_ENV", "production");
     else fail("NODE_ENV", "not production. The API treats unset as production, but Next, npm and every other tool on the box read it too: set NODE_ENV=production.");
   }
-  requireKey("NEXT_PUBLIC_SITE_URL", "production", "Canonical links and the sitemap fall back to https://tnajem.tn.");
+  requireKey("NEXT_PUBLIC_SITE_URL", "production", "Canonical links and the sitemap fall back to https://tnajem.com.");
 
   /* Error tracking is optional everywhere, so this only ever reports — it must not
      fail a deploy. It is worth a line because "we thought errors were being

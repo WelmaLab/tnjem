@@ -471,7 +471,7 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
                     className={`inp ${slugError ? "border-rose" : slug ? "border-blue" : ""}`}
                     dir="ltr"
                   >
-                    <span className="pre whitespace-nowrap shrink-0">tnajem.tn/</span>
+                    <span className="pre whitespace-nowrap shrink-0">tnajem.com/</span>
                     <input
                       type="text"
                       ref={fieldRefs.slug}

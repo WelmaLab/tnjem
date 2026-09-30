@@ -70,7 +70,7 @@ export const TERMS_VERSION = "2026-09-24";
 export const CONSENT_POLICY_VERSION = PRIVACY_POLICY_VERSION;
 
 /** LEGAL-REVIEW: the mailbox /privacy tells people to write to. It must exist. */
-export const PRIVACY_CONTACT_EMAIL = "privacy@tnajem.tn";
+export const PRIVACY_CONTACT_EMAIL = "privacy@tnajem.com";
 
 /* ── Sessions ────────────────────────────────────────────────────────────────── */
 

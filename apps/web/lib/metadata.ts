@@ -15,7 +15,7 @@ import type { Metadata } from "next";
    the route file), so FR/AR parity stays compiler- and guardrail-checked where the
    words are. */
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.tn";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.com";
 
 /* Same cache-busted image as the root layout (app/[locale]/layout.tsx). Bump both
    together when og.png is rebuilt. */

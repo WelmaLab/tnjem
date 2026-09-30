@@ -192,7 +192,7 @@ first load JS                117 kB → 110 kB
 `<ShareButton>` is the island, and it now hides itself where `navigator.share`
 does not exist instead of rendering a button that does nothing.
 
-**The root is rewritten, not redirected.** "tnajem.tn" is the URL people type and
+**The root is rewritten, not redirected.** "tnajem.com" is the URL people type and
 read out loud; a 307 there cost a whole extra round trip (0.5–1s on 3G) before
 the first byte. `GET /` is **200 with 0 redirects**. Deeper paths still redirect
 on purpose — `/explore` and `/fr/explore` serving the same page at two URLs would

@@ -69,7 +69,7 @@ curl -s http://localhost:3000/fr/does-not-exist-xyz-123 | grep -o "<title>[^<]*<
 The page renders his full storefront including a working **"Réserver"** button.
 
 ### Why this is first
-Your distribution model is a tutor pasting `tnajem.tn/their-name` into WhatsApp. One wrong
+Your distribution model is a tutor pasting `tnajem.com/their-name` into WhatsApp. One wrong
 character sends a student to a **different tutor's page**, with no sign anything is wrong, and
 lets them book a seat. It also gives Google unlimited duplicate URLs on the route that must rank.
 
