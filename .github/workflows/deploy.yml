@@ -124,7 +124,10 @@ jobs:
           BACKUP_DIR=${{ vars.BACKUP_DIR || secrets.BACKUP_DIR }}
           PG_BIN=${{ vars.PG_BIN || secrets.PG_BIN }}
           EOF
-          chmod 600 tnajem.env
+          # 644, not 600: appleboy/scp-action runs in a Docker container as another user
+          # and cannot read a 600 file ("tar: can't open 'tnajem.env': Permission denied").
+          # The runner is a throwaway VM; on the server the file is installed as 600 below.
+          chmod 644 tnajem.env
 
       # ── Fail before the server is touched if a secret is missing ─────────────
       # A secret that does not exist expands to an EMPTY STRING, silently. An empty
