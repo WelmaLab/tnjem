@@ -20,14 +20,20 @@
    same arrangement app/[locale]/auth/page.tsx documents at length: reading the
    query string with the client hook forces the form into a Suspense boundary,
    which Next bails to client-only rendering, which ships a login page with no
-   fields in the HTML. */
-import { useRef, useState } from "react";
+   fields in the HTML.
+
+   Layout (Option B): <AuthShell> draws the page chrome and the brand panel; this
+   file owns the form side. Two steps share ONE card and ONE <form>: the identifier
+   step (address + birth date), then the code step, which REPLACES it rather than
+   being appended below. */
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocalizedRouter } from "@/components/Link";
 import { Button, Field } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
-import { Phone, Calendar, Check, Mail } from "@/components/icons";
+import { Phone, Calendar, Mail, Back, ChevronDown } from "@/components/icons";
 import { requestOtp, verifyOtp } from "@/app/actions";
-import { SiteShell } from "@/components/SiteShell";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { OtpInput, OTP_LENGTH } from "@/components/auth/OtpInput";
 import { postAuthDestination } from "@/lib/auth-destination";
 import { useCountdown, formatCountdown } from "@/components/useCountdown";
 // Pure module — the SAME validity check the server runs, so the form and the action
@@ -43,23 +49,38 @@ export type SignupRole = "tutor" | "student";
    (this is signup) and t.auth.pending describes our SMS-provider status. */
 const COPY = {
   fr: {
-    tutorTitle: "Crée ton compte prof",
-    tutorLead: "Ta page publique, tes classes, tes élèves. Entre ton email : on t'envoie un code. Pas de mot de passe.",
-    tutorLeadSms: "Ta page publique, tes classes, tes élèves. Entre ton numéro : on t'envoie un code par SMS. Pas de mot de passe.",
-    tutorPerks: [
-      "Ta page prête en 2 minutes",
+    /* The brand panel. What this account actually gets you — three facts,
+       role-specific. This is the whole reason the funnel is split: the two
+       audiences want different things and a shared toggle could speak to neither.
+       Every line is true of the product today: no testimonial, name, city or
+       number (the no-fabrication rule applies to marketing copy too). */
+    tutorEyebrow: "Pour les profs",
+    tutorPanelTitle: "Ta page de prof en 2 minutes.",
+    tutorSummary: "Prix libre · vérification à la main",
+    tutorPoints: [
       "Tu fixes ton prix — 100 % pour toi pendant le pilote",
       "Vérification à la main par notre équipe",
+      "Paiement et élèves au même endroit",
     ],
-    studentTitle: "Crée ton compte élève",
-    studentLead: "Trouve un prof, réserve ta séance. Entre ton email : on t'envoie un code. Pas de mot de passe.",
-    studentLeadSms: "Trouve un prof, réserve ta séance. Entre ton numéro : on t'envoie un code par SMS. Pas de mot de passe.",
+    studentEyebrow: "Pour les élèves",
+    studentPanelTitle: "Trouve le bon prof, près de chez toi.",
+    studentSummary: "Tarif affiché · profs vérifiés à la main",
+    studentPerks: [
+      "Le tarif est affiché avant que tu réserves",
+      "Uniquement des profs vérifiés à la main",
+      "Annulation gratuite jusqu'à 48h avant",
+    ],
+    panelTrust: "Pilote · chaque prof est vérifié à la main par notre équipe",
+
+    title: "Crée ton compte",
+    lead: "Sans mot de passe.",
+    cta: "Continuer",
     email: "Ton email",
     emailPh: "prenom@exemple.com",
-    spam: "Le code arrive en moins d'une minute. Pense à regarder dans les spams.",
     changeEmail: "Changer d'email",
     errNeedEmail: "Entre ton adresse email.",
     errBadEmail: "Cette adresse email n'est pas valide.",
+    errBadPhone: "Numéro de téléphone invalide.",
     errSend: "Envoi du code impossible. Réessaie.",
     errBadCode: "Code incorrect ou expiré. Vérifie les 6 chiffres, ou demande un nouveau code.",
     errTooManyAttempts: (secs: number) =>
@@ -67,14 +88,7 @@ const COPY = {
     errBlocked: "Ce compte a été suspendu par l'équipe Tnajem. Tu ne peux pas te connecter.",
     alreadySent: "Un code t'a déjà été envoyé et il est encore valable — saisis-le ci-dessous.",
     haveCode: "J'ai déjà un code",
-    studentPerks: [
-      "Le tarif est affiché avant que tu réserves",
-      "Uniquement des profs vérifiés à la main",
-      "Annulation gratuite jusqu'à 48h avant",
-    ],
 
-    byLabel: "Année de naissance de l'élève",
-    byPh: "Choisir…",
     byNote: "Pour un élève de moins de 18 ans, l'accord d'un parent ou tuteur est demandé avant la 1ʳᵉ séance.",
     termsBefore: "En créant ton compte, tu acceptes les ",
     termsLink: "conditions d'utilisation",
@@ -82,23 +96,35 @@ const COPY = {
     privacyLink: "politique de confidentialité",
     termsAfter: ".",
 
-    sentTo: (p: string) => `Code envoyé au ${p}`,
+    checkTitleEmail: "Vérifie ta boîte mail",
+    checkTitleSms: "Vérifie tes SMS",
+    // Followed by the address / number in bold, isolated left-to-right.
+    sentToEmail: "Code envoyé à",
+    sentToSms: "Code envoyé au",
     changeNumber: "Changer de numéro",
     devCodeNote: "Code de test — aucun message n'est envoyé pour l'instant",
     codeHelp: "6 chiffres.",
     codeLabelEmail: "Code reçu par email",
     codeLabelSms: "Code reçu par SMS",
     resend: "Renvoyer le code",
+    // Followed by the ticking m:ss in bold.
+    resendIn: "Renvoyer dans",
     resendReady: "Tu peux redemander un code.",
-    expiresIn: (t: string) => `Ce code expire dans ${t}.`,
+    /* Email's one genuinely new failure mode, and by far the most common support
+       question an OTP-by-mail flow produces. */
+    spamHint: "Pense aux spams",
+    expiresInEmail: (t: string) => `le code expire dans ${t}`,
+    expiresInSms: (t: string) => `Le code expire dans ${t}`,
+    minutes: (n: number) => `${n} min`,
     expired: "Ce code a expiré — demande-en un nouveau.",
 
     errNeedPhone: "Entre ton numéro de téléphone.",
-    errNeedBirthYear: "Choisis l'année de naissance de l'élève.",
-    haveAccount: "Tu as déjà un compte ?",
+    // The two exits: I already have an account, or I'm the other audience.
+    haveAccount: "Déjà inscrit ?",
     signIn: "Se connecter",
-    otherTutor: "Tu es prof ? Crée un compte prof",
-    otherStudent: "Tu cherches un prof ? Crée un compte élève",
+    askTutor: "Prof ?",
+    askStudent: "Élève ?",
+    thisWay: "Par ici",
 
     mismatchTitle: "Ce compte existe déjà",
     mismatchTutor: "C'est déjà un compte prof. Tu es connecté — voici ton tableau de bord.",
@@ -112,36 +138,46 @@ const COPY = {
     bdLabelSelf: "Ta date de naissance",
     bdMonth: "Mois de naissance",
     bdYear: "Année de naissance",
-    bdMonthPh: "Mois…",
-    bdYearPh: "Année…",
+    bdMonthPh: "Mois",
+    bdYearPh: "Année",
     bdMonths: ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
     // LEGAL-REVIEW: why the date is asked (adult-only pilot, D6).
     bdAdultsNote: "Le pilote est réservé aux 18 ans et plus.",
     errNeedBirthDate: "Choisis le mois et l'année de naissance.",
     errAdultsOnly: "Le pilote est réservé aux 18 ans et plus. Merci de ton intérêt pour Tnajem !",
     // A14 — a tutor must be 18+, whatever ALLOW_MINORS says
-    bdTutorNote: "Pour enseigner sur Tnajem, il faut avoir 18 ans ou plus. Ta date de naissance n'est jamais publique.",
+    bdTutorNote: "18 ans minimum pour enseigner. Jamais affichée publiquement.",
     errTutorMinor: "Il faut avoir 18 ans ou plus pour enseigner sur Tnajem.",
     // end phase-a lane L2
   },
   ar: {
-    tutorTitle: "اعمل حسابك متاع أستاذ",
-    tutorLead: "صفحتك، حصصك، تلامذتك. حطّ الإيميل متاعك : نبعثولك كود. بلا كلمة سرّ.",
-    tutorLeadSms: "صفحتك، حصصك، تلامذتك. حطّ نمرتك : نبعثولك كود بالـSMS. بلا كلمة سرّ.",
-    tutorPerks: [
-      "صفحتك حاضرة في دقيقتين",
+    tutorEyebrow: "للأساتذة",
+    tutorPanelTitle: "صفحتك متاع أستاذ في دقيقتين.",
+    tutorSummary: "الثمن على كيفك · التثبّت بيدينا",
+    tutorPoints: [
       "إنتي تحدّد ثمنك — 100 % متاعك في فترة التجربة",
       "التثبّت يتعمل بيدينا",
+      "الخلاص والتلامذة في بلاصة وحدة",
     ],
-    studentTitle: "اعمل حسابك متاع تلميذ",
-    studentLead: "لقّي أستاذ واحجز حصتك. حطّ الإيميل متاعك : نبعثولك كود. بلا كلمة سرّ.",
-    studentLeadSms: "لقّي أستاذ واحجز حصتك. حطّ نمرتك : نبعثولك كود بالـSMS. بلا كلمة سرّ.",
+    studentEyebrow: "للتلامذة",
+    studentPanelTitle: "لقّي الأستاذ اللي يلزمك، قريب منك.",
+    studentSummary: "الثمن يبان · أساتذة متثبّت منهم بيدينا",
+    studentPerks: [
+      "الثمن يبان قبل ما تحجز",
+      "كان أساتذة متثبّت منهم بيدينا",
+      "الإلغاء مجاني حتى 48 ساعة قبل",
+    ],
+    panelTrust: "فترة التجربة · كل أستاذ نتثبّتو منّو بيدينا",
+
+    title: "اعمل حسابك",
+    lead: "بلا كلمة سرّ.",
+    cta: "كمّل",
     email: "الإيميل متاعك",
     emailPh: "esm@exemple.com",
-    spam: "الكود يوصل في أقل من دقيقة. شوف زادة في الـspam.",
     changeEmail: "بدّل الإيميل",
     errNeedEmail: "حطّ الإيميل متاعك.",
     errBadEmail: "هذا الإيميل موش صحيح.",
+    errBadPhone: "رقم الهاتف موش صحيح.",
     errSend: "تعذّر إرسال الكود. عاود المحاولة.",
     errBadCode: "الكود موش صحيح ولا سالا. شوف الـ 6 أرقام، ولا اطلب كود جديد.",
     errTooManyAttempts: (secs: number) =>
@@ -149,14 +185,7 @@ const COPY = {
     errBlocked: "الحساب هذا وقّفو فريق Tnajem. ما تنجّمش تدخل.",
     alreadySent: "فما كود تبعثلك وما زال صالح — حطّو تحت.",
     haveCode: "عندي كود",
-    studentPerks: [
-      "الثمن يبان قبل ما تحجز",
-      "كان أساتذة متثبّت منهم بيدينا",
-      "الإلغاء مجاني حتى 48 ساعة قبل",
-    ],
 
-    byLabel: "سنة ولادة التلميذ",
-    byPh: "اختر…",
     byNote: "للتلميذ اللي عمرو أقلّ من 18 سنة، تتطلب موافقة الولي قبل الحصة الأولى.",
     termsBefore: "كي تعمل حسابك، تقبل ",
     termsLink: "شروط الاستعمال",
@@ -164,23 +193,31 @@ const COPY = {
     privacyLink: "سياسة الخصوصية",
     termsAfter: ".",
 
-    sentTo: (p: string) => `الكود تبعث لـ ${p}`,
+    checkTitleEmail: "شوف الإيميل متاعك",
+    checkTitleSms: "شوف الـSMS متاعك",
+    sentToEmail: "الكود تبعث لـ",
+    sentToSms: "الكود تبعث لـ",
     changeNumber: "بدّل النمرة",
     devCodeNote: "كود للتجربة — توّا ما تتبعث حتى رسالة",
     codeHelp: "6 أرقام.",
     codeLabelEmail: "الكود اللي وصلك في الإيميل",
     codeLabelSms: "الكود اللي وصلك بالـ SMS",
     resend: "عاود ابعث الكود",
+    resendIn: "عاود ابعث بعد",
     resendReady: "تنجم تطلب كود جديد.",
-    expiresIn: (t: string) => `هذا الكود يسالي في ${t}.`,
+    spamHint: "شوف زادة في الـspam",
+    expiresInEmail: (t: string) => `الكود يسالي في ${t}`,
+    expiresInSms: (t: string) => `الكود يسالي في ${t}`,
+    minutes: (n: number) =>
+      n === 1 ? "دقيقة" : n === 2 ? "دقيقتين" : n <= 10 ? `${n} دقايق` : `${n} دقيقة`,
     expired: "هذا الكود سالا — اطلب واحد جديد.",
 
     errNeedPhone: "حطّ نمرة تليفونك.",
-    errNeedBirthYear: "اختار سنة ولادة التلميذ.",
     haveAccount: "عندك حساب قبل ؟",
     signIn: "دخول",
-    otherTutor: "إنتي أستاذ ؟ اعمل حساب أستاذ",
-    otherStudent: "تلوّج على أستاذ ؟ اعمل حساب تلميذ",
+    askTutor: "أستاذ ؟",
+    askStudent: "تلميذ ؟",
+    thisWay: "من هنا",
 
     mismatchTitle: "هذا الحساب موجود",
     mismatchTutor: "هذا حساب أستاذ. إنتي داخل — هاذي لوحتك.",
@@ -194,19 +231,21 @@ const COPY = {
     bdLabelSelf: "تاريخ ولادتك",
     bdMonth: "شهر الولادة",
     bdYear: "عام الولادة",
-    bdMonthPh: "الشهر…",
-    bdYearPh: "العام…",
+    bdMonthPh: "الشهر",
+    bdYearPh: "العام",
     bdMonths: ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"],
     // LEGAL-REVIEW: why the date is asked (adult-only pilot, D6).
     bdAdultsNote: "فترة التجربة كان للي عندهم 18 سنة ولا أكثر.",
     errNeedBirthDate: "اختار الشهر والعام متاع الولادة.",
     errAdultsOnly: "فترة التجربة كان للي عندهم 18 سنة ولا أكثر. يعيشك على اهتمامك بـ Tnajem !",
     // A14 — a tutor must be 18+, whatever ALLOW_MINORS says
-    bdTutorNote: "باش تقرّي في Tnajem لازمك 18 سنة ولا أكثر. تاريخ ولادتك ما يبان لحتّى حد.",
+    bdTutorNote: "18 سنة على الأقل باش تقرّي. التاريخ ما يبان لحتّى حد.",
     errTutorMinor: "لازمك 18 سنة ولا أكثر باش تقرّي في Tnajem.",
     // end phase-a lane L2
   },
 } as const;
+
+type FieldName = "identifier" | "code" | "birth";
 
 /* `channel` comes from the SERVER shell (otpChannel()), so flipping OTP_CHANNEL
    back to sms swaps this form to a phone field on the next restart — no rebuild, no
@@ -245,20 +284,58 @@ export function SignupInner({
   const [error, setError] = useState<string | null>(null);
   /* Field-level problems go ON the field, with focus moved there — the same split
      as AuthInner, which explains it. `error` is for everything else. */
-  const [fieldError, setFieldError] = useState<{ field: "identifier" | "code" | "birth"; message: string } | null>(null);
+  const [fieldError, setFieldError] = useState<{ field: FieldName; message: string } | null>(null);
   const identifierRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
   const birthMonthRef = useRef<HTMLSelectElement>(null); // phase-a lane L2 (A24)
-  function invalid(field: "identifier" | "code" | "birth", message: string) {
+  /* Neutral guidance, not a failure — styled and announced as information. */
+  const [notice, setNotice] = useState<string | null>(null);
+
+  /* THE TWO STEPS REPLACE EACH OTHER, so a field of step 1 does not exist while the
+     code step is on screen — and two things on the code step can still fail one:
+     the birth date (verifyWith re-checks it, see A24 below) and, rarely, the
+     number (a resend the server calls invalid). Either way we go back to step 1
+     with the error on the field, and focus it once step 1 has rendered it again:
+     the ref is null until then, so the focus is parked here and taken by the
+     effect below.
+
+     `resumeFor` is the address whose code step we just left because of the birth
+     date. The code in their inbox (and the digits they typed) is still good, so
+     pressing Continuer again with the SAME address must not request another one —
+     createOtp would replace it and the digits they typed would die. It returns to
+     the code step instead (see send()). A different address, or "Changer
+     d'email", forgets it. */
+  const focusOnStep1 = useRef<"identifier" | "birth" | null>(null);
+  const [resumeFor, setResumeFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (codeSent || !focusOnStep1.current) return;
+    const field = focusOnStep1.current;
+    focusOnStep1.current = null;
+    (field === "identifier" ? identifierRef : birthMonthRef).current?.focus();
+  }, [codeSent]);
+
+  /* Which step is on screen is read from the REFS, not from `codeSent`: verifyWith
+     can start in a step-1 render (the resume path in send()) and answer after the
+     code step has replaced it, and that render's `codeSent` would be stale.
+
+     `codeStillValid` is false only when the server refused the birth date: it
+     checks the date AFTER proving the code, and proving it consumed it. */
+  function invalid(field: FieldName, message: string, codeStillValid = true) {
     setError(null);
     setFieldError({ field, message });
-    (field === "identifier" ? identifierRef : field === "birth" ? birthMonthRef : codeRef).current?.focus();
+    const ref = field === "identifier" ? identifierRef : field === "birth" ? birthMonthRef : codeRef;
+    if (ref.current || field === "code") { ref.current?.focus(); return; }
+    focusOnStep1.current = field;
+    setResumeFor(field === "birth" && codeStillValid ? identifier.trim() : null);
+    setNotice(null);
+    setCodeSent(false);
   }
 
   /* phase-a lane L2 (A24). The birth date is checked BEFORE a code is spent — on
-     the send AND on the "J'ai déjà un code" path, which used to skip it entirely.
-     The same isAdult() the API runs, so the two cannot disagree; the API is still
-     the one that refuses. Returns true when the form may go on. */
+     the send, and on the verify, which is what the "J'ai déjà un code" path goes
+     through (it used to skip the date entirely). The same isAdult() the API runs,
+     so the two cannot disagree; the API is still the one that refuses. Returns
+     true when the form may go on. */
   function birthDateOk(): boolean {
     if (!asksBirthDate) return true;
     if (!birthYear || !birthMonth) { invalid("birth", c.errNeedBirthDate); return false; }
@@ -268,8 +345,17 @@ export function SignupInner({
     }
     return true;
   }
-  /* Neutral guidance, not a failure — styled and announced as information. */
-  const [notice, setNotice] = useState<string | null>(null);
+
+  /* The address checks shared by the send and by "J'ai déjà un code". Returns the
+     trimmed identifier, or null once the problem is on the field. */
+  function identifierOk(): string | null {
+    const id = identifier.trim();
+    if (!id) { invalid("identifier", isEmail ? c.errNeedEmail : c.errNeedPhone); return null; }
+    // Same check the server runs, so a typo is caught before we spend a send.
+    if (isEmail && !isValidEmail(id.toLowerCase())) { invalid("identifier", c.errBadEmail); return null; }
+    return id;
+  }
+
   // Only true once a send actually reported a TTL — without it the "expired" state
   // would fire immediately, before any code has been requested.
   const [hadExpiry, setHadExpiry] = useState(false);
@@ -290,7 +376,16 @@ export function SignupInner({
      page they deliberately opened. */
   const [existingRole, setExistingRole] = useState<string | null>(null);
 
-  const ar = locale === "ar";
+  /* Everything that belongs to one code: the digits typed, the dev code, and the
+     two timers — which describe a code that is no longer on screen. */
+  function forgetCode() {
+    setCode("");
+    setDevCode(null);
+    cooldown.start(0);
+    expiry.start(0);
+    setHadExpiry(false);
+    setResumeFor(null);
+  }
 
   /* One send path for the first code and every resend. `resend` only changes how
      the result is presented: a resend keeps the user on the code step, and a
@@ -300,11 +395,23 @@ export function SignupInner({
      still has the cooldown). */
   async function send(resend: boolean) {
     if (loading) return;
-    const id = identifier.trim();
-    if (!id) { invalid("identifier", isEmail ? c.errNeedEmail : c.errNeedPhone); return; }
-    // Same check the server runs, so a typo is caught before we spend a send.
-    if (isEmail && !isValidEmail(id.toLowerCase())) { invalid("identifier", c.errBadEmail); return; }
+    const id = identifierOk();
+    if (!id) return;
     if (!birthDateOk()) return; // phase-a lane L2 (A24)
+    if (!resend) {
+      if (resumeFor === id) {
+        /* Back from the code step to fix the birth date, same address: the code
+           they hold is still the live one, so go back to it rather than spending a
+           send that would kill it. Six digits already typed → verify them now. */
+        setError(null);
+        setFieldError(null);
+        setCodeSent(true);
+        if (code.length === OTP_LENGTH) void verifyWith(code);
+        return;
+      }
+      // A first send for this address: nothing from an earlier code step applies.
+      forgetCode();
+    }
     setLoading(true);
     setError(null);
     setFieldError(null);
@@ -344,7 +451,7 @@ export function SignupInner({
     } else if (res.error === "invalid-email") {
       invalid("identifier", c.errBadEmail);
     } else if (res.error === "invalid-phone") {
-      invalid("identifier", ar ? "رقم الهاتف موش صحيح." : "Numéro de téléphone invalide.");
+      invalid("identifier", c.errBadPhone);
     } else {
       setError(t.extra.error);
     }
@@ -368,13 +475,27 @@ export function SignupInner({
   const handleSendCode = () => send(false);
   const handleResend = () => send(true);
 
-  /* Digits only, then submit on the sixth. See the twin in AuthInner: the code is
-     passed explicitly because setCode has not landed yet when this fires. */
-  function onCodeChange(raw: string) {
-    const digits = raw.replace(/\D/g, "").slice(0, 6);
-    setCode(digits);
-    if (fieldError?.field === "code") setFieldError(null);
-    if (digits.length === 6 && !loading) void verifyWith(digits);
+  /* For someone who reloaded mid-flow: reach the code they already have without
+     spending a send or waiting out a cooldown. It needs a valid address and
+     NOTHING ELSE. It used to run the birth-date check first, so the one person this
+     link exists for — someone holding a code — got "choose your birth month"
+     instead of the boxes to type it into. The date is not skipped: verifyWith
+     checks it before the code is spent (A24) and brings them back to the field. */
+  function handleHaveCode() {
+    setError(null); setFieldError(null); setNotice(null);
+    const id = identifierOk();
+    if (!id) return;
+    if (resumeFor !== id) forgetCode();
+    setCodeSent(true);
+  }
+
+  /* Back to the address step. The code on screen belongs to the old address. */
+  function handleChangeIdentifier() {
+    forgetCode();
+    setError(null); setFieldError(null); setNotice(null);
+    // The link that had focus leaves the DOM with the code step; land in the field.
+    focusOnStep1.current = "identifier";
+    setCodeSent(false);
   }
 
   const handleVerify = () => verifyWith(code);
@@ -415,10 +536,13 @@ export function SignupInner({
       if (res.error === "invalid-code") { invalid("code", c.errBadCode); return; }
       // Only ever reaches the owner of the address: the API checks it after the code is proven.
       if (res.error === "account-blocked") { setError(c.errBlocked); return; }
-      // phase-a lane L2 (A24): the server's refusals, in the same words as the form's own.
-      if (res.error === "adults-only") { invalid("birth", c.errAdultsOnly); return; }
-      if (res.error === "birth-date-required") { invalid("birth", c.errNeedBirthDate); return; }
-      if (res.error === "minor-cannot-teach") { invalid("birth", c.errTutorMinor); return; } // A14
+      /* phase-a lane L2 (A24): the server's refusals, in the same words as the form's
+         own. The API checks the date AFTER proving the code, and proving it deleted
+         it — so this code is spent: back to the birth field WITHOUT it, and the
+         next Continuer mints a fresh one (a consumed code holds no cooldown). */
+      if (res.error === "adults-only") { forgetCode(); invalid("birth", c.errAdultsOnly, false); return; }
+      if (res.error === "birth-date-required") { forgetCode(); invalid("birth", c.errNeedBirthDate, false); return; }
+      if (res.error === "minor-cannot-teach") { forgetCode(); invalid("birth", c.errTutorMinor, false); return; } // A14
       setError(t.extra.error);
       return;
     }
@@ -436,74 +560,70 @@ export function SignupInner({
     // phase-a lane L2 (A24): an adults-only form does not offer years that cannot be 18.
     .filter((y) => !adultsOnly || y <= currentYear - 18);
 
-  const title = isStudent ? c.studentTitle : c.tutorTitle;
-  const lead = isStudent
-    ? (isEmail ? c.studentLead : c.studentLeadSms)
-    : (isEmail ? c.tutorLead : c.tutorLeadSms);
-  const perks = isStudent ? c.studentPerks : c.tutorPerks;
+  /* The brand panel — the same on every screen of this page, including roleMismatch. */
+  const panel = isStudent
+    ? { eyebrow: c.studentEyebrow, title: c.studentPanelTitle, summary: c.studentSummary, points: c.studentPerks, trust: c.panelTrust }
+    : { eyebrow: c.tutorEyebrow, title: c.tutorPanelTitle, summary: c.tutorSummary, points: c.tutorPoints, trust: c.panelTrust };
 
   /* ── The number already has an account of the other kind ── */
   if (existingRole) {
     const asTutor = existingRole === "tutor";
     return (
-      <SiteShell>
-        <section className="web-section">
-          <div className="container container-narrow flex justify-center">
-            <div className="panel panel-pad rise w-full max-w-[460px] min-w-0">
-              <h1 className="font-display text-[clamp(22px,_4vw,_28px)] tracking-[-0.6px] mb-1.5 text-ink">
-                {c.mismatchTitle}
-              </h1>
-              <p className="text-[13.5px] text-ink2 mb-4 leading-[1.55]">
-                {asTutor ? c.mismatchTutor : c.mismatchStudent}
-              </p>
-              <p className="text-[13px] text-muted mb-5 leading-[1.6]">{c.mismatchNote}</p>
-              <Link href={withNext(asTutor ? "/dashboard" : "/student")} className="btn btn-primary">
-                {asTutor ? c.goDashboard : c.goStudent}
-              </Link>
-            </div>
-          </div>
-        </section>
-      </SiteShell>
+      <AuthShell {...panel}>
+        <h1 className="auth-title">{c.mismatchTitle}</h1>
+        <p className="text-[13.5px] text-ink2 mt-2 mb-4 leading-[1.55]">
+          {asTutor ? c.mismatchTutor : c.mismatchStudent}
+        </p>
+        <p className="text-[13px] text-muted mb-5 leading-[1.6]">{c.mismatchNote}</p>
+        <Link href={withNext(asTutor ? "/dashboard" : "/student")} className="btn btn-primary">
+          {asTutor ? c.goDashboard : c.goStudent}
+        </Link>
+      </AuthShell>
     );
   }
 
+  // Whole minutes while there is at least one left, then the m:ss of the last one.
+  const expiryText = expiry.left >= 60 ? c.minutes(Math.ceil(expiry.left / 60)) : formatCountdown(expiry.left);
+  const showExpiry = !expired && expiry.left > 0;
+
+  /* role="alert" so screen readers announce it on change */
+  const errorLine = error && (
+    <p role="alert" className="text-rose text-[13px] font-semibold leading-[1.5] mb-3 text-start">
+      {error}
+    </p>
+  );
+  const noticeLine = notice && !error && (
+    <p role="status" className="text-[13px] text-ink2 font-semibold leading-[1.5] mb-3 text-start">
+      {notice}
+    </p>
+  );
+
   return (
-    <SiteShell>
-      <section className="web-section">
-        <div className="container container-narrow flex justify-center">
-          <div className="panel panel-pad rise w-full max-w-[460px] min-w-0">
-            <h1 className="font-display text-[clamp(22px,_4vw,_28px)] tracking-[-0.6px] mb-1.5 text-ink">
-              {title}
-            </h1>
-            <p className="text-[13.5px] text-muted mb-5 leading-[1.55]">{lead}</p>
+    <AuthShell {...panel}>
+      {/* A real <form> so Enter submits — this was loose divs with onClick. ONE form
+          for both steps: the submit sends on step 1 and verifies on step 2. */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (codeSent) handleVerify();
+          else handleSendCode();
+        }}
+        noValidate
+      >
+        {/* KEYED wrappers: unkeyed, React matches the two <div>s by position and
+            recycles step 1's nodes into step 2, and a recycled focused node keeps
+            focus — OtpInput's autoFocus then loses to it (seen on /auth). */}
+        {!codeSent ? (
+          <div key="identifier" data-e2e="auth-step-identifier">
+            <h1 className="auth-title">{c.title}</h1>
+            <p className="auth-lead mb-6">{c.lead}</p>
 
-            {/* What this account actually gets you — three facts, role-specific.
-                This is the whole reason the funnel is split: the two audiences want
-                different things and a shared toggle could speak to neither. */}
-            <ul className="list-none flex flex-col gap-2 mb-6">
-              {perks.map((p) => (
-                <li key={p} className="flex items-start gap-[9px] text-[13.5px] text-ink2 leading-[1.5]">
-                  <Check className="w-4 h-4 text-green-ink flex-none mt-0.5" />
-                  <span className="min-w-0">{p}</span>
-                </li>
-              ))}
-            </ul>
-
-            {/* A real <form> so Enter submits — this was loose divs with onClick. */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (codeSent) handleVerify();
-                else handleSendCode();
-              }}
-              noValidate
-            >
             <Field
               label={isEmail ? c.email : t.auth.phone}
               error={fieldError?.field === "identifier" ? fieldError.message : undefined}
             >
               <div className="inp">
-                {isEmail ? <Mail className="" /> : <Phone className="" />}
+                {isEmail ? <Mail /> : <Phone />}
                 {!isEmail && (
                   <span className="pre whitespace-nowrap shrink-0" dir="ltr">+216</span>
                 )}
@@ -523,7 +643,6 @@ export function SignupInner({
                   autoComplete={isEmail ? "email" : "tel"}
                   autoCapitalize="off"
                   spellCheck={false}
-                  disabled={codeSent}
                   className="min-w-0"
                 />
               </div>
@@ -531,236 +650,215 @@ export function SignupInner({
 
             {/* phase-a lane L2 (A24) — birth MONTH + year. A year alone passed a
                 December-born 17-year-old as 18 all year. Drives the adult-only pilot
-                (ALLOW_MINORS off) and, when minors are allowed, the consent gate. */}
+                (ALLOW_MINORS off) and, when minors are allowed, the consent gate.
+                ONE field: a single .inp holding both selects. Field wires the hint
+                and the error onto the FIRST control (the month); the year carries its
+                own aria-invalid. */}
             {asksBirthDate && (
               <Field
                 label={minorsAllowed && isStudent ? c.bdLabel : c.bdLabelSelf}
+                help={!isStudent ? c.bdTutorNote : adultsOnly ? c.bdAdultsNote : c.byNote}
                 error={fieldError?.field === "birth" ? fieldError.message : undefined}
               >
-                <div className="flex gap-2">
-                  <div className="inp flex-1 min-w-0">
-                    <Calendar className="" />
-                    <select
-                      ref={birthMonthRef}
-                      value={birthMonth}
-                      onChange={(e) => {
-                        setBirthMonth(e.target.value);
-                        if (fieldError?.field === "birth") setFieldError(null);
-                      }}
-                      disabled={codeSent}
-                      required
-                      aria-required="true"
-                      aria-label={c.bdMonth}
-                      className="min-w-0 w-full border-0 bg-transparent font-[inherit] disabled:cursor-not-allowed"
-                      style={{ color: birthMonth ? "var(--ink)" : "var(--muted)" }}
-                    >
-                      <option value="" disabled>{c.bdMonthPh}</option>
-                      {c.bdMonths.map((m, i) => (
-                        <option key={m} value={i + 1} className="text-ink">{m}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="inp flex-1 min-w-0">
-                    <select
-                      value={birthYear}
-                      onChange={(e) => {
-                        setBirthYear(e.target.value);
-                        if (fieldError?.field === "birth") setFieldError(null);
-                      }}
-                      disabled={codeSent}
-                      required
-                      aria-required="true"
-                      aria-label={c.bdYear}
-                      aria-invalid={fieldError?.field === "birth" ? true : undefined}
-                      className="min-w-0 w-full border-0 bg-transparent font-[inherit] disabled:cursor-not-allowed"
-                      style={{ color: birthYear ? "var(--ink)" : "var(--muted)" }}
-                    >
-                      <option value="" disabled>{c.bdYearPh}</option>
-                      {years.map((y) => (
-                        <option key={y} value={y} className="text-ink">{y}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="inp" data-e2e="birth-date">
+                  <Calendar />
+                  <select
+                    ref={birthMonthRef}
+                    value={birthMonth}
+                    onChange={(e) => {
+                      setBirthMonth(e.target.value);
+                      if (fieldError?.field === "birth") setFieldError(null);
+                    }}
+                    required
+                    aria-required="true"
+                    aria-label={c.bdMonth}
+                    className="flex-1 min-w-0"
+                    style={{ color: birthMonth ? "var(--ink)" : "var(--muted)" }}
+                  >
+                    <option value="" disabled>{c.bdMonthPh}</option>
+                    {c.bdMonths.map((m, i) => (
+                      <option key={m} value={i + 1} className="text-ink">{m}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="inp-chev" />
+                  <span className="inp-divider" aria-hidden="true" />
+                  <select
+                    value={birthYear}
+                    onChange={(e) => {
+                      setBirthYear(e.target.value);
+                      if (fieldError?.field === "birth") setFieldError(null);
+                    }}
+                    required
+                    aria-required="true"
+                    aria-label={c.bdYear}
+                    aria-invalid={fieldError?.field === "birth" ? true : undefined}
+                    className="flex-1 min-w-0"
+                    style={{ color: birthYear ? "var(--ink)" : "var(--muted)" }}
+                  >
+                    <option value="" disabled>{c.bdYearPh}</option>
+                    {years.map((y) => (
+                      <option key={y} value={y} className="text-ink">{y}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="inp-chev" />
                 </div>
-                <p className="text-[13px] text-muted mt-1.5 leading-[1.5]">
-                  {!isStudent ? c.bdTutorNote : adultsOnly ? c.bdAdultsNote : c.byNote}
-                </p>
               </Field>
             )}
 
-            {/* role="alert" so screen readers announce it on change */}
-            {error && (
-              <p role="alert" className="text-rose text-[13px] font-semibold leading-[1.5] mb-3 text-start">
-                {error}
-              </p>
-            )}
-            {notice && !error && (
-              <p role="status" className="text-[13px] text-ink2 font-semibold leading-[1.5] mb-3 text-start">
-                {notice}
-              </p>
-            )}
+            {errorLine}
+            {noticeLine}
+
+            <Button type="submit" variant="primary" disabled={loading}>
+              {loading ? t.common.loading : c.cta}
+            </Button>
 
             {/* What creating the account accepts, before it is created: the API records
                 the terms version with the account (profiles.terms_version). */}
             {/* 13px, not 12px: the a11y audit's floor (tools/ui-audit/a11y.mjs). This is
                 the sentence that records what someone agreed to — the last place to
-                shrink text on a cheap Android in bright sun. The two links inherit it. */}
-            <p className="text-[13px] text-muted leading-[1.6] mb-3 text-start" data-e2e="signup-terms">
+                shrink text on a cheap Android in bright sun. The two links inherit it,
+                and stay inline so the sentence flows as one line where it fits. */}
+            <p className="auth-terms mt-3" data-e2e="signup-terms">
               {c.termsBefore}
-              <Link href="/terms" className="linklike">{c.termsLink}</Link>
+              <Link href="/terms" className="auth-link">{c.termsLink}</Link>
               {c.termsAnd}
-              <Link href="/privacy" className="linklike">{c.privacyLink}</Link>
+              <Link href="/privacy" className="auth-link">{c.privacyLink}</Link>
               {c.termsAfter}
             </p>
 
-            {!codeSent ? (
-              <>
-                <Button type="submit" variant="primary" disabled={loading}>
-                  {loading ? t.common.loading : t.auth.sendCode}
-                </Button>
-                {/* For someone who reloaded mid-flow: reach the code they already
-                    have without spending a send or waiting out a cooldown. */}
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError(null); setFieldError(null); setNotice(null);
-                      // phase-a lane L2 (A24): this path used to skip the birth date entirely.
-                      if (!birthDateOk()) return;
-                      setCodeSent(true);
-                    }}
-                    className="linklike bg-transparent border-0 text-[13px] min-h-[44px] min-w-[44px] font-[inherit]"
-                  >
-                    {c.haveCode}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="rise">
-                <div className="flex items-center justify-between gap-2.5 flex-wrap mb-3.5">
-                  <span className="text-[13px] text-ink2 min-w-0">{c.sentTo(identifier.trim())}</span>
-                  <button
-                    type="button"
-                    className="linklike bg-transparent border-0 text-[13px] min-h-[44px] min-w-[44px] flex-none font-[inherit]"
-                    onClick={() => {
-                      setCodeSent(false); setCode(""); setDevCode(null); setError(null); setFieldError(null);
-                      // The timers describe a code that is no longer on screen.
-                      cooldown.start(0); expiry.start(0); setHadExpiry(false);
-                    }}
-                  >
-                    {isEmail ? c.changeEmail : c.changeNumber}
-                  </button>
-                </div>
-
-                {/* Local development only. requestOtp() returns the code ONLY when
-                    NODE_ENV is not "production" AND no provider is configured; a
-                    production deploy with no mail or SMS credentials now fails the
-                    send outright rather than printing a stranger's code here. */}
-                {devCode && (
-                  <div className="bg-sand border-[1.4px] border-dashed border-ochre-btn rounded-brand py-2.5 px-3 mb-3.5 text-center text-[13px] text-ink2 leading-[1.5]">
-                    <b className="font-display text-[18px] tracking-[3px] text-ink block" dir="ltr">
-                      {devCode}
-                    </b>
-                    {c.devCodeNote}
-                  </div>
-                )}
-
-                {/* Email's one genuinely new failure mode, and by far the most
-                    common support question an OTP-by-mail flow produces. */}
-                {isEmail && (
-                  <p className="text-[13px] text-muted leading-[1.5] mb-3.5">{c.spam}</p>
-                )}
-
-                <Field
-                  label={isEmail ? c.codeLabelEmail : c.codeLabelSms}
-                  help={c.codeHelp}
-                  error={fieldError?.field === "code" ? fieldError.message : undefined}
-                >
-                  <div className="inp">
-                    <input
-                      type="text"
-                      dir="ltr"
-                      placeholder="000000"
-                      ref={codeRef}
-                      value={code}
-                      onChange={(e) => onCodeChange(e.target.value)}
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      maxLength={6}
-                      autoFocus
-                      className="min-w-0 tracking-[3px] font-display"
-                    />
-                  </div>
-                </Field>
-
-                <Button type="submit" variant="primary" disabled={loading}>
-                  {loading ? t.common.loading : t.auth.verify}
-                </Button>
-
-                {/* ── Resend + the two countdowns ──
-                    Before this there was no way to ask for another code at all: the
-                    only control here reset the whole form. A code that lands in spam,
-                    or arrives after the user has looked away, had no recovery.
-
-                    Both durations come from the server (requestOtp returns them), so
-                    the button can never re-enable while the server still refuses. ── */}
-                <div className="mt-3.5 text-center">
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    disabled={loading || !canResend}
-                    className="linklike bg-transparent border-0 text-[13px] min-h-[44px] min-w-[44px] font-[inherit] disabled:opacity-60 disabled:cursor-default"
-                  >
-                    {c.resend}
-                    {/* aria-hidden: a value that changes every second would be read
-                       aloud every second. The button's disabled state carries the
-                       meaning; the live region below announces the one transition
-                       that matters. */}
-                    {!canResend && (
-                      <span aria-hidden="true"> ({formatCountdown(cooldown.left)})</span>
-                    )}
-                  </button>
-
-                  {/* Ticking reassurance, decorative for the same reason. */}
-                  {!expired && expiry.left > 0 && (
-                    <p aria-hidden="true" className="text-[13px] text-muted leading-[1.5] mt-1">
-                      {c.expiresIn(formatCountdown(expiry.left))}
-                    </p>
-                  )}
-
-                  {/* The only live region: it changes at most twice (cooldown ends,
-                     then the code expires), never once per second.
-
-                     Rendered even while empty, deliberately — a live region has to be
-                     in the DOM BEFORE its content changes or the change is not
-                     announced at all. Do not "simplify" this to render only when
-                     there is a message. */}
-                  <p role="status" className="text-[13px] text-muted leading-[1.5] mt-1">
-                    {expired ? c.expired : canResend ? c.resendReady : ""}
-                  </p>
-                </div>
-              </div>
-            )}
-            </form>
+            <div className="text-center mt-1">
+              <button type="button" data-e2e="have-code" onClick={handleHaveCode} className="auth-link auth-tap text-[14px]">
+                {c.haveCode}
+              </button>
+            </div>
 
             {/* The two exits: I already have an account, or I'm the other audience. */}
-            <div className="mt-6 pt-5 border-t border-line flex flex-col gap-2 text-[13px] text-muted leading-[1.6]">
-              <p>
+            <div className="auth-foot">
+              <span>
                 {c.haveAccount}{" "}
-                <Link
-                  href={withNext("/auth")}
-                  className="linklike inline-flex items-center justify-center min-h-[44px] min-w-[44px]"
-                >
-                  {c.signIn}
+                <Link href={withNext("/auth")} className="auth-link auth-tap">{c.signIn}</Link>
+              </span>
+              <span>
+                {isStudent ? c.askTutor : c.askStudent}{" "}
+                <Link href={withNext(isStudent ? "/signup/prof" : "/signup/eleve")} className="auth-link auth-tap">
+                  {c.thisWay}
                 </Link>
-              </p>
-              <Link href={withNext(isStudent ? "/signup/prof" : "/signup/eleve")} className="linklike">
-                {isStudent ? c.otherTutor : c.otherStudent}
-              </Link>
+              </span>
             </div>
           </div>
-        </div>
-      </section>
-    </SiteShell>
+        ) : (
+          <div key="code" data-e2e="auth-step-code" className="rise">
+            <div className="auth-icon-tile mb-4" aria-hidden="true">
+              {isEmail ? <Mail /> : <Phone />}
+            </div>
+            <h1 className="auth-title">{isEmail ? c.checkTitleEmail : c.checkTitleSms}</h1>
+            <p className="auth-lead mb-5">
+              {isEmail ? c.sentToEmail : c.sentToSms}{" "}
+              <b className="font-bold text-ink break-words" dir="ltr">{identifier.trim()}</b>
+            </p>
+
+            {noticeLine}
+
+            {/* Local development only. requestOtp() returns the code ONLY when
+                NODE_ENV is not "production" AND no provider is configured; a
+                production deploy with no mail or SMS credentials now fails the
+                send outright rather than printing a stranger's code here. */}
+            {devCode && (
+              <div className="bg-sand border-[1.4px] border-dashed border-ochre-btn rounded-brand py-2.5 px-3 mb-3.5 text-center text-[13px] text-ink2 leading-[1.5]">
+                <b className="font-display text-[18px] tracking-[3px] text-ink block" dir="ltr" data-e2e="dev-code">
+                  {devCode}
+                </b>
+                {c.devCodeNote}
+              </div>
+            )}
+
+            {/* Six boxes. Completing the sixth digit verifies straight away (it
+                replaces the old "submit on the sixth" of the single input); the code
+                is passed explicitly because setCode has not landed yet when it fires. */}
+            <OtpInput
+              value={code}
+              onChange={(v) => {
+                setCode(v);
+                if (fieldError?.field === "code") setFieldError(null);
+              }}
+              onComplete={(v) => { if (!loading) void verifyWith(v); }}
+              label={isEmail ? c.codeLabelEmail : c.codeLabelSms}
+              error={fieldError?.field === "code" ? fieldError.message : undefined}
+              inputRef={codeRef}
+              autoFocus
+            />
+
+            {/* ── Change the address + resend ──
+                Before this there was no way to ask for another code at all: the
+                only control here reset the whole form. A code that lands in spam,
+                or arrives after the user has looked away, had no recovery.
+
+                Both durations come from the server (requestOtp returns them), so
+                the button can never re-enable while the server still refuses. ── */}
+            <div className="auth-row mt-2 mb-4">
+              <button type="button" data-e2e="change-identifier" onClick={handleChangeIdentifier} className="auth-link auth-tap gap-1">
+                <Back className="w-4 h-4" />
+                {isEmail ? c.changeEmail : c.changeNumber}
+              </button>
+              <button
+                type="button"
+                data-e2e="resend"
+                onClick={handleResend}
+                disabled={loading || !canResend}
+                className="auth-link auth-tap disabled:font-normal"
+              >
+                {canResend ? c.resend : (
+                  <>
+                    {/* aria-hidden: a value that changes every second would be read
+                       aloud every second. The accessible name stays "Renvoyer le
+                       code", the disabled state carries the meaning, and the live
+                       region below announces the one transition that matters. */}
+                    <span aria-hidden="true">
+                      {c.resendIn} <b className="font-bold text-ink" dir="ltr">{formatCountdown(cooldown.left)}</b>
+                    </span>
+                    <span className="sr-only">{c.resend}</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {errorLine}
+
+            <Button type="submit" variant="primary" disabled={loading}>
+              {loading ? t.common.loading : t.auth.verify}
+            </Button>
+
+            {/* Spam reminder (email) + ticking reassurance. The countdown half is
+                aria-hidden for the same once-a-second reason as the resend timer;
+                the spam reminder does not tick, so it stays readable. */}
+            {(isEmail || showExpiry) && (
+              <p className="auth-fine mt-4" aria-hidden={isEmail ? undefined : true}>
+                {isEmail ? (
+                  <>
+                    {c.spamHint}
+                    {showExpiry && <span aria-hidden="true"> · {c.expiresInEmail(expiryText)}</span>}
+                  </>
+                ) : (
+                  c.expiresInSms(expiryText)
+                )}
+              </p>
+            )}
+
+            {/* The only live region: it changes at most twice (cooldown ends,
+               then the code expires), never once per second.
+
+               Rendered even while empty, deliberately — a live region has to be
+               in the DOM BEFORE its content changes or the change is not
+               announced at all. Do not "simplify" this to render only when
+               there is a message. */}
+            <p role="status" className="text-[13px] text-muted text-center leading-[1.5] mt-1">
+              {/* "Tu peux redemander un code." is for screen readers only: on
+                 screen the resend link turning active already says it. */}
+              {expired ? c.expired : canResend ? <span className="sr-only">{c.resendReady}</span> : ""}
+            </p>
+          </div>
+        )}
+      </form>
+    </AuthShell>
   );
 }

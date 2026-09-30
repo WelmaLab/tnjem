@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { sql } from "./support/db";
 import { recoverOtp, resetRateLimits } from "./support/otp";
 import { email } from "./support/seed";
+import { fillOtp } from "./support/otp-ui";
 import { randomBytes } from "node:crypto";
 
 /* The REAL login flow, end to end, through the browser.
@@ -77,10 +78,16 @@ test("a student signs up with a real OTP and lands signed in", async ({ page }) 
      reused across both steps and is `disabled` while the request is in flight —
      clicking it too early resolves the locator to a disabled "Chargement…" button
      and burns the whole timeout. */
-  const codeField = page.getByPlaceholder("000000");
-  await expect(codeField).toBeVisible({ timeout: 20_000 });
-  await codeField.fill(code);
+  /* Auth Option B: the code step REPLACES step 1, and the code is six boxes
+     (support/otp-ui.ts). fillOtp puts all six digits in the first box, the way SMS
+     autofill does, and OtpInput's onComplete starts the verify on the sixth. */
+  await expect(page.locator('[data-e2e="auth-step-code"]')).toBeVisible({ timeout: 20_000 });
+  await fillOtp(page, code);
 
+  /* Kept as a fallback, and harmless: onComplete has already started the verify,
+     so this submit lands on verifyWith's `loading` guard and returns. Were two
+     verifies ever to reach the server, it is race-safe — one code, one winner
+     (otp-race.spec.ts). */
   await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
 
   // A profile now exists, and the browser holds a session for it.

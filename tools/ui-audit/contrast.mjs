@@ -34,6 +34,22 @@ function resolve(spec) {
   return spec;
 }
 
+/* A translucent token (`--on-blue-fill: rgba(255,255,255,.10)`) laid over a solid
+   one, as {fg,alpha,bg} — the alpha is READ from the declaration, so the row
+   follows the CSS if the token changes. */
+function onFill(token, bg) {
+  const m = /,\s*([\d.]+)\s*\)\s*$/.exec(T[token.slice(2)] ?? "");
+  if (!m) throw new Error(`${token} is not an rgba() token in globals.css :root`);
+  return { fg: token, alpha: Number(m[1]), bg };
+}
+
+/* How a spec prints in the table: a token without its dashes, a composite as
+   "fill@alpha/backdrop". */
+function specLabel(spec) {
+  if (typeof spec === "object") return `${specLabel(spec.fg)}@${spec.alpha}/${specLabel(spec.bg)}`;
+  return spec.replace(/^--/, "");
+}
+
 const NEED = { normal: 4.5, large: 3.0, ui: 3.0 };
 
 /* ── the pairs, grouped ───────────────────────────────────────────────────── */
@@ -143,6 +159,29 @@ const PAIRS = [
   ["On dark", "--mint200", "--blue900", "ui", ".sf-pill icon", "StorefrontView.tsx:631"],
   ["On dark", W, "--ink", "normal", ".toast / .side-nav .active", "globals.css:186"],
 
+  // ── Auth Option B (AuthShell, OtpInput, the auth-* classes) ──
+  // The brand panel is linear-gradient(--blue → --blue900): every text on it is
+  // checked against BOTH ends — the light one is the hard one for light text.
+  ["Auth (Option B)", "--on-blue-soft", "--blue", "normal", ".auth-eyebrow (13px) — light end", "globals.css .auth-eyebrow"],
+  ["Auth (Option B)", "--on-blue-soft", "--blue900", "normal", ".auth-eyebrow (13px) — dark end", "globals.css .auth-eyebrow"],
+  ["Auth (Option B)", W, "--blue", "normal", ".auth-panel-title H2 (mobile band 18px bold) — light end", "globals.css .auth-panel-title"],
+  ["Auth (Option B)", W, "--blue900", "normal", ".auth-panel-title H2 (mobile band 18px bold) — dark end", "globals.css .auth-panel-title"],
+  ["Auth (Option B)", "--on-blue-soft", "--blue", "normal", ".auth-panel-summary (mobile band 13px) — light end", "globals.css .auth-panel-summary"],
+  ["Auth (Option B)", "--on-blue-soft", "--blue900", "normal", ".auth-panel-summary (mobile band 13px) — dark end", "globals.css .auth-panel-summary"],
+  ["Auth (Option B)", "--on-blue", "--blue", "normal", ".auth-points li (14px) — light end", "globals.css .auth-points"],
+  ["Auth (Option B)", "--on-blue", "--blue900", "normal", ".auth-points li (14px) — dark end", "globals.css .auth-points"],
+  ["Auth (Option B)", W, onFill("--on-blue-rule", "--blue"), "ui", ".auth-tick white tick on its disc — light end", "globals.css .auth-tick"],
+  ["Auth (Option B)", W, onFill("--on-blue-rule", "--blue900"), "ui", ".auth-tick white tick on its disc — dark end", "globals.css .auth-tick"],
+  ["Auth (Option B)", "--on-blue", onFill("--on-blue-fill", "--blue"), "normal", ".auth-trust p (13px) + Shield on the note fill — light end", "globals.css .auth-trust"],
+  ["Auth (Option B)", "--on-blue", onFill("--on-blue-fill", "--blue900"), "normal", ".auth-trust p (13px) + Shield on the note fill — dark end", "globals.css .auth-trust"],
+  ["Auth (Option B)", "--ink", "--paper", "normal", ".auth-title (form H1) / .otp-box digits", "globals.css .auth-title, .otp-box"],
+  ["Auth (Option B)", "--muted", "--paper", "normal", ".auth-lead / .auth-fine / .auth-terms / .auth-foot", "globals.css .auth-lead"],
+  ["Auth (Option B)", "--blue", "--paper", "normal", ".auth-link (600, on <a> and <button>)", "globals.css .auth-link"],
+  ["Auth (Option B)", "--blue", "--blue50", "ui", ".auth-icon-tile mail icon", "globals.css .auth-icon-tile"],
+  ["Auth (Option B)", "--rose", "--paper", "normal", ".otp-error message (13px/600)", "globals.css .otp-error"],
+  ["Auth (Option B)", "--rose", "--paper", "ui", ".otp-box[aria-invalid] rose border", "globals.css .otp-box"],
+  ["Auth (Option B)", "--blue", "--paper", "ui", ".otp-box:focus border + 3px ring", "globals.css .otp-box:focus"],
+
   // ── avatar initials on their gradient — BOTH ends of every gradient ──
   ["Avatars", "--ink", "--amber", "normal", ".avatar / .cd-tutor-av initials (light end)", "globals.css .avatar"],
   ["Avatars", "--ink", "--ochre", "normal", ".avatar / .cd-tutor-av initials (dark end)", "globals.css .avatar"],
@@ -176,8 +215,8 @@ let group = null;
 const w = (s, n) => String(s).padEnd(n).slice(0, n);
 
 console.log("\nWCAG 2.1 AA contrast audit — tokens read from app/globals.css\n");
-console.log("  " + w("FG", 28) + w("BG", 18) + w("RATIO", 8) + w("NEED", 11) + w("", 7) + "WHERE");
-console.log("  " + "-".repeat(110));
+console.log("  " + w("FG", 28) + w("BG", 30) + w("RATIO", 8) + w("NEED", 11) + w("", 7) + "WHERE");
+console.log("  " + "-".repeat(122));
 
 for (const [g, fgSpec, bgSpec, size, what, where] of PAIRS) {
   if (g !== group) {
@@ -192,11 +231,11 @@ for (const [g, fgSpec, bgSpec, size, what, where] of PAIRS) {
   const advisory = g.includes("advisory");
   if (!ok) advisory ? advisoryFails++ : fails++;
   const mark = ok ? "PASS" : advisory ? "ADVIS" : "FAIL";
-  const label = fgSpec.startsWith("--") ? `${fgSpec} (${fg})` : fgSpec;
+  const label = typeof fgSpec === "string" && fgSpec.startsWith("--") ? `${fgSpec} (${fg})` : specLabel(fgSpec);
   console.log(
     "  " +
       w(label, 28) +
-      w(bgSpec.replace(/^--/, ""), 18) +
+      w(specLabel(bgSpec), 30) +
       w(ratio.toFixed(2), 8) +
       w(`${need.toFixed(1)} ${size}`, 11) +
       w(mark, 7) +
@@ -204,7 +243,7 @@ for (const [g, fgSpec, bgSpec, size, what, where] of PAIRS) {
   );
 }
 
-console.log("\n  " + "-".repeat(110));
+console.log("\n  " + "-".repeat(122));
 console.log(`  ${PAIRS.length} pairs checked — ${fails} FAIL, ${advisoryFails} advisory below 3.0\n`);
 
 if (advisoryFails) {

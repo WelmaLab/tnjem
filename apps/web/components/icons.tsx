@@ -6,6 +6,8 @@ const S = ({ children, className, style }: { children: ReactNode } & P) => (
 );
 export const Back = (p: P) => <S className={`flip ${p.className ?? ""}`} style={p.style}><polyline points="15 18 9 12 15 6" /></S>;
 export const Forward = (p: P) => <S className={`flip ${p.className ?? ""}`} style={p.style}><polyline points="9 6 15 12 9 18" /></S>;
+// Auth Option B: the arrow after a <select> inside .inp (className="inp-chev"). Vertical, so never flipped.
+export const ChevronDown = (p: P) => <S {...p}><polyline points="6 9 12 15 18 9" /></S>;
 export const Share = (p: P) => <S {...p}><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" /></S>;
 export const Copy = (p: P) => <S {...p}><rect x="9" y="9" width="11" height="11" rx="2.4" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></S>;
 export const Gear = (p: P) => <S {...p}><circle cx="12" cy="12" r="3" /><path d="M19.4 13.5a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.6 1.6 0 0 0 1.4-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H10a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V10a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.6 1.6 0 0 0-1.4 1z" /></S>;

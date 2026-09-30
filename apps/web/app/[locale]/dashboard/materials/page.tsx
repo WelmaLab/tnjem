@@ -239,7 +239,7 @@ export default function MaterialsPage() {
             <input
               id="m-title" name="title" required minLength={3} maxLength={120}
               placeholder={c.fTitlePh}
-              className="w-full text-[14px] rounded-[12px] p-3 mb-3 min-h-[46px]"
+              className="w-full text-[14px] rounded-[12px] p-3 mb-3 min-h-[48px]"
               style={{ border: "1px solid var(--line)", background: "var(--paper)" }}
             />
 
@@ -247,7 +247,7 @@ export default function MaterialsPage() {
             <input
               id="m-desc" name="description" maxLength={1000}
               placeholder={c.fDescPh}
-              className="w-full text-[14px] rounded-[12px] p-3 mb-3 min-h-[46px]"
+              className="w-full text-[14px] rounded-[12px] p-3 mb-3 min-h-[48px]"
               style={{ border: "1px solid var(--line)", background: "var(--paper)" }}
             />
 
@@ -255,10 +255,10 @@ export default function MaterialsPage() {
             <input
               id="m-file" name="file" type="file"
               accept="application/pdf,image/png,image/jpeg,image/webp"
-              /* A native file input is ~21px tall on its own. The 46px matches
+              /* A native file input is ~21px tall on its own. The 48px matches
                  .inp so this form has one field height, and gives the control a
                  real hit box on a phone. */
-              className="w-full text-[13px] mb-3 min-h-[46px] py-2.5"
+              className="w-full text-[13px] mb-3 min-h-[48px] py-2.5"
             />
 
             <div className="text-[13px] text-muted mb-1">{c.fOr}</div>
@@ -271,7 +271,7 @@ export default function MaterialsPage() {
                  the phone, e-mail and OTP fields already follow. */
               dir="ltr"
               placeholder={c.fYoutubePh}
-              className="w-full text-[14px] rounded-[12px] p-3 min-h-[46px]"
+              className="w-full text-[14px] rounded-[12px] p-3 min-h-[48px]"
               style={{ border: "1px solid var(--line)", background: "var(--paper)" }}
             />
             <p className="text-[13px] text-muted mt-1 mb-3 leading-[1.6]">{c.fYoutubeHelp}</p>
@@ -282,7 +282,7 @@ export default function MaterialsPage() {
               id="m-class" name="classId" value={classId}
               onChange={(e) => setClassId(e.target.value)}
               data-e2e="material-class"
-              className="w-full text-[14px] rounded-[12px] p-3 mb-3 min-h-[46px]"
+              className="w-full text-[14px] rounded-[12px] p-3 mb-3 min-h-[48px]"
               style={{ border: "1px solid var(--line)", background: "var(--paper)" }}
             >
               <option value="">{c.fClassNone}</option>
@@ -297,7 +297,7 @@ export default function MaterialsPage() {
             <select
               id="m-vis" name="visibility" defaultValue="students"
               data-e2e="material-visibility"
-              className="w-full text-[14px] rounded-[12px] p-3 min-h-[46px]"
+              className="w-full text-[14px] rounded-[12px] p-3 min-h-[48px]"
               style={{ border: "1px solid var(--line)", background: "var(--paper)" }}
             >
               {/* phase-a lane L5 (A18.9): the label says exactly who — this class, or all my students. */}

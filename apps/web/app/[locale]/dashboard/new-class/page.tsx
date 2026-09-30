@@ -404,7 +404,8 @@ export default function NewClassPage() {
 
                     <Field label={t.tools.videoUrl} error={errorFor("meet-url")}>
                       <div className="inp">
-                        <Video className="w-4 h-4 text-muted shrink-0" />
+                        {/* Size, colour, flex:none and centring come from `.inp > .ic` (globals.css). */}
+                        <Video />
                         <input
                           type="url"
                           inputMode="url"
@@ -420,7 +421,7 @@ export default function NewClassPage() {
 
                     <Field label={t.tools.whiteboardUrl} error={errorFor("whiteboard-url")}>
                       <div className="inp">
-                        <Board className="w-4 h-4 text-muted shrink-0" />
+                        <Board />
                         <input
                           type="url"
                           inputMode="url"
@@ -436,7 +437,7 @@ export default function NewClassPage() {
 
                     <Field label={t.tools.quizUrl} help={t.tools.hint} error={errorFor("quiz-url")}>
                       <div className="inp">
-                        <Quiz className="w-4 h-4 text-muted shrink-0" />
+                        <Quiz />
                         <input
                           type="url"
                           inputMode="url"

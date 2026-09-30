@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { sql } from "./support/db";
 import { email, seedProfile, seedTutor, seedClass, seedBooking } from "./support/seed";
 import { recoverOtp, resetRateLimits } from "./support/otp";
+import { fillOtp } from "./support/otp-ui";
 import { mintSession } from "./support/session";
 import { api, browserSession } from "./support/journey";
 
@@ -46,9 +47,12 @@ test("student journey: minor signup → consent → explore → book → live ga
     await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
     await expect.poll(async () => (await sql<{ n: number }[]>`select count(*)::int n from otp_codes where identifier = ${address}`)[0].n, { timeout: 20_000 }).toBe(1);
     const code = await recoverOtp(address);
-    const codeField = page.getByPlaceholder("000000");
-    await expect(codeField).toBeVisible({ timeout: 20_000 });
-    await codeField.fill(code);
+    /* Auth Option B: the code step replaces step 1; six boxes, filled the way SMS
+       autofill does (support/otp-ui.ts). onComplete verifies on the sixth digit; the
+       requestSubmit stays as a harmless fallback (verifyWith's `loading` guard, and
+       the server is race-safe — otp-race.spec.ts). */
+    await expect(page.locator('[data-e2e="auth-step-code"]')).toBeVisible({ timeout: 20_000 });
+    await fillOtp(page, code);
     await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
     await page.waitForURL(/\/fr\/auth\/consent/, { timeout: 20_000 });
     studentId = (await sql<{ id: string }[]>`select id from profiles where email = ${address}`)[0].id;

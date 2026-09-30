@@ -564,7 +564,9 @@ html[dir="rtl"] .av-pitch{border-radius:var(--r-s) 0 0 var(--r-s)}
 .av-approve .btn{width:100%}
 @media (min-width:680px){.av-approve .btn{width:auto}}
 .av-reject{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap}
-.av-note{flex:1;min-width:160px;margin:0;padding:11px 13px}
+/* No vertical padding: .inp puts it on the INPUT now (globals.css), and 11px more
+   on this wrapper made the note field ~69px tall next to a 48px button row. */
+.av-note{flex:1;min-width:160px;margin:0}
 .av-reject .btn{width:auto;flex:none}
 .av-btn-spin{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite}
 .av-btn-spin.dark{border-color:rgba(16,31,51,.25);border-top-color:var(--ink)}

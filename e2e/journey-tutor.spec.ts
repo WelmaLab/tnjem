@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { sql } from "./support/db";
 import { email, seedAdmin, seedProfile } from "./support/seed";
 import { recoverOtp, resetRateLimits } from "./support/otp";
+import { fillOtp } from "./support/otp-ui";
 import { mintSession } from "./support/session";
 import { e2eStore } from "./support/store";
 import { openForE2E } from "./support/doc-crypto";
@@ -43,9 +44,12 @@ test("tutor journey: signup → storefront → ID → approved → class → boo
     await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
     await expect.poll(async () => (await sql<{ n: number }[]>`select count(*)::int n from otp_codes where identifier = ${address}`)[0].n, { timeout: 20_000 }).toBe(1);
     const code = await recoverOtp(address);
-    const codeField = page.getByPlaceholder("000000");
-    await expect(codeField).toBeVisible({ timeout: 20_000 });
-    await codeField.fill(code);
+    /* Auth Option B: the code step replaces step 1; six boxes, filled the way SMS
+       autofill does (support/otp-ui.ts). onComplete verifies on the sixth digit; the
+       requestSubmit stays as a harmless fallback (verifyWith's `loading` guard, and
+       the server is race-safe — otp-race.spec.ts). */
+    await expect(page.locator('[data-e2e="auth-step-code"]')).toBeVisible({ timeout: 20_000 });
+    await fillOtp(page, code);
     await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
     await page.waitForURL((u) => !u.pathname.includes("/signup/"), { timeout: 20_000 });
     const [p] = await sql<{ id: string; role: string }[]>`select id, role from profiles where email = ${address}`;

@@ -157,7 +157,10 @@
   html[dir=rtl] .btn{font-family:var(--fa)}
   .btn:active{transform:translateY(1px)}
   .btn:disabled{opacity:.5;cursor:not-allowed}
-  .btn-primary{background:var(--ochre-btn);color:#fff;box-shadow:0 14px 24px -12px rgba(224,133,46,.85)}
+  /* No glow (Auth Option B §1.5). The orange drop-shadow haloed every primary
+     button and smeared ochre onto the surface under it; the fill alone is the
+     call to action. */
+  .btn-primary{background:var(--ochre-btn);color:#fff}
   .btn-primary:hover:not(:disabled){background:var(--ochre-btn-hover)}
   .btn-ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
   /* UI Option A (A3): the cobalt OUTLINE — a way in ("Tableau de bord", "Mes cours"
@@ -238,8 +241,16 @@
      stretches its children. Before, `.inp` carried 13px of vertical padding and
      centred a 17px-tall <input> inside it: the field LOOKED 46px tall, but the
      input's own hit box was 17px, and a tap in the padding landed on the div and
-     did not focus anything. Same box, real target. */
-  .inp{width:100%;background:var(--paper);border:1.6px solid var(--line);border-radius:13px;padding:0 14px;font-size:14px;font-family:var(--fb);display:flex;align-items:stretch;gap:6px;min-height:46px}
+     did not focus anything. Same box, real target.
+
+     A CENTRED row (Auth Option B §1.1). It used to be align-items:stretch, which
+     never grows an <svg> with a fixed height: the leading icon fell back to
+     flex-start and sat in the TOP corner of the field (the mail and calendar
+     icons on /signup/prof, the URL icons on new-class) while the text sat on the
+     centre line. Now every child sits on the centre line, and the controls keep
+     their full-height hit box by stretching THEMSELVES (align-self, below) — so
+     the fix above still holds. 48px tall. */
+  .inp{width:100%;background:var(--paper);border:1.6px solid var(--line);border-radius:13px;padding:0 14px;font-size:14px;font-family:var(--fb);display:flex;align-items:center;gap:6px;min-height:48px}
   /* The WRAPPER carries the focus ring, not the control. `.inp input` sets
      outline:0 (it is a borderless control inside a styled box), so keyboard
      focus used to be signalled only by a 1.6px border going --line -> --blue —
@@ -248,11 +259,27 @@
      matches what the user perceives as "the field", and matches the 3px ring
      every button already gets. Verified by scripts/ui-audit/keyboard.mjs. */
   .inp:focus-within{border-color:var(--blue);outline:3px solid var(--blue);outline-offset:2px}
-  .inp input,.inp textarea,.inp select{border:0;outline:0;font-size:14px;font-family:inherit;width:100%;min-width:0;background:transparent;color:var(--ink);padding-block:13px;min-height:44px}
-  /* textarea has to keep its own rows-based height and must not inherit the
-     flex stretch, or it collapses to one line. */
-  .inp textarea{align-self:stretch;resize:vertical}
+  .inp input,.inp textarea,.inp select{border:0;outline:0;font-size:14px;font-family:inherit;width:100%;min-width:0;background:transparent;color:var(--ink);padding-block:13px;min-height:44px;align-self:stretch}
+  /* A textarea keeps its own rows-based height (the row grows to it). On a
+     multi-line field the row aligns to the TOP, so a leading icon sits beside
+     the first line instead of floating in the middle of the paragraph. */
+  .inp textarea{resize:vertical}
+  .inp:has(> textarea){align-items:flex-start}
+  .inp:has(> textarea) > .ic{margin-block-start:14px}
   .inp .pre{color:var(--muted);font-family:var(--fd);flex:none;display:flex;align-items:center}
+  /* The leading icon: 18px, muted, and flex:none so a tight row never squashes it
+     (the .verified lesson). :where() keeps this at ONE class of weight, so a
+     utility on the icon (w-4, text-blue) still wins, as everywhere else here. */
+  :where(.inp) > .ic{width:18px;height:18px;flex:none;color:var(--muted)}
+  :where(.inp) > .ic:first-child{margin-inline-end:4px}
+  /* A thin rule between two controls sharing one field (month | year). */
+  .inp-divider{flex:none;width:1px;height:24px;background:var(--line);margin-inline:4px}
+  /* A chevron after a <select>. It is pulled back over the select's end padding
+     and lets clicks through (pointer-events:none), so a tap on the arrow opens
+     the select; the native arrow goes, or there would be two. */
+  .inp-chev{width:16px;height:16px;flex:none;color:var(--muted);pointer-events:none}
+  .inp select + .inp-chev{margin-inline-start:-24px}
+  .inp select:has(+ .inp-chev){appearance:none;-webkit-appearance:none;padding-inline-end:22px;cursor:pointer}
   .help{font-size:13px;color:var(--muted);margin-top:6px}
   .field-label{font-size:13px;font-weight:700;display:block;margin-bottom:7px}
 
@@ -526,6 +553,96 @@
      on <a class="btn hide-mobile"> it reverted the anchor to display:inline, which
      silently killed the button's flex box — gap gone, min-height:44px inert. A
      visibility utility must never guess an element's display type. */
+
+  /* =====================================================================
+     AUTH PAGES — "Option B · brand panel + form" (UI_AUTH_OPTION_B.md).
+     The frame is components/auth/AuthShell.tsx, the code field
+     components/auth/OtpInput.tsx; SignupInner and AuthInner use the rest.
+     Every colour pair below is a row in tools/ui-audit/contrast.mjs.
+     ===================================================================== */
+
+  /* ---- the frame ----
+     Mobile first: one full-bleed paper card, the brand panel collapsed to a
+     compact band ABOVE the form (title + one line). From 900px: a centred card,
+     panel ~40% on the inline START side, form ~60%. Grid areas follow the
+     writing direction, so on /ar the panel lands on the right by itself.
+     The FORM comes first in the DOM (the page H1 is read before the panel's H2);
+     the panel holds nothing focusable, so the visual order changes no focus order. */
+  .auth-card{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"panel" "main";background:var(--paper)}
+  .auth-main{grid-area:main;min-width:0;padding-block:24px 32px;padding-inline:16px}
+  .auth-main-inner{max-width:420px;margin-inline:auto;min-width:0}
+  .auth-panel{grid-area:panel;min-width:0;display:flex;flex-direction:column;gap:32px;padding-block:14px 16px;padding-inline:16px;
+    background:linear-gradient(165deg,var(--blue),var(--blue900));color:#fff}
+  .auth-panel-head{min-width:0}
+  .auth-eyebrow{display:none;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--on-blue-soft)}
+  .auth-panel-title{font-family:var(--fd);font-size:18px;font-weight:700;line-height:1.3;letter-spacing:-.2px;color:#fff}
+  .auth-panel-summary{font-size:13px;line-height:1.5;color:var(--on-blue-soft);margin-block-start:2px}
+  .auth-points{display:none;list-style:none;flex-direction:column;gap:14px;margin-block-start:24px}
+  .auth-points li{display:flex;align-items:flex-start;gap:10px;min-width:0;font-size:14px;line-height:1.5;color:var(--on-blue)}
+  /* The tick: a white stroke on a translucent disc, 3.6:1 even at the light end. */
+  .auth-tick{flex:none;display:grid;place-items:center;width:20px;height:20px;margin-block-start:1px;border-radius:50%;background:var(--on-blue-rule);color:#fff}
+  .auth-tick .ic{width:12px;height:12px;stroke-width:2.8}
+  /* The trust note — NOT a testimonial: no name, no city, no quote (truth rule). */
+  .auth-trust{display:none;align-items:flex-start;gap:10px;margin-block-start:auto;padding-block:13px;padding-inline:14px;
+    border-radius:14px;background:var(--on-blue-fill);border:1px solid var(--on-blue-hairline);color:var(--on-blue)}
+  .auth-trust .ic{width:18px;height:18px;margin-block-start:1px}
+  .auth-trust p{min-width:0;font-size:13px;line-height:1.5}
+  @media (min-width:900px){
+    .auth-shell{padding-block:clamp(32px,4vw,56px);padding-inline:clamp(16px,4vw,40px)}
+    .auth-card{grid-template-columns:minmax(0,2fr) minmax(0,3fr);grid-template-areas:"panel main";max-width:940px;min-height:600px;margin-inline:auto;
+      border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--sh);overflow:hidden}
+    .auth-main{padding-block:52px 44px;padding-inline:clamp(28px,4vw,56px)}
+    .auth-panel{padding-block:44px 32px;padding-inline:32px}
+    .auth-eyebrow{display:block;margin-block-end:14px}
+    .auth-panel-title{font-size:clamp(26px,2.4vw,30px);line-height:1.15;letter-spacing:-.6px}
+    .auth-panel-summary{display:none}
+    .auth-points{display:flex}
+    .auth-trust{display:flex}
+  }
+
+  /* ---- the pieces the two forms share ---- */
+  .auth-title{font-family:var(--fd);font-size:clamp(24px,3vw,30px);font-weight:700;line-height:1.15;letter-spacing:-.6px;color:var(--ink)}
+  .auth-lead{font-size:14px;line-height:1.55;color:var(--muted)}
+  /* THE link of the auth pages, on <a> and <button> alike (the button chrome is
+     reset). Inline, so it flows inside a sentence; add .auth-tap when it stands
+     alone and needs a 44px target. */
+  .auth-link{display:inline;padding:0;border:0;background:none;font:inherit;font-weight:600;color:var(--blue);
+    text-decoration:none;text-align:inherit;cursor:pointer}
+  .auth-link:hover:not(:disabled){text-decoration:underline;text-underline-offset:3px}
+  .auth-link:disabled{color:var(--muted);cursor:default}
+  .auth-link:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:4px}
+  .auth-tap{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px}
+  /* The terms sentence: one flowing line where it fits, balanced when it wraps. */
+  .auth-terms{font-size:13px;line-height:1.6;color:var(--muted);text-align:center;text-wrap:balance}
+  /* Underlined here, as in the reference: inside a running sentence, --blue against
+     --muted is only 1.2:1, and weight alone is a thin cue for the two links a
+     person is agreeing to (WCAG 1.4.1). */
+  .auth-terms .auth-link{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+  /* Footer row under a hairline. Each DIRECT child is one item ("Déjà inscrit ?
+     Se connecter"); the middle dot between them is drawn here and silent to AT. */
+  .auth-foot{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;margin-block-start:24px;padding-block-start:14px;
+    border-block-start:1px solid var(--line);font-size:13px;line-height:1.5;color:var(--muted);text-align:center}
+  .auth-foot > * + *::before{content:"·";content:"·" / "";margin-inline:8px;color:var(--muted)}
+  .auth-icon-tile{display:grid;place-items:center;flex:none;width:52px;height:52px;border-radius:14px;background:var(--blue50);color:var(--blue)}
+  .auth-icon-tile .ic{width:24px;height:24px}
+  .auth-row{display:flex;justify-content:space-between;align-items:center;gap:4px 12px;flex-wrap:wrap;font-size:13px}
+  .auth-fine{font-size:13px;line-height:1.5;color:var(--muted);text-align:center}
+
+  /* ---- OtpInput: six boxes, always left-to-right ----
+     Fluid (flex:1 1 0) between 44px and 58px wide; spread edge to edge so the
+     row lines up with the button under it. At 320px the gap tightens so six
+     44px boxes still fit a 288px column. The focus ring is the .inp one. */
+  .otp{min-width:0}
+  .otp-boxes{display:flex;justify-content:space-between;gap:10px}
+  .otp-box{flex:1 1 0;min-width:44px;max-width:58px;height:clamp(48px,14vw,56px);padding:0;
+    border:1.6px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);
+    font-family:var(--fd);font-size:clamp(20px,6vw,24px);font-weight:700;text-align:center;font-variant-numeric:tabular-nums;
+    caret-color:var(--blue);outline:0;transition:border-color .15s}
+  .otp-box:focus{border-color:var(--blue);outline:3px solid var(--blue);outline-offset:2px}
+  .otp-box[aria-invalid="true"]{border-color:var(--rose)}
+  .otp-box:disabled{opacity:.6;cursor:not-allowed}
+  .otp-error{margin-block-start:8px;font-size:13px;font-weight:600;line-height:1.5;color:var(--rose);text-align:start}
+  @media (max-width:379px){.otp-boxes{gap:4px}}
 }
 
 /* ─── Arabic typography safety net (dir="rtl" only) ─────────────────────────

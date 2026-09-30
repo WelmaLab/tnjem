@@ -15,14 +15,19 @@
    SIGNUP act, and it now happens by choosing a page — /signup/prof or
    /signup/eleve. This screen sends no role at all, which is also what stops it
    from silently minting an account for a number that has never signed up (see the
-   `no-account` branch in verifyOtp). */
-import { useRef, useState } from "react";
+   `no-account` branch in verifyOtp).
+
+   Layout (Option B): <AuthShell> draws the page chrome and the brand panel; this
+   file owns the form side. Two steps share ONE card and ONE <form>: the identifier
+   step, then the code step, which REPLACES it rather than being appended below. */
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocalizedRouter } from "@/components/Link";
 import { Button, Field } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
-import { Phone, Mail } from "@/components/icons";
+import { Phone, Mail, Back } from "@/components/icons";
 import { requestOtp, verifyOtp } from "@/app/actions";
-import { SiteShell } from "@/components/SiteShell";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { OtpInput } from "@/components/auth/OtpInput";
 import { postAuthDestination } from "@/lib/auth-destination";
 import { useCountdown, formatCountdown } from "@/components/useCountdown";
 // Pure module — the SAME validity check the server runs, so the form and the action
@@ -32,16 +37,30 @@ import type { OtpChannel } from "@/lib/auth";
 
 /* Page-local copy. The shared t.auth.pending string explains our SMS provider
    status ("une fois le fournisseur SMS branché… mode dev") — that is release
-   plumbing, not something to greet a visitor with. Plain language instead. */
+   plumbing, not something to greet a visitor with. Plain language instead.
+
+   The PANEL states only what is true of every account today — no password, a
+   single-use 6-digit code, no role to pick — and no testimonial, name, city or
+   number: the no-fabrication rule applies to marketing copy too. */
 const COPY = {
   fr: {
+    panelEyebrow: "Ton espace",
+    panelTitle: "Content de te revoir",
+    panelSummary: "Sans mot de passe · un code à 6 chiffres",
+    panelPoints: [
+      "Pas de mot de passe à retenir",
+      "Un code à 6 chiffres, valable une seule fois",
+      "Rien à choisir : ton compte sait si tu es prof ou élève",
+    ],
+    panelTrust: "Pilote · chaque prof est vérifié à la main par notre équipe",
     lead: "Entre ton email : on t'envoie un code. Pas de mot de passe.",
     leadSms: "Entre ton numéro : on t'envoie un code par SMS. Pas de mot de passe.",
     email: "Ton email",
     emailPh: "prenom@exemple.com",
-    spam: "Le code arrive en moins d'une minute. Pense à regarder dans les spams.",
+    cta: "Continuer",
     errNeedEmail: "Entre ton adresse email.",
     errBadEmail: "Cette adresse email n'est pas valide.",
+    errBadPhone: "Numéro de téléphone invalide.",
     errSend: "Envoi du code impossible. Réessaie.",
     /* Wrong and expired are deliberately one message: verifyOtp will not tell us
        which, because saying "expired" would confirm the account exists. So name
@@ -52,7 +71,11 @@ const COPY = {
     errBlocked: "Ce compte a été suspendu par l'équipe Tnajem. Tu ne peux pas te connecter.",
     alreadySent: "Un code t'a déjà été envoyé et il est encore valable — saisis-le ci-dessous.",
     haveCode: "J'ai déjà un code",
-    sentTo: (p: string) => `Code envoyé au ${p}`,
+    checkTitleEmail: "Vérifie ta boîte mail",
+    checkTitleSms: "Vérifie tes SMS",
+    // Followed by the address / number in bold, isolated left-to-right.
+    sentToEmail: "Code envoyé à",
+    sentToSms: "Code envoyé au",
     changeNumber: "Changer de numéro",
     changeEmail: "Changer d'email",
     devCodeNote: "Code de test — aucun message n'est envoyé pour l'instant",
@@ -63,8 +86,15 @@ const COPY = {
     codeLabelEmail: "Code reçu par email",
     codeLabelSms: "Code reçu par SMS",
     resend: "Renvoyer le code",
+    // Followed by the ticking m:ss in bold.
+    resendIn: "Renvoyer dans",
     resendReady: "Tu peux redemander un code.",
-    expiresIn: (t: string) => `Ce code expire dans ${t}.`,
+    /* Email's one genuinely new failure mode, and by far the most common support
+       question an OTP-by-mail flow produces. */
+    spamHint: "Pense aux spams",
+    expiresInEmail: (t: string) => `le code expire dans ${t}`,
+    expiresInSms: (t: string) => `Le code expire dans ${t}`,
+    minutes: (n: number) => `${n} min`,
     expired: "Ce code a expiré — demande-en un nouveau.",
     noAccountTitleEmail: "Aucun compte avec cet email",
     noAccountTitleSms: "Aucun compte avec ce numéro",
@@ -79,13 +109,23 @@ const COPY = {
     // end phase-a lane L2
   },
   ar: {
+    panelEyebrow: "فضاءك",
+    panelTitle: "مرحبا بيك من جديد",
+    panelSummary: "بلا كلمة سرّ · كود بـ 6 أرقام",
+    panelPoints: [
+      "ما فماش كلمة سرّ تحفظها",
+      "كود بـ 6 أرقام، يتستعمل مرّة وحدة",
+      "ما تختار شي : حسابك يعرف إنتي أستاذ ولا تلميذ",
+    ],
+    panelTrust: "فترة التجربة · كل أستاذ نتثبّتو منّو بيدينا",
     lead: "حطّ الإيميل متاعك : نبعثولك كود. بلا كلمة سرّ.",
     leadSms: "حطّ نمرتك : نبعثولك كود بالـSMS. بلا كلمة سرّ.",
     email: "الإيميل متاعك",
     emailPh: "esm@exemple.com",
-    spam: "الكود يوصل في أقل من دقيقة. شوف زادة في الـspam.",
+    cta: "كمّل",
     errNeedEmail: "حطّ الإيميل متاعك.",
     errBadEmail: "هذا الإيميل موش صحيح.",
+    errBadPhone: "رقم الهاتف موش صحيح.",
     errSend: "تعذّر إرسال الكود. عاود المحاولة.",
     errBadCode: "الكود موش صحيح ولا سالا. شوف الـ 6 أرقام، ولا اطلب كود جديد.",
     errTooManyAttempts: (secs: number) =>
@@ -93,7 +133,10 @@ const COPY = {
     errBlocked: "الحساب هذا وقّفو فريق Tnajem. ما تنجّمش تدخل.",
     alreadySent: "فما كود تبعثلك وما زال صالح — حطّو تحت.",
     haveCode: "عندي كود",
-    sentTo: (p: string) => `الكود تبعث لـ ${p}`,
+    checkTitleEmail: "شوف الإيميل متاعك",
+    checkTitleSms: "شوف الـSMS متاعك",
+    sentToEmail: "الكود تبعث لـ",
+    sentToSms: "الكود تبعث لـ",
     changeNumber: "بدّل النمرة",
     changeEmail: "بدّل الإيميل",
     devCodeNote: "كود للتجربة — توّا ما تتبعث حتى رسالة",
@@ -101,8 +144,13 @@ const COPY = {
     codeLabelEmail: "الكود اللي وصلك في الإيميل",
     codeLabelSms: "الكود اللي وصلك بالـ SMS",
     resend: "عاود ابعث الكود",
+    resendIn: "عاود ابعث بعد",
     resendReady: "تنجم تطلب كود جديد.",
-    expiresIn: (t: string) => `هذا الكود يسالي في ${t}.`,
+    spamHint: "شوف زادة في الـspam",
+    expiresInEmail: (t: string) => `الكود يسالي في ${t}`,
+    expiresInSms: (t: string) => `الكود يسالي في ${t}`,
+    minutes: (n: number) =>
+      n === 1 ? "دقيقة" : n === 2 ? "دقيقتين" : n <= 10 ? `${n} دقايق` : `${n} دقيقة`,
     expired: "هذا الكود سالا — اطلب واحد جديد.",
     noAccountTitleEmail: "ما فماش حساب بهذا الإيميل",
     noAccountTitleSms: "ما فماش حساب بهذي النمرة",
@@ -153,9 +201,28 @@ export function AuthInner({
   const [fieldError, setFieldError] = useState<{ field: "identifier" | "code"; message: string } | null>(null);
   const identifierRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
+  /* The two steps REPLACE each other, so whatever had focus on the code step (the
+     "Changer" link, the resend button) leaves the DOM when we go back — and focus
+     would fall to <body>. Set before leaving the code step; the effect below puts
+     focus on the identifier field once step 1 has rendered it again. (Going the
+     other way needs nothing: OtpInput's autoFocus lands on the first box.) */
+  const refocusIdentifier = useRef(false);
+  useEffect(() => {
+    if (!codeSent && refocusIdentifier.current) {
+      refocusIdentifier.current = false;
+      identifierRef.current?.focus();
+    }
+  }, [codeSent]);
+
   function invalid(field: "identifier" | "code", message: string) {
     setError(null);
     setFieldError({ field, message });
+    /* The identifier field is not in the DOM while the code step is on screen. A
+       server refusal of the address at that point (a resend answered with
+       invalid-email / invalid-phone) would be set on a field nobody can see — so
+       go back to step 1, where the message renders on the field and the effect
+       above focuses it. */
+    if (field === "identifier" && codeSent) { leaveCodeStep(); return; }
     (field === "identifier" ? identifierRef : codeRef).current?.focus();
   }
   /* Neutral information, not a failure — e.g. "a code is already on its way".
@@ -181,10 +248,28 @@ export function AuthInner({
   // rather than quietly creating a profile the visitor never asked for.
   const [noAccount, setNoAccount] = useState(false);
 
-  const ar = locale === "ar";
   // Carry ?next= into signup so someone bounced off /checkout who turns out to be
   // new still lands back on the class they wanted.
   const signupHref = (path: string) => (next ? `${path}?next=${encodeURIComponent(next)}` : path);
+
+  /* The client half of the identifier rules, shared by the send and by "J'ai déjà
+     un code" — so both paths refuse exactly the same input, and the code step is
+     never shown for an address the server would reject. */
+  function identifierOk(): boolean {
+    const id = identifier.trim();
+    if (!id) { invalid("identifier", isEmail ? c.errNeedEmail : c.errNeedPhone); return false; }
+    // Same check the server runs, so a typo is caught before we spend a send.
+    if (isEmail && !isValidEmail(id.toLowerCase())) { invalid("identifier", c.errBadEmail); return false; }
+    return true;
+  }
+
+  /* Back to step 1 with the same identifier. The code, the dev code and both
+     timers describe a code that is no longer on screen, so they go too. */
+  function leaveCodeStep() {
+    setCodeSent(false); setCode(""); setDevCode(null);
+    cooldown.start(0); expiry.start(0); setHadExpiry(false);
+    refocusIdentifier.current = true;
+  }
 
   /* One send path for the first code and every resend. `resend` only changes how
      the result is presented: a resend keeps the user on the code step, and a
@@ -194,10 +279,8 @@ export function AuthInner({
      still has the cooldown). */
   async function send(resend: boolean) {
     if (loading) return;
+    if (!identifierOk()) return;
     const id = identifier.trim();
-    if (!id) { invalid("identifier", isEmail ? c.errNeedEmail : c.errNeedPhone); return; }
-    // Same check the server runs, so a typo is caught before we spend a send.
-    if (isEmail && !isValidEmail(id.toLowerCase())) { invalid("identifier", c.errBadEmail); return; }
     setLoading(true);
     setError(null);
     setFieldError(null);
@@ -241,7 +324,7 @@ export function AuthInner({
     } else if (res.error === "invalid-email") {
       invalid("identifier", c.errBadEmail);
     } else if (res.error === "invalid-phone") {
-      invalid("identifier", ar ? "رقم الهاتف موش صحيح." : "Numéro de téléphone invalide.");
+      invalid("identifier", c.errBadPhone);
     } else {
       setError(t.extra.error);
     }
@@ -258,24 +341,13 @@ export function AuthInner({
 
   const handleSendCode = () => send(false);
   const handleResend = () => send(true);
-
-  /* Strip everything that isn't a digit, then submit the moment six of them are
-     present. The field accepted letters before, which the server could only ever
-     reject — and it required a separate tap on a button that is below the fold on
-     a 320px phone. Android's SMS/email autofill delivers all six at once, so in
-     the common case the user now types nothing and taps nothing. */
-  function onCodeChange(raw: string) {
-    const digits = raw.replace(/\D/g, "").slice(0, 6);
-    setCode(digits);
-    if (fieldError?.field === "code") setFieldError(null);
-    if (digits.length === 6 && !loading) void verifyWith(digits);
-  }
   const handleVerify = () => verifyWith(code);
 
-  /* Takes the code as an argument rather than reading state: the auto-submit above
-     fires from inside the same change handler that calls setCode, so `code` is
-     still the previous value at that point. Passing it explicitly is what makes
-     autofill work on the first try instead of submitting five digits. */
+  /* Takes the code as an argument rather than reading state: OtpInput's onComplete
+     fires from inside the same user action that calls onChange → setCode, so `code`
+     is still the previous value at that point. Passing it explicitly is what makes
+     SMS / email autofill work on the first try instead of submitting five digits —
+     in the common case the user types nothing and taps nothing. */
   async function verifyWith(submitted: string) {
     if (loading) return;
     if (!submitted.trim()) { invalid("code", c.codeHelp); return; }
@@ -316,58 +388,77 @@ export function AuthInner({
     router.push(postAuthDestination(res, next));
   }
 
+  /* The panel is the same on every screen of this page, including "no account". */
+  const panel = {
+    eyebrow: c.panelEyebrow,
+    title: c.panelTitle,
+    summary: c.panelSummary,
+    points: c.panelPoints,
+    trust: c.panelTrust,
+  };
+
   /* ── Verified, but there is no account for this number ── */
   if (noAccount) {
     return (
-      <SiteShell>
-        <section className="web-section">
-          <div className="container container-narrow flex justify-center">
-            <div className="panel panel-pad rise w-full max-w-[460px] min-w-0">
-              <h1 className="font-display text-[clamp(22px,_4vw,_28px)] tracking-[-0.6px] mb-1.5 text-ink">
-                {isEmail ? c.noAccountTitleEmail : c.noAccountTitleSms}
-              </h1>
-              <p className="text-[13.5px] text-muted mb-6 leading-[1.55]">
-                {isEmail ? c.noAccountBodyEmail : c.noAccountBodySms}
-              </p>
-              <div className="flex flex-col gap-2.5">
-                <Link href={signupHref("/signup/prof")} className="btn btn-primary">
-                  {c.newTutor}
-                </Link>
-                <Link href={signupHref("/signup/eleve")} className="btn btn-ghost">
-                  {studentCta}
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-      </SiteShell>
+      <AuthShell {...panel}>
+        <h1 className="auth-title mb-1.5">
+          {isEmail ? c.noAccountTitleEmail : c.noAccountTitleSms}
+        </h1>
+        <p className="auth-lead">
+          {isEmail ? c.noAccountBodyEmail : c.noAccountBodySms}
+        </p>
+        <div className="flex flex-col gap-2.5 mt-6">
+          <Link href={signupHref("/signup/prof")} className="btn btn-primary">
+            {c.newTutor}
+          </Link>
+          <Link href={signupHref("/signup/eleve")} className="btn btn-ghost">
+            {studentCta}
+          </Link>
+        </div>
+      </AuthShell>
     );
   }
 
-  return (
-    <SiteShell>
-      <section className="web-section">
-        <div className="container container-narrow flex justify-center">
-          <div className="panel panel-pad rise w-full max-w-[460px] min-w-0">
-            <h1 className="font-display text-[clamp(22px,_4vw,_28px)] tracking-[-0.6px] mb-1.5 text-ink">
-              {t.auth.title}
-            </h1>
-            <p className="text-[13.5px] text-muted mb-6 leading-[1.55]">
-              {isEmail ? c.lead : c.leadSms}
-            </p>
+  /* role="alert" so screen readers announce it on change. */
+  const errorLine = error && (
+    <p role="alert" className="text-rose text-[13px] font-semibold leading-[1.5] mb-3 text-start">
+      {error}
+    </p>
+  );
+  const noticeLine = notice && !error && (
+    <p role="status" className="text-[13px] text-ink2 font-semibold leading-[1.5] mb-3 text-start">
+      {notice}
+    </p>
+  );
+  // Whole minutes while there is at least one left, then the m:ss of the last one.
+  const expiryText = expiry.left >= 60 ? c.minutes(Math.ceil(expiry.left / 60)) : formatCountdown(expiry.left);
+  const showExpiry = !expired && expiry.left > 0;
 
-            {/* A real <form>: this was loose divs with onClick handlers, so pressing
-                Enter after typing an address or a code did nothing at all — the
-                single most reflexive action on a login screen. onSubmit dispatches
-                to whichever step is on screen. */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (codeSent) handleVerify();
-                else handleSendCode();
-              }}
-              noValidate
-            >
+  return (
+    <AuthShell {...panel}>
+      {/* A real <form>: this was loose divs with onClick handlers, so pressing
+          Enter after typing an address or a code did nothing at all — the single
+          most reflexive action on a login screen. ONE form for both steps;
+          onSubmit dispatches to whichever step is on screen. */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (codeSent) handleVerify();
+          else handleSendCode();
+        }}
+        noValidate
+      >
+        {/* The two wrappers are KEYED. Unkeyed, React matched them by position
+            (both are a <div>) and recycled step 1's nodes into step 2 — the
+            "J'ai déjà un code" button became "Changer d'email" in place and kept
+            focus, so OtpInput's autoFocus never won. Distinct keys make the swap
+            a real unmount/mount. */}
+        {!codeSent ? (
+          /* ── Step 1: the address (or number) ── */
+          <div key="identifier" data-e2e="auth-step-identifier">
+            <h1 className="auth-title mb-1.5">{t.auth.title}</h1>
+            <p className="auth-lead mb-6">{isEmail ? c.lead : c.leadSms}</p>
+
             <Field
               label={isEmail ? c.email : t.auth.phone}
               error={fieldError?.field === "identifier" ? fieldError.message : undefined}
@@ -396,173 +487,184 @@ export function AuthInner({
                   autoComplete={isEmail ? "email" : "tel"}
                   autoCapitalize="off"
                   spellCheck={false}
-                  disabled={codeSent}
                   className="min-w-0"
                 />
               </div>
             </Field>
 
-            {/* role="alert" so screen readers announce it on change */}
-            {error && (
-              <p role="alert" className="text-rose text-[13px] font-semibold leading-[1.5] mb-3 text-start">
-                {error}
-              </p>
-            )}
-            {notice && !error && (
-              <p role="status" className="text-[13px] text-ink2 font-semibold leading-[1.5] mb-3 text-start">
-                {notice}
-              </p>
-            )}
+            {errorLine}
+            {noticeLine}
 
-            {!codeSent ? (
-              <>
-                <Button type="submit" variant="primary" disabled={loading}>
-                  {loading ? t.common.loading : t.auth.sendCode}
-                </Button>
-                {/* For someone who reloaded mid-flow: jump straight to the code they
-                    already have, without spending a send or waiting out a cooldown. */}
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => { setError(null); setFieldError(null); setNotice(null); setCodeSent(true); }}
-                    className="linklike bg-transparent border-0 text-[13px] min-h-[44px] min-w-[44px] font-[inherit]"
-                  >
-                    {c.haveCode}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="rise">
-                {/* Where the code went + an escape hatch if the number is wrong. */}
-                <div className="flex items-center justify-between gap-2.5 flex-wrap mb-3.5">
-                  <span className="text-[13px] text-ink2 min-w-0">{c.sentTo(identifier.trim())}</span>
-                  <button
-                    type="button"
-                    className="linklike bg-transparent border-0 text-[13px] min-h-[44px] min-w-[44px] flex-none font-[inherit]"
-                    onClick={() => {
-                      setCodeSent(false); setCode(""); setDevCode(null); setError(null); setFieldError(null);
-                      // The timers describe a code that is no longer on screen.
-                      cooldown.start(0); expiry.start(0); setHadExpiry(false);
-                    }}
-                  >
-                    {isEmail ? c.changeEmail : c.changeNumber}
-                  </button>
-                </div>
-
-                {/* Local development only. requestOtp() returns the code ONLY when
-                    NODE_ENV is not "production" AND no provider is configured; a
-                    production deploy with no mail or SMS credentials now fails the
-                    send outright rather than printing a stranger's code here. (The
-                    previous note claimed production was safe because a provider
-                    would be set — precisely the assumption that failed.) */}
-                {devCode && (
-                  <div className="bg-sand border-[1.4px] border-dashed border-ochre-btn rounded-brand py-2.5 px-3 mb-3.5 text-center text-[13px] text-ink2 leading-[1.5]">
-                    <b className="font-display text-[18px] tracking-[3px] text-ink block" dir="ltr">
-                      {devCode}
-                    </b>
-                    {c.devCodeNote}
-                  </div>
-                )}
-
-                {/* Email's one genuinely new failure mode, and by far the most
-                    common support question an OTP-by-mail flow produces. */}
-                {isEmail && (
-                  <p className="text-[13px] text-muted leading-[1.5] mb-3.5">{c.spam}</p>
-                )}
-
-                <Field
-                  label={isEmail ? c.codeLabelEmail : c.codeLabelSms}
-                  help={c.codeHelp}
-                  error={fieldError?.field === "code" ? fieldError.message : undefined}
-                >
-                  <div className="inp">
-                    <input
-                      type="text"
-                      dir="ltr"
-                      placeholder="000000"
-                      ref={codeRef}
-                      value={code}
-                      onChange={(e) => onCodeChange(e.target.value)}
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      maxLength={6}
-                      autoFocus
-                      className="min-w-0 tracking-[3px] font-display"
-                    />
-                  </div>
-                </Field>
-
-                <Button type="submit" variant="primary" disabled={loading}>
-                  {loading ? t.common.loading : t.auth.verify}
-                </Button>
-
-                {/* ── Resend + the two countdowns ──
-                    Before this there was no way to ask for another code at all: the
-                    only control here reset the whole form. A code that lands in spam,
-                    or arrives after the user has looked away, had no recovery.
-
-                    Both durations come from the server (requestOtp returns them), so
-                    the button can never re-enable while the server still refuses. ── */}
-                <div className="mt-3.5 text-center">
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    disabled={loading || !canResend}
-                    className="linklike bg-transparent border-0 text-[13px] min-h-[44px] min-w-[44px] font-[inherit] disabled:opacity-60 disabled:cursor-default"
-                  >
-                    {c.resend}
-                    {/* aria-hidden: a value that changes every second would be read
-                       aloud every second. The button's disabled state carries the
-                       meaning; the live region below announces the one transition
-                       that matters. */}
-                    {!canResend && (
-                      <span aria-hidden="true"> ({formatCountdown(cooldown.left)})</span>
-                    )}
-                  </button>
-
-                  {/* Ticking reassurance, decorative for the same reason. */}
-                  {!expired && expiry.left > 0 && (
-                    <p aria-hidden="true" className="text-[13px] text-muted leading-[1.5] mt-1">
-                      {c.expiresIn(formatCountdown(expiry.left))}
-                    </p>
-                  )}
-
-                  {/* The only live region: it changes at most twice (cooldown ends,
-                     then the code expires), never once per second.
-
-                     Rendered even while empty, deliberately — a live region has to be
-                     in the DOM BEFORE its content changes or the change is not
-                     announced at all. Do not "simplify" this to render only when
-                     there is a message. */}
-                  <p role="status" className="text-[13px] text-muted leading-[1.5] mt-1">
-                    {expired ? c.expired : canResend ? c.resendReady : ""}
-                  </p>
-                </div>
-              </div>
-            )}
-            </form>
-
-            {/* Signup is a different page now, one per audience. */}
-            <div className="mt-6 pt-5 border-t border-line text-[13px] text-muted leading-[1.6]">
-              <p className="mb-1.5">{c.noAccountHint}</p>
-              <div className="flex gap-4 flex-wrap">
-                <Link
-                  href={signupHref("/signup/prof")}
-                  className="linklike inline-flex items-center justify-center min-h-[44px] min-w-[44px]"
-                >
-                  {c.newTutor}
-                </Link>
-                <Link
-                  href={signupHref("/signup/eleve")}
-                  className="linklike inline-flex items-center justify-center min-h-[44px] min-w-[44px]"
-                >
-                  {studentCta}
-                </Link>
-              </div>
+            <Button type="submit" variant="primary" disabled={loading} className="mt-1">
+              {loading ? t.common.loading : c.cta}
+            </Button>
+            {/* For someone who reloaded mid-flow: jump straight to the code they
+                already have, without spending a send or waiting out a cooldown.
+                It still requires a valid identifier — the same checks as the send —
+                because verifyOtp needs it and the code step displays it. */}
+            <div className="mt-2 text-center">
+              <button
+                type="button"
+                data-e2e="have-code"
+                onClick={() => {
+                  setError(null); setFieldError(null); setNotice(null);
+                  if (!identifierOk()) return;
+                  setCodeSent(true);
+                }}
+                className="auth-link auth-tap text-[14px]"
+              >
+                {c.haveCode}
+              </button>
             </div>
           </div>
+        ) : (
+          /* ── Step 2: the code. Replaces step 1 in the same card. ── */
+          <div key="code" data-e2e="auth-step-code" className="rise">
+            <div className="auth-icon-tile mb-5">
+              {isEmail ? <Mail /> : <Phone />}
+            </div>
+            <h1 className="auth-title mb-1.5">{isEmail ? c.checkTitleEmail : c.checkTitleSms}</h1>
+            {/* Where the code went. The identifier is isolated left-to-right so an
+                address or a number reads correctly inside the Arabic sentence. */}
+            <p className="auth-lead mb-6 break-words">
+              {isEmail ? c.sentToEmail : c.sentToSms}{" "}
+              <b className="font-bold text-ink" dir="ltr">{identifier.trim()}</b>
+            </p>
+
+            {noticeLine}
+
+            {/* Local development only. requestOtp() returns the code ONLY when
+                NODE_ENV is not "production" AND no provider is configured; a
+                production deploy with no mail or SMS credentials now fails the
+                send outright rather than printing a stranger's code here. (The
+                previous note claimed production was safe because a provider
+                would be set — precisely the assumption that failed.) */}
+            {devCode && (
+              <div className="bg-sand border-[1.4px] border-dashed border-ochre-btn rounded-brand py-2.5 px-3 mb-3.5 text-center text-[13px] text-ink2 leading-[1.5]">
+                <b className="font-display text-[18px] tracking-[3px] text-ink block" dir="ltr" data-e2e="dev-code">
+                  {devCode}
+                </b>
+                {c.devCodeNote}
+              </div>
+            )}
+
+            <OtpInput
+              value={code}
+              onChange={(v) => {
+                setCode(v);
+                if (fieldError?.field === "code") setFieldError(null);
+              }}
+              /* Replaces "submit on the sixth digit": fires when a user action
+                 (typing, paste, SMS autofill) completes the code. */
+              onComplete={(v) => { if (!loading) void verifyWith(v); }}
+              label={isEmail ? c.codeLabelEmail : c.codeLabelSms}
+              error={fieldError?.field === "code" ? fieldError.message : undefined}
+              inputRef={codeRef}
+              autoFocus
+            />
+
+            {/* ── The escape hatch + resend ──
+                Before resend existed there was no way to ask for another code at
+                all: the only control here reset the whole form. A code that lands
+                in spam, or arrives after the user has looked away, had no recovery.
+
+                Both durations come from the server (requestOtp returns them), so
+                the button can never re-enable while the server still refuses. ── */}
+            <div className="auth-row mt-1 mb-3">
+              <button
+                type="button"
+                data-e2e="change-identifier"
+                className="auth-link auth-tap gap-1"
+                onClick={() => {
+                  setError(null); setFieldError(null);
+                  // The notice ("saisis-le ci-dessous") is about the code step only.
+                  setNotice(null);
+                  leaveCodeStep();
+                }}
+              >
+                <Back className="w-4 h-4" />
+                {isEmail ? c.changeEmail : c.changeNumber}
+              </button>
+              <button
+                type="button"
+                data-e2e="resend"
+                onClick={handleResend}
+                disabled={loading || !canResend}
+                className="auth-link auth-tap disabled:font-normal"
+              >
+                {canResend ? (
+                  c.resend
+                ) : (
+                  <>
+                    {/* aria-hidden: a value that changes every second would be read
+                        aloud every second. The accessible name stays "Renvoyer le
+                        code"; the button's disabled state carries the meaning and
+                        the live region below announces the one transition that
+                        matters. */}
+                    <span aria-hidden="true">
+                      {c.resendIn} <b className="font-bold text-ink" dir="ltr">{formatCountdown(cooldown.left)}</b>
+                    </span>
+                    <span className="sr-only">{c.resend}</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {errorLine}
+
+            <Button type="submit" variant="primary" disabled={loading}>
+              {loading ? t.common.loading : t.auth.verify}
+            </Button>
+
+            {/* Spam reminder (email) + ticking reassurance. The countdown half is
+                aria-hidden for the same once-a-second reason as the resend timer;
+                the spam reminder does not tick, so it stays readable. */}
+            {(isEmail || showExpiry) && (
+              <p className="auth-fine mt-4" aria-hidden={isEmail ? undefined : true}>
+                {isEmail ? (
+                  <>
+                    {c.spamHint}
+                    {showExpiry && <span aria-hidden="true"> · {c.expiresInEmail(expiryText)}</span>}
+                  </>
+                ) : (
+                  c.expiresInSms(expiryText)
+                )}
+              </p>
+            )}
+
+            {/* The only live region: it changes at most twice (cooldown ends,
+               then the code expires), never once per second.
+
+               Rendered even while empty, deliberately — a live region has to be
+               in the DOM BEFORE its content changes or the change is not
+               announced at all. Do not "simplify" this to render only when
+               there is a message. */}
+            <p role="status" className="text-[13px] text-muted text-center leading-[1.5] mt-1">
+              {/* "Tu peux redemander un code." is for screen readers only: on
+                 screen the resend link turning active already says it. */}
+              {expired ? c.expired : canResend ? <span className="sr-only">{c.resendReady}</span> : ""}
+            </p>
+          </div>
+        )}
+      </form>
+
+      {/* Signup is a different page now, one per audience. Step 1 only: on the
+          code step the only ways out are "Changer" and resend. */}
+      {!codeSent && (
+        <div className="auth-foot">
+          <span>
+            {c.noAccountHint}{" "}
+            <Link href={signupHref("/signup/prof")} className="auth-link auth-tap">
+              {c.newTutor}
+            </Link>
+          </span>
+          <span>
+            <Link href={signupHref("/signup/eleve")} className="auth-link auth-tap">
+              {studentCta}
+            </Link>
+          </span>
         </div>
-      </section>
-    </SiteShell>
+      )}
+    </AuthShell>
   );
 }

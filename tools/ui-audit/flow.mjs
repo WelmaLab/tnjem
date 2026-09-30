@@ -90,11 +90,14 @@ async function walk(browser, locale, width) {
   await page.locator('main button[type="submit"]').first().click();
 
   // ── 3. The code step, with the dev code printed on it ───────────────────
-  await must(page, 'main input[autocomplete="one-time-code"]', "the OTP field");
+  // Option B: six boxes; the first carries autocomplete="one-time-code".
+  await must(page, 'main [data-e2e="otp"] input[autocomplete="one-time-code"]', "the OTP boxes");
   await shot(page, locale, width, "code-step");
   note("code step reached");
 
-  const devCode = (await page.locator("main b[dir='ltr']").first().innerText().catch(() => "")).trim();
+  /* Its own hook: the code step also shows the address in a <b dir="ltr">
+     ("Code envoyé à …"), so "the first bold ltr run" is no longer the code. */
+  const devCode = (await page.locator('main [data-e2e="dev-code"]').first().innerText().catch(() => "")).trim();
   if (!/^\d{6}$/.test(devCode)) {
     throw new Error(
       `FLOW: no dev code on screen (got ${JSON.stringify(devCode)}). ` +
@@ -104,7 +107,9 @@ async function walk(browser, locale, width) {
 
   // ── 4. A WRONG code must say something specific ─────────────────────────
   const wrong = devCode === "000000" ? "111111" : "000000";
-  await page.locator('main input[autocomplete="one-time-code"]').fill(wrong);
+  // fill() on the first box is the SMS-autofill path: the six digits are spread
+  // over the boxes and completing them verifies.
+  await page.locator('main [data-e2e="otp"] input').first().fill(wrong);
   await must(page, 'main [role="alert"]', "an error for the wrong code");
   const wrongMsg = (await page.locator('main [role="alert"]').first().innerText()).trim();
   await shot(page, locale, width, "wrong-code");
@@ -113,13 +118,13 @@ async function walk(browser, locale, width) {
     throw new Error(`FLOW: wrong code still shows the generic error: ${wrongMsg}`);
   }
 
-  // ── 5. The right one — typed, and auto-submitting on the 6th digit ──────
-  await page.locator('main input[autocomplete="one-time-code"]').fill("");
-  await page.locator('main input[autocomplete="one-time-code"]').type(devCode, { delay: 40 });
+  // ── 5. The right one — auto-submitting once the code is complete ────────
+  // A whole code landing in the first box replaces what the wrong one left.
+  await page.locator('main [data-e2e="otp"] input').first().fill(devCode);
   await page.waitForURL(/\/onboarding(\?|$)/, { timeout: 20_000 });
   await must(page, "main h1", "the onboarding heading");
   await shot(page, locale, width, "onboarding");
-  note("auto-submitted on the 6th digit → /onboarding");
+  note("auto-submitted on the completed code → /onboarding");
 
   // ── 6. Fill the storefront and publish ──────────────────────────────────
   const name = locale === "ar" ? "ياسين خليفي" : "Yassine Flow";

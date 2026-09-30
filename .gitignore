@@ -82,3 +82,7 @@ tnajem.env
 PHASE_A_TRUST_BLOCKERS.md
 PHASE_A_PLUS.md
 UI_OPTION_A.md
+UI_AUTH_OPTION_B.md
+UI_AUTH_B_REPORT.md
+# Auth Option B screenshots (e2e/visual/auth-b.capture.ts). Local only.
+ui-auth-b/
