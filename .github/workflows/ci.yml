@@ -105,8 +105,8 @@ jobs:
 
       # typecheck (every workspace + e2e) + eslint --max-warnings=0 + the contrast
       # and guardrail audits. Not ui:audit: nojs/a11y/keyboard need a running server.
-      - name: Verify (typecheck, lint, contrast, guardrails)
-        run: npm run verify
+      - name: Verify (typecheck, lint, contrast)
+        run: npm run typecheck && npm run lint && node tools/ui-audit/contrast.mjs
 
       - name: API tests
         run: npm run test -w @tnajem/api
@@ -117,6 +117,10 @@ jobs:
       # turns a slow build into its own legible failure instead of a server timeout.
       - name: Build both apps
         run: npm run build
+
+      # guardrails 5-6 inspect apps/web/.next, so they run after the build
+      - name: Guardrails (needs the production build)
+        run: node tools/ui-audit/guardrails.mjs
 
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
