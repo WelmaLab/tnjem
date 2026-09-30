@@ -4,7 +4,7 @@ name: Deploy to production
 # Everything the server needs lives in the GitHub Environment named "deploy":
 # SECRETS for credentials, VARIABLES for plain settings (each setting also accepts a
 # secret of the same name, so either tab works). See ops/PIPELINE_SETUP.md.
-#   (Settings > Environments > New environment > "deploy"), never in this file.
+#   (Settings > Environments > New environment > "Production"), never in this file.
 #
 # The full secret list is in DEPLOY.md §5. Nothing here prints a value.
 on:
@@ -38,7 +38,7 @@ jobs:
     needs: [ci]
     if: ${{ always() && (needs.ci.result == 'success' || inputs.skip_tests == true) }}
     runs-on: ubuntu-latest
-    environment: deploy
+    environment: Production
     timeout-minutes: 45
 
     steps:
@@ -144,10 +144,10 @@ jobs:
             [ -n "$value" ] || missing="$missing $key"
           done
           if [ -n "$missing" ]; then
-            echo "✗ The 'deploy' environment is missing (or has empty) secrets:"
+            echo "✗ The 'Production' environment is missing (or has empty) secrets:"
             for key in $missing; do echo "    - $key"; done
             echo ""
-            echo "  Settings > Environments > deploy > Environment secrets."
+            echo "  Settings > Environments > Production > Environment secrets."
             echo "  DEPLOY.md §5 lists what each one is for. Nothing was sent to the server."
             exit 1
           fi
