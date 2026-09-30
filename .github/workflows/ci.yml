@@ -150,8 +150,10 @@ jobs:
           # something listening on :3000" — which is the whole question here. The API
           # is already stopped at this point, so /fr may well answer 500, and that is
           # still a bound port holding the address the next release needs.
-          bound() { curl -s --max-time 3 -o /dev/null "http://127.0.0.1:3000/fr"; }
-          PORT=3000 API_URL=http://127.0.0.1:4000 node apps/web/scripts/serve-standalone.mjs &
+          bound() { curl -s --max-time 3 -o /dev/null "http://localhost:3000/fr"; }
+          # HOSTNAME as in ecosystem.config.cjs: the runner exports its own machine name
+          # as HOSTNAME, and Next binds to that instead of loopback.
+          HOSTNAME=localhost PORT=3000 API_URL=http://127.0.0.1:4000 node apps/web/scripts/serve-standalone.mjs &
           parent=$!
           for i in $(seq 1 60); do
             if bound; then break; fi
