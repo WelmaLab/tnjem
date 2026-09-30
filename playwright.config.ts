@@ -98,6 +98,9 @@ export default defineConfig({
       env: {
         ...SERVER_TZ,
         PORT: "3210",
+        /* next build/start must run as production. e2e/support/env loads .env into this
+           process, and CI's .env says NODE_ENV=development, which breaks prerendering. */
+        NODE_ENV: "production",
         /* ABSOLUTE, always. Next's standalone server.js chdir()s to its own
            directory, so a relative STORAGE_DIR resolves to
            .next/standalone/.e2e-storage for the server while the seeder writes to
@@ -132,6 +135,9 @@ export default defineConfig({
       env: {
         ...SERVER_TZ,
         PORT: "3212",
+        /* next build/start must run as production. e2e/support/env loads .env into this
+           process, and CI's .env says NODE_ENV=development, which breaks prerendering. */
+        NODE_ENV: "production",
         STORAGE_DIR: resolve(process.env.E2E_STORAGE_DIR ?? ".e2e-storage"),
         ADMIN_EMAILS: "e2e-admin@tnajem.invalid",
         API_URL: "http://127.0.0.1:4000",
