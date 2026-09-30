@@ -17,11 +17,13 @@ const SERVER = fileURLToPath(new URL("../src/server.ts", import.meta.url));
 
 function childEnv(overrides: Record<string, string | undefined>): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
-  delete env.NODE_ENV;
+  // Blank, not deleted: dotenv skips keys already present, so a deleted key would be
+  // refilled from the repo .env (CI writes NODE_ENV=development there). "" reads as unset.
+  env.NODE_ENV = "";
   // No mail provider: the configuration that used to leak the code.
   for (const k of ["MAIL_HOST", "MAIL_USER", "MAIL_PASS", "MAIL_FROM_ADDRESS", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"]) env[k] = "";
   for (const [k, v] of Object.entries(overrides)) {
-    if (v === undefined) delete env[k];
+    if (v === undefined) env[k] = "";
     else env[k] = v;
   }
   return env;
