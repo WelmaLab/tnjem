@@ -60,10 +60,10 @@ const COPY = {
     tutorPoints: [
       "Tu fixes ton prix — 100 % pour toi pendant le pilote",
       "Vérification à la main par notre équipe",
-      "Paiement et élèves au même endroit",
+      "Tes classes et tes élèves au même endroit",
     ],
     studentEyebrow: "Pour les élèves",
-    studentPanelTitle: "Trouve le bon prof, près de chez toi.",
+    studentPanelTitle: "Trouve le bon prof, en ligne.",
     studentSummary: "Tarif affiché · profs vérifiés à la main",
     studentPerks: [
       "Le tarif est affiché avant que tu réserves",
@@ -157,10 +157,10 @@ const COPY = {
     tutorPoints: [
       "إنتي تحدّد ثمنك — 100 % متاعك في فترة التجربة",
       "التثبّت يتعمل بيدينا",
-      "الخلاص والتلامذة في بلاصة وحدة",
+      "كلاساتك وتلامذتك في بلاصة وحدة",
     ],
     studentEyebrow: "للتلامذة",
-    studentPanelTitle: "لقّي الأستاذ اللي يلزمك، قريب منك.",
+    studentPanelTitle: "لقّي الأستاذ اللي يلزمك، أونلاين.",
     studentSummary: "الثمن يبان · أساتذة متثبّت منهم بيدينا",
     studentPerks: [
       "الثمن يبان قبل ما تحجز",
