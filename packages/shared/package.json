@@ -19,7 +19,8 @@
     "./observability": "./src/observability.ts",
     "./class-input": "./src/class-input.ts",
     "./password-check": "./src/password-check.ts",
-    "./unsubscribe": "./src/unsubscribe.ts"
+    "./unsubscribe": "./src/unsubscribe.ts",
+    "./growth-input": "./src/growth-input.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

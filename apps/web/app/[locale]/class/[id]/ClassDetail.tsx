@@ -12,6 +12,10 @@ import { isOpenForBooking, monthLabel, LEVEL_LABELS, type ClassItem } from "@tna
 import { bilingual } from "@/lib/i18n";
 import { VitrineBeacon } from "@/components/share/VitrineBeacon"; // espace prof v2 · growth (P3)
 import { FollowButton } from "@/components/follow/FollowButton"; // espace prof v2 · growth (P4)
+import { PromoPrice } from "@/components/pricing/PromoPrice"; // espace prof v2 · growth (P5)
+import { PromoCodeBanner } from "@/components/pricing/PromoCodeBanner"; // espace prof v2 · growth (P5)
+import { getTutorPricing } from "@/app/actions-growth"; // espace prof v2 · growth (P5)
+import type { PublicPromotion } from "@tnajem/shared";
 
 
 /* Page-local copy (lib/i18n.ts is shared). One shared key is deliberately unused:
@@ -96,6 +100,8 @@ const PAGE_CSS = `
   .cd-pricerow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .cd-pricelabel{font-size:13px;color:var(--muted);font-weight:600;min-width:0}
   .cd-priceval{text-align:end;min-width:0;margin-inline-start:auto}
+  .cd-priceval .pp{justify-items:end}
+  .cd-promo{margin-bottom:16px}
   .cd-amount{font-size:19px;line-height:1.2;white-space:nowrap}
   .cd-amount-lg{font-size:26px;letter-spacing:-.7px}
   .cd-free{color:var(--green-ink)}
@@ -171,6 +177,14 @@ export function ClassDetail({ id }: { id: string }) {
 
   useEffect(() => { getClass(params.id).then(setCls).catch(() => setCls(null)); }, [params.id]);
 
+  // espace prof v2 · growth (P5): the tutor's live public promotions, read in the browser.
+  const [promos, setPromos] = useState<PublicPromotion[]>([]);
+  const slugForPricing = cls?.tutor_slug ?? null;
+  useEffect(() => {
+    if (!slugForPricing) return;
+    getTutorPricing(slugForPricing).then((r) => setPromos(r?.promotions ?? [])).catch(() => {});
+  }, [slugForPricing]);
+
   const styles = <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />;
 
   if (cls === undefined) {
@@ -236,9 +250,17 @@ export function ClassDetail({ id }: { id: string }) {
 
   /* One price renderer, so "1ère gratuite" and "15 TND" can never sit side by side
      as if both applied to the session being booked. */
+  /* espace prof v2 · growth (P5): a paid seat may carry a promotion — the same
+     <PromoPrice> as the storefront (pricing.ts), with the tutor's live public
+     promotions and a code this tab already validated for them. */
+  const promoPrice = (variant: "row" | "panel" | "bar") =>
+    tutorSlug && !cls.is_free_first && cls.price_tnd > 0 ? (
+      <PromoPrice slug={tutorSlug} item={{ kind: "class", id: cls.id, priceTnd: cls.price_tnd }} promotions={promos} variant={variant} />
+    ) : null;
+
   const priceValue = (
     <div className="cd-priceval">
-      {cls.is_free_first ? (
+      {promoPrice("row") ?? (cls.is_free_first ? (
         <>
           <div className="cd-amount cd-free">{c.free}</div>
           {cls.price_tnd > 0 && <div className="cd-then">{c.then(cls.price_tnd)}</div>}
@@ -250,7 +272,7 @@ export function ClassDetail({ id }: { id: string }) {
           </div>
           <div className="cd-then">{c.perSession}</div>
         </>
-      )}
+      ))}
     </div>
   );
 
@@ -286,6 +308,9 @@ export function ClassDetail({ id }: { id: string }) {
               {t.classDetail.with} <UserText>{tutorName}</UserText>
             </p>
           </div>
+
+          {/* espace prof v2 · growth (P5): a ?promo= code this tab validated for this tutor. */}
+          {tutorSlug && <PromoCodeBanner slug={tutorSlug} className="cd-promo" />}
 
           {/* ── Two-column grid ── */}
           <div className="cd-grid">
@@ -402,7 +427,7 @@ export function ClassDetail({ id }: { id: string }) {
                     <div className="cd-pricerow mb-[18px]">
                       <span className="cd-pricelabel">{t.classDetail.price}</span>
                       <div className="cd-priceval">
-                        {cls.is_free_first ? (
+                        {promoPrice("panel") ?? (cls.is_free_first ? (
                           <>
                             <div className="cd-amount cd-amount-lg cd-free">{c.free}</div>
                             {cls.price_tnd > 0 && <div className="cd-then">{c.then(cls.price_tnd)}</div>}
@@ -414,7 +439,7 @@ export function ClassDetail({ id }: { id: string }) {
                             </div>
                             <div className="cd-then">{c.perSession}</div>
                           </>
-                        )}
+                        ))}
                       </div>
                     </div>
 
@@ -446,7 +471,7 @@ export function ClassDetail({ id }: { id: string }) {
             <div className="cd-mobile-cta">
               <div className="cd-mcta-row">
                 <div className="cd-mcta-price">
-                  {cls.is_free_first ? (
+                  {promoPrice("bar") ?? (cls.is_free_first ? (
                     <>
                       <b className="cd-free">{c.free}</b>
                       <span>{t.classDetail.freeFirst}</span>
@@ -456,7 +481,7 @@ export function ClassDetail({ id }: { id: string }) {
                       <b>{cls.price_tnd} {t.common.tnd}</b>
                       <span>{c.perSession}</span>
                     </>
-                  )}
+                  ))}
                 </div>
                 {/* Short visible label so the bar never wraps at 320px; the full
                     label stays as the accessible name (and contains the visible

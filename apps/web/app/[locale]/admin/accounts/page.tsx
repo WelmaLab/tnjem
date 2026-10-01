@@ -2,6 +2,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "@/components/Link";
 import { AdminTabs } from "@/components/admin/AdminTabs";
+import { TutorPromotions } from "@/components/admin/TutorPromotions";
 import { Button, Spinner } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
 import { useToast } from "@/components/useToast";
@@ -274,6 +275,8 @@ export default function AdminAccountsPage() {
                     </div>
                     <div className="muted">{c.upcoming(account.upcomingClasses, account.upcomingBookings)}</div>
                   </dl>
+
+                  {account.tutor && <TutorPromotions key={account.tutor.id} tutorId={account.tutor.id} />}
 
                   {account.blockedAt ? (
                     <div className="flex flex-col gap-3" data-e2e="account-blocked">

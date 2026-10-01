@@ -195,6 +195,34 @@ export async function seedPassword(profileId: string, password: string): Promise
    DELETE CASCADE (migrations 0033–0037), so purgeRun's tutor/profile delete takes
    them along. */
 
+/** A monthly offer (tutor_offers), active unless said otherwise. */
+export async function seedOffer(opts: {
+  tutorId: string; title?: string; sessionsPerMonth?: number; priceTnd?: number; active?: boolean;
+}): Promise<{ id: string; title: string }> {
+  const [row] = await sql`
+    insert into tutor_offers (id, tutor_id, kind, title, sessions_per_month, price_tnd_per_month, active)
+    values (${randomUUID()}, ${opts.tutorId}, 'monthly', ${opts.title ?? "Suivi mensuel"},
+            ${opts.sessionsPerMonth ?? 4}, ${String(opts.priceTnd ?? 120)}, ${opts.active ?? true})
+    returning id, title`;
+  return row as { id: string; title: string };
+}
+
+/** A promotion, live now unless startsInHours / endsInDays say otherwise. The
+    database CHECK (1–20 %) still applies to whatever a spec writes here. */
+export async function seedPromotion(opts: {
+  tutorId: string; percent: number; scope?: "all" | "class" | "pack" | "monthly"; targetId?: string | null;
+  code?: string | null; startsInHours?: number; endsInDays?: number; maxUses?: number | null;
+}): Promise<{ id: string }> {
+  const starts = new Date(Date.now() + (opts.startsInHours ?? -1) * 3600_000);
+  const ends = new Date(Date.now() + (opts.endsInDays ?? 14) * 86_400_000);
+  const [row] = await sql`
+    insert into promotions (id, tutor_id, code, percent, scope, target_id, starts_at, ends_at, max_uses)
+    values (${randomUUID()}, ${opts.tutorId}, ${opts.code ?? null}, ${opts.percent}, ${opts.scope ?? "all"},
+            ${opts.targetId ?? null}, ${starts}, ${ends}, ${opts.maxUses ?? null})
+    returning id`;
+  return row as { id: string };
+}
+
 /** A student following a tutor (tutor_follows). */
 export async function seedFollow(studentId: string, tutorId: string): Promise<void> {
   await sql`insert into tutor_follows (student_profile_id, tutor_id) values (${studentId}, ${tutorId})

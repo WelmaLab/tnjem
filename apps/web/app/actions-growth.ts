@@ -9,6 +9,9 @@
    nothing here is retried. Demo mode (no API, dev only) degrades to empty answers. */
 import { call } from "@/lib/api";
 import { demoFallback } from "@/lib/backend";
+import type {
+  MySubscription, TutorOfferRow, TutorPricing, TutorPromotionRow, TutorSubscriptionRow,
+} from "@tnajem/shared";
 
 /* ── Phase 3 · vitrine statistics ─────────────────────────────────────────── */
 
@@ -113,4 +116,117 @@ export async function saveNotificationPrefs(
 ): Promise<NotificationPrefsResult> {
   if (demoFallback) return { ok: false, error: "demo" };
   return call<NotificationPrefsResult>("/me/notification-prefs", patch);
+}
+
+/* ── Phase 5 · prices, monthly offers, subscriptions, promotions ──────────────
+   Every price shown with a promotion is computed by @tnajem/shared/pricing.ts
+   (contract C6) from what these return; the API applies the same function when
+   it records a booking or a subscription request. */
+
+/** The live public promotions of a tutor and, when given, the visitor's own code.
+    Called from the BROWSER (the code is the visitor's), never during an ISR render. */
+export async function getTutorPricing(slug: string, code?: string | null): Promise<TutorPricing | null> {
+  if (demoFallback) return { promotions: [] };
+  const qs = code ? `?code=${encodeURIComponent(code)}` : "";
+  return call<TutorPricing | null>(`/tutors/${encodeURIComponent(slug)}/pricing${qs}`, undefined, "GET");
+}
+
+export type PricedReserveResult = {
+  ok: boolean;
+  already?: boolean;
+  error?: string;
+  /** What this seat was booked at (after its promotion; 0 when free or covered). */
+  priceTnd?: number;
+  /** Covered by the student's monthly subscription (contract C7). */
+  covered?: boolean;
+  promotionPercent?: number | null;
+  /** Why a code the visitor brought did not apply: expired · invalid · exhausted · … */
+  promoNotice?: string;
+};
+
+/** POST /bookings with the visitor's promo code. The same endpoint as reserveSeat
+    (app/actions.ts); this one carries the code and returns the recorded price. */
+export async function reserveSeatPriced(input: { classId: string; promoCode?: string | null }): Promise<PricedReserveResult> {
+  if (demoFallback) return { ok: true };
+  return call<PricedReserveResult>("/bookings", input);
+}
+
+/* Student side */
+
+export async function getMySubscription(slug: string): Promise<{ ok: boolean; subscription?: MySubscription | null; error?: string }> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call(`/subscriptions/mine?slug=${encodeURIComponent(slug)}`, undefined, "GET");
+}
+
+export async function requestSubscription(input: { offerId: string; promoCode?: string | null }): Promise<{
+  ok: boolean; subscription?: MySubscription; promoNotice?: string; error?: string;
+}> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call("/subscriptions", input);
+}
+
+export async function cancelMySubscription(id: string): Promise<{ ok: boolean; already?: boolean; error?: string }> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call(`/subscriptions/${encodeURIComponent(id)}/cancel`, {});
+}
+
+/* Tutor side — Abonnements (/dashboard/subscriptions) */
+
+export async function getMyOffers(): Promise<{ ok: true; offers: TutorOfferRow[]; max: number } | { ok: false; error: string }> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call("/tutor/offers", undefined, "GET");
+}
+
+export async function createOffer(input: { title: string; sessionsPerMonth: number; priceTnd: number; active?: boolean }): Promise<{ ok: boolean; id?: string; error?: string; max?: number }> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call("/tutor/offers", input);
+}
+
+export async function updateOffer(id: string, patch: Partial<{ title: string; sessionsPerMonth: number; priceTnd: number; active: boolean }>): Promise<{ ok: boolean; error?: string }> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call(`/tutor/offers/${encodeURIComponent(id)}`, patch);
+}
+
+export async function archiveOffer(id: string): Promise<{ ok: boolean; error?: string }> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call(`/tutor/offers/${encodeURIComponent(id)}/archive`, {});
+}
+
+export async function getTutorSubscriptions(): Promise<{ ok: true; rows: TutorSubscriptionRow[] } | { ok: false; error: string }> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call("/tutor/subscriptions", undefined, "GET");
+}
+
+/** confirm ("paiement reçu hors Tnajem") · renew · pause · resume · cancel */
+export async function actOnSubscription(id: string, action: "confirm" | "renew" | "pause" | "resume" | "cancel"): Promise<{
+  ok: boolean; error?: string; periodEnd?: string | null; status?: string; already?: boolean;
+}> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call(`/tutor/subscriptions/${encodeURIComponent(id)}/${action}`, {});
+}
+
+/* Tutor side — Promotions (/dashboard/promotions) */
+
+export async function getMyPromotions(): Promise<{ ok: true; promotions: TutorPromotionRow[] } | { ok: false; error: string }> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call("/tutor/promotions", undefined, "GET");
+}
+
+export async function createPromotion(input: {
+  percent: number; scope: "all" | "class" | "pack" | "monthly"; targetId?: string | null;
+  code?: string | null; startsAt?: string; endsAt: string; maxUses?: number | null;
+}): Promise<{ ok: boolean; promotion?: TutorPromotionRow; error?: string }> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call("/tutor/promotions", input);
+}
+
+export async function actOnPromotion(id: string, action: "pause" | "resume" | "end"): Promise<{ ok: boolean; promotion?: TutorPromotionRow; error?: string }> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call(`/tutor/promotions/${encodeURIComponent(id)}/${action}`, {});
+}
+
+/** The admin tutor page: a tutor's promotions, read-only (audited by the API). */
+export async function getTutorPromotionsAsAdmin(tutorId: string): Promise<{ ok: true; promotions: TutorPromotionRow[] } | { ok: false; error: string }> {
+  if (demoFallback) return { ok: false, error: "demo" };
+  return call(`/admin/tutors/${encodeURIComponent(tutorId)}/promotions`, undefined, "GET");
 }

@@ -6,8 +6,12 @@ import { useLocale } from "@/components/LocaleProvider";
 import { Check, Calendar, Clock, Users, Shield, Back } from "@/components/icons";
 import { Spinner } from "@/components/ui";
 import { UserText } from "@/components/UserText";
-import { getClass, reserveSeat } from "@/app/actions";
+import { getClass } from "@/app/actions";
 import { isOpenForBooking, monthLabel, type ClassItem } from "@tnajem/shared";
+// espace prof v2 · growth (P5): the priced booking, promotions and the monthly subscription.
+import { getMySubscription, getTutorPricing, reserveSeatPriced } from "@/app/actions-growth";
+import { formatNumericDate, priceWithPromotion, type MySubscription, type PublicPromotion } from "@tnajem/shared";
+import { storedPromoCode } from "@/components/pricing/promo-store";
 import { bilingual } from "@/lib/i18n";
 import { PaymentStory } from "@/components/PaymentStory"; // phase-a lane L3 (A22)
 
@@ -83,6 +87,11 @@ const copy = bilingual({
     // phase-a lane L2 (A24): the server refuses a minor's booking while the pilot is adults only.
     errAdultsOnly: "Le pilote est réservé aux 18 ans et plus : ce compte ne peut pas réserver pour l'instant.",
     // end phase-a lane L2
+    // espace prof v2 · growth (P5): a promotion on this seat, or a seat covered by the monthly subscription.
+    paidPromo: (p: number, was: number, pct: number, end: string) => `Cette séance est à ${p} TND au lieu de ${was} TND (−${pct} % jusqu'au ${end}).`,
+    covered: (used: number, n: number) => `Comprise dans ton abonnement mensuel (${used} / ${n} séances utilisées ce mois).`,
+    okCovered: "Elle est comprise dans ton abonnement.",
+    okPromoGone: "Le code promo ne s'appliquait plus : la place est réservée au prix normal.",
   },
   ar: {
     title: "أكّد حجزي",
@@ -136,6 +145,10 @@ const copy = bilingual({
     // phase-a lane L2 (A24): the server refuses a minor's booking while the pilot is adults only.
     errAdultsOnly: "فترة التجربة كان للي عندهم 18 سنة ولا أكثر : الحساب هذا ما ينجّمش يحجز توّا.",
     // end phase-a lane L2
+    paidPromo: (p: number, was: number, pct: number, end: string) => `الحصة هاذي بـ ${p} د.ت عوض ${was} د.ت (\u2066−${pct} %\u2069 حتى لـ ${end}).`,
+    covered: (used: number, n: number) => `محسوبة في الاشتراك الشهري متاعك (${used} / ${n} حصص استعملتهم هالشهر).`,
+    okCovered: "محسوبة في الاشتراك متاعك.",
+    okPromoGone: "الكود ما عادش يتطبّق : البلاصة تحجزت بالسوم العادي.",
   },
 });
 
@@ -248,6 +261,28 @@ export default function CheckoutInner() {
 
   const [done, setDone] = useState<null | "new" | "already">(null);
   const [busy, setBusy] = useState(false);
+
+  /* espace prof v2 · growth (P5): the price this seat will be RECORDED at — the
+     tutor's live public promotions and a ?promo= code this tab validated for them
+     (pricing.ts, the function the API books with) — and whether the student's
+     monthly subscription covers it. A hint only: POST /bookings decides. */
+  const [promos, setPromos] = useState<PublicPromotion[]>([]);
+  const [promoCode, setPromoCode] = useState<string | null>(null);
+  const [sub, setSub] = useState<MySubscription | null>(null);
+  const [doneNote, setDoneNote] = useState<string | null>(null);
+  const tutorSlug = cls?.tutor_slug ?? null;
+  useEffect(() => {
+    if (!tutorSlug) return;
+    const code = searchParams.get("promo") ?? storedPromoCode(tutorSlug);
+    getTutorPricing(tutorSlug, code).then((r) => {
+      const list = r?.promotions ?? [];
+      if (code && r?.code?.state === "ok" && r.code.promotion) {
+        setPromos([...list, r.code.promotion]);
+        setPromoCode(code);
+      } else setPromos(list);
+    }).catch(() => {});
+    getMySubscription(tutorSlug).then((r) => setSub(r.ok ? (r.subscription ?? null) : null)).catch(() => {});
+  }, [tutorSlug, searchParams]);
   const [err, setErr] = useState<"auth" | "full" | "unavailable" | "consent" | "adults" | "generic" | null>(null); // phase-a lane L2 (A24): "adults"
 
   const handleConfirm = useCallback(async () => {
@@ -256,16 +291,21 @@ export default function CheckoutInner() {
     /* phase-a lane L3 (A7): a server failure is now a real failure (the API no
        longer answers "already booked" for it), and it rejects the action. Without
        this catch the button stayed busy forever and nothing was said. */
-    let res: Awaited<ReturnType<typeof reserveSeat>>;
+    let res: Awaited<ReturnType<typeof reserveSeatPriced>>;
     try {
-      res = await reserveSeat({ classId });
+      // espace prof v2 · growth (P5): the same POST /bookings, carrying the visitor's promo code.
+      res = await reserveSeatPriced({ classId, promoCode });
     } catch {
       setBusy(false);
       setErr("generic");
       return;
     }
     setBusy(false);
-    if (res.ok) { setDone(res.already ? "already" : "new"); return; }
+    if (res.ok) {
+      setDoneNote(res.covered ? c.okCovered : res.promoNotice ? c.okPromoGone : null);
+      setDone(res.already ? "already" : "new");
+      return;
+    }
     if (res.error === "not-authenticated") setErr("auth");
     else if (res.error === "full") setErr("full");
     else if (res.error === "unavailable") setErr("unavailable");
@@ -274,7 +314,7 @@ export default function CheckoutInner() {
     else if (res.error === "needs-consent") setErr("consent");
     else if (res.error === "adults-only") setErr("adults"); // phase-a lane L2 (A24): retrying never fixes it
     else setErr("generic");
-  }, [classId]);
+  }, [classId, promoCode, c]);
 
   /* Page-scoped styles. --fd (Space Grotesk) has no Arabic glyphs and its negative
      tracking severs Arabic joins, so every display-font surface here has an RTL
@@ -401,6 +441,13 @@ export default function CheckoutInner() {
      reaches reserveSeat, and the server refuses it ("unavailable" below). */
   const closed = !isOpenForBooking(cls);
   const soldOut = !closed && cls.seats_left <= 0;
+  // espace prof v2 · growth (P5): what the seat will cost (pricing.ts), or that the subscription covers it.
+  const quote = priceWithPromotion({ kind: "class", id: cls.id, priceTnd: cls.price_tnd }, promos, { code: promoCode });
+  const at = Date.parse(cls.starts_at);
+  const coveredHint = Boolean(
+    sub && sub.status === "active" && sub.periodStart && sub.periodEnd &&
+    at >= Date.parse(sub.periodStart) && at < Date.parse(sub.periodEnd) && sub.usedThisPeriod < sub.sessionsPerMonth,
+  );
 
   return (
     <div className="ck-wrap">
@@ -462,6 +509,11 @@ export default function CheckoutInner() {
               <b>{c.freeSession}</b>
               {cls.price_tnd > 0 && c.nextSessions(cls.price_tnd)}
             </>
+          ) : coveredHint ? (
+            // espace prof v2 · growth (P5): the monthly subscription covers this seat.
+            <b>{c.covered(sub?.usedThisPeriod ?? 0, sub?.sessionsPerMonth ?? 0)}</b>
+          ) : quote.promotion && quote.endsAt ? (
+            c.paidPromo(quote.finalTnd, quote.baseTnd, quote.percent, formatNumericDate(quote.endsAt))
           ) : (
             c.paidSession(cls.price_tnd)
           )}
@@ -552,7 +604,7 @@ export default function CheckoutInner() {
       <SuccessOverlay
         show={done !== null}
         okTitle={c.okTitle}
-        okBody={done === "already" ? c.okAlready : c.okBody}
+        okBody={done === "already" ? c.okAlready : doneNote ? `${c.okBody} ${doneNote}` : c.okBody}
         whenLabel={c.okWhen}
         when={whenLine}
         whenIso={cls.starts_at}

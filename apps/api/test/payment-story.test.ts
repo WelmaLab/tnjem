@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PAYMENT_STORY, paymentStoryText } from "@tnajem/shared";
+import { MONTHLY_PAYMENT_NOTE, PAYMENT_STORY, paymentStoryText } from "@tnajem/shared";
 import { PAYMENT_STORY as FROM_PAYMENTS } from "@tnajem/shared/payments";
 
 /* phase-a lane L3 (A22) — ONE payment story (decision D4).
@@ -64,6 +64,32 @@ const CONTRADICTIONS: [RegExp, string][] = [
   [/ne paie(nt)? jamais Tnajem|ما يخلّص حتى حاجة لـ Tnajem/i, "the student never pays Tnajem (contradicts D4)"],
 ];
 
+/* espace prof v2 · growth (phase 5) — ONE allowed sentence, by coordinator decision:
+   the monthly offer's note, the spec's own words (MONTHLY_PAYMENT_NOTE,
+   packages/shared/src/offers.ts). It opens with "Paiement en ligne bientôt" — it
+   says the D4 story is coming and what holds until then — and is rendered beside
+   the "Bientôt" tag. EXACTLY these two strings are cut out of a line before it is
+   scanned; any other "règles directement" phrasing, or this one with a word
+   changed, is still a hit. Written out literally so that changing the constant
+   breaks this file instead of silently widening the exception. */
+const ALLOWED_SENTENCES = [
+  "Paiement en ligne bientôt — pour l'instant tu règles directement avec ton prof.",
+  "الخلاص أونلاين قريب — للوقت هذا تخلّص أستاذك مباشرة.",
+] as const;
+
+function contradictionsIn(line: string): string[] {
+  let rest = line;
+  for (const ok of ALLOWED_SENTENCES) rest = rest.split(ok).join(" ");
+  return CONTRADICTIONS.filter(([re]) => re.test(rest)).map(([, why]) => why);
+}
+
+/* The rendered copy that lives in packages/shared (the growth surfaces' sentences:
+   the offer note, the share messages, the e-mail preference labels). Not the whole
+   package: payments.ts and types.ts name providers as CODE (the provider switch),
+   which no page shows. */
+const SHARED = fileURLToPath(new URL("../../../packages/shared/src/", import.meta.url));
+const SHARED_COPY = ["offers.ts", "share-links.ts", "email-prefs.ts", "pricing.ts"];
+
 describe("A22 · the one payment story", () => {
   test("the sentence, from the one source, reachable from payments.ts too", () => {
     assert.equal(PAYMENT_STORY.fr.student, "Tu paies en ligne, via Tnajem, avant la séance.");
@@ -84,12 +110,36 @@ describe("A22 · the one payment story", () => {
       if (EXCLUDED.some((re) => re.test(file))) continue;
       const lines = stripComments(readFileSync(file, "utf8")).split("\n");
       lines.forEach((line, i) => {
-        for (const [re, why] of CONTRADICTIONS) {
-          if (re.test(line)) hits.push(`${relative(WEB, file)}:${i + 1} (${why}) ${line.trim().slice(0, 110)}`);
+        for (const why of contradictionsIn(line)) {
+          hits.push(`${relative(WEB, file)}:${i + 1} (${why}) ${line.trim().slice(0, 110)}`);
         }
       });
     }
     assert.deepEqual(hits, [], `\n${hits.join("\n")}`);
+  });
+
+  test("growth · the shared copy files tell no other story either", () => {
+    const hits: string[] = [];
+    for (const name of SHARED_COPY) {
+      stripComments(readFileSync(join(SHARED, name), "utf8")).split("\n").forEach((line, i) => {
+        for (const why of contradictionsIn(line)) hits.push(`shared/${name}:${i + 1} (${why}) ${line.trim().slice(0, 110)}`);
+      });
+    }
+    assert.deepEqual(hits, [], `\n${hits.join("\n")}`);
+  });
+
+  test("growth · the allow-list is exactly MONTHLY_PAYMENT_NOTE, and nothing near it", () => {
+    assert.deepEqual([...ALLOWED_SENTENCES], [MONTHLY_PAYMENT_NOTE.fr, MONTHLY_PAYMENT_NOTE.ar]);
+    // It is the "Bientôt" kind of sentence: online payment is named first, as coming.
+    assert.match(MONTHLY_PAYMENT_NOTE.fr, /^Paiement en ligne bientôt — /);
+    assert.match(MONTHLY_PAYMENT_NOTE.ar, /^الخلاص أونلاين قريب — /);
+    // The sentence itself passes; the same words without it, or edited, do not.
+    assert.deepEqual(contradictionsIn(`x ${MONTHLY_PAYMENT_NOTE.fr} y`), []);
+    assert.deepEqual(contradictionsIn(MONTHLY_PAYMENT_NOTE.ar), []);
+    assert.notDeepEqual(contradictionsIn("Pour l'instant tu règles directement avec ton prof."), []);
+    assert.notDeepEqual(contradictionsIn("Paiement en ligne bientôt — pour l'instant tu règles directement avec ton prof, après."), []);
+    assert.notDeepEqual(contradictionsIn(`${MONTHLY_PAYMENT_NOTE.fr} Tu règles directement avec lui.`), []);
+    assert.notDeepEqual(contradictionsIn("للوقت هذا تخلّص أستاذك مباشرة."), []);
   });
 
   test("the dead payment keys left in lib/i18n.ts are rendered by nothing", () => {

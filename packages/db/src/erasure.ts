@@ -47,6 +47,7 @@ import {
   messageThreads, notifications, otpCodes, profiles, reports, retiredSlugs, sessions, tutors,
   verificationDocs, verificationTraces,
   tutorFollows, notificationPrefs, followDigests, // espace prof v2 · growth (P4)
+  studentSubscriptions, // espace prof v2 · growth (P5)
 } from "./schema";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -255,6 +256,16 @@ export async function eraseAccount(
     if (tutor) await tx.delete(tutorFollows).where(eq(tutorFollows.tutorId, tutor.id));
     await tx.delete(notificationPrefs).where(eq(notificationPrefs.profileId, profileId));
     await tx.delete(followDigests).where(eq(followDigests.profileId, profileId));
+    /* espace prof v2 · growth (P5): a live monthly subscription on either side ends
+       with the account. The rows stay (what was agreed, as the ledger keeps its rows),
+       pointing at a tombstone. */
+    const liveSub = inArray(studentSubscriptions.status, ["requested", "active", "paused"]);
+    await tx.update(studentSubscriptions).set({ status: "cancelled", cancelledAt: sql`now()` })
+      .where(and(liveSub, eq(studentSubscriptions.studentProfileId, profileId)));
+    if (tutor) {
+      await tx.update(studentSubscriptions).set({ status: "cancelled", cancelledAt: sql`now()` })
+        .where(and(liveSub, eq(studentSubscriptions.tutorId, tutor.id)));
+    }
     const identifiers = [p.email, p.phone].filter((x): x is string => Boolean(x));
     if (identifiers.length) await tx.delete(otpCodes).where(inArray(otpCodes.identifier, identifiers));
     if (p.email) await tx.update(reports).set({ reporterEmail: null }).where(eq(reports.reporterEmail, p.email));

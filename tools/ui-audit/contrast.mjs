@@ -216,6 +216,21 @@ const PAIRS = [
   ["Password meter", "--ink2", "--paper", "normal", ".pw-meter-label", "components/auth/PasswordField.tsx"],
   ["Chips", "--blue", "--blue50", "normal", ".sec-pill-current (Cet appareil)", "components/settings/SecurityPanel.tsx"],
   ["UI (advisory)", "--muted", "--paper", "ui", ".pw-toggle eye icon", "components/auth/PasswordField.tsx"],
+  // ── espace prof v2 · growth (P3–P5) ──
+  ["Growth", "--blue700", "--blue50", "normal", "share target / FR·ع toggle selected, Abonné ✓, '−15 %' badge", "components/share/ShareSheet.tsx, follow/FollowButton.tsx, pricing/PromoPrice.tsx"],
+  ["Growth", "--blue700", "--paper", "normal", "Abonné ✓ on the hero (white pill), share 'reset' link, consent/account links", "follow/FollowButton.tsx, share/ShareSheet.tsx, email/unsubscribe"],
+  ["Growth", "--blue", "--paper", "normal", "Suivre (outline), S'abonner (btn-outline)", "follow/FollowButton.tsx, offers/OffersSection.tsx"],
+  ["Growth", "--on-blue", "--blue", "normal", "follow note on the storefront hero", "follow/FollowButton.tsx"],
+  ["Growth", "--ink2", "--cream", "normal", "share link field", "share/ShareSheet.tsx"],
+  ["Growth", "--muted", "--paper", "normal", "struck price, '/ mois · jusqu'au …'", "pricing/PromoPrice.tsx, offers/OffersSection.tsx"],
+  ["Growth", "--ochre-ink", "--ochre-tint", "large", "OG card price pill (30px)", "lib/og-card.tsx"],
+  ["Growth", "--blue", "--cream", "large", "OG class card date line (32px)", "lib/og-card.tsx"],
+  ["Growth", "--muted", "--cream", "large", "OG card URL (26px)", "lib/og-card.tsx"],
+  ["Growth", "--rose700", "--blue50", "normal", "offer form error (.sb-err)", "dashboard/subscriptions/SubscriptionsView.tsx"],
+  ["Growth", "--ink", "--blue50", "normal", "offer form labels and inputs (.sb-form)", "dashboard/subscriptions/SubscriptionsView.tsx"],
+  ["Growth", "--ink2", "--blue50", "normal", "offer form help text (.sb-form)", "dashboard/subscriptions/SubscriptionsView.tsx"],
+  ["Growth", "--rose700", "--paper", "normal", "promotion form error (.pv-err)", "dashboard/promotions/PromotionsView.tsx"],
+  ["Growth", "--rose", "--paper", "normal", "admin promotions load error (.text-rose)", "components/admin/TutorPromotions.tsx"],
 
   // ── non-text UI (1.4.11) — ADVISORY, see NOTE ──
   ["UI (advisory)", "--blue", "--cream", "ui", ":focus-visible ring", "globals.css:49"],

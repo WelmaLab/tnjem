@@ -4,6 +4,7 @@ import { paymentsEnabled } from "@tnajem/shared/payments";
 import { db } from "../db";
 import { rotateRoomToken } from "./room-rotation";
 import { recomputeTutorStats } from "./stats";
+import { releasePromotionUse } from "./promotions"; // espace prof v2 · growth (P5)
 
 /* RELEASING SOMEONE'S UPCOMING SEATS WHEN THEY DID NOT CHOOSE TO CANCEL.
 
@@ -21,6 +22,10 @@ export type ReleasableBooking = {
   scheduledAt: Date;
   priceTnd: string | null;
   tutorId: string;
+  // espace prof v2 · growth (P5): the seat's own price, its cover and its promotion.
+  bookedPriceTnd?: string | null;
+  subscriptionId?: string | null;
+  promotionId?: string | null;
 };
 
 /** A student's upcoming, non-cancelled bookings on classes that will still run. */
@@ -33,6 +38,9 @@ export async function upcomingBookingsOf(studentId: string): Promise<ReleasableB
       scheduledAt: classes.scheduledAt,
       priceTnd: classes.priceTnd,
       tutorId: classes.tutorId,
+      bookedPriceTnd: bookings.priceTnd, // espace prof v2 · growth (P5)
+      subscriptionId: bookings.subscriptionId,
+      promotionId: bookings.promotionId,
     })
     .from(bookings)
     .innerJoin(classes, eq(bookings.classId, classes.id))
@@ -68,10 +76,11 @@ export async function releaseBookings(
       await rotateRoomToken(tx, b.classId);
       const outcome = cancellationOutcome({
         scheduledAt: b.scheduledAt,
-        amountTnd: b.isFree ? 0 : Number(b.priceTnd ?? 0),
+        amountTnd: b.isFree || b.subscriptionId ? 0 : Number(b.bookedPriceTnd ?? b.priceTnd ?? 0), // espace prof v2 · growth (P5)
         now,
         waived: true,
       });
+      if (b.promotionId) await releasePromotionUse(tx, b.promotionId); // espace prof v2 · growth (P5)
       await tx
         .insert(cancellations)
         .values({

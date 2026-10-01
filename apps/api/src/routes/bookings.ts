@@ -26,6 +26,8 @@ import { checkRateLimit } from "../lib/rate-limit";
 import { recomputeTutorStats } from "../lib/stats";
 import { isUniqueViolation } from "../lib/db-errors";
 import { freeFirstStillAvailable } from "../lib/free-first-entitlement"; // phase-a/integrate (A6)
+import { coveringSubscription } from "../lib/subscription-seat"; // espace prof v2 · growth (P5, C7)
+import { claimPromotionUse, quoteItem, releasePromotionUse } from "../lib/promotions"; // espace prof v2 · growth (P5)
 
 /* bookings — reserveSeat, cancelBooking, getStudentDashboard.
 
@@ -73,7 +75,8 @@ async function freeFirstSeatFor(
   return freeFirstStillAvailable(tx, studentId, tutorId);
 }
 
-const reserveBody = z.object({ classId: z.string() });
+// espace prof v2 · growth (P5): + the code a visitor brought (?promo=CODE). Optional.
+const reserveBody = z.object({ classId: z.string(), promoCode: z.string().max(40).nullable().optional() });
 const cancelBody = z.object({ bookingId: z.string() });
 
 /** The UI promises free cancellation up to 24h before — enforced here, not in copy.
@@ -178,10 +181,17 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
        comparison becomes a compile error. */
     type SeatOutcome = "booked" | "already" | "full";
     let outcome: SeatOutcome;
+    // espace prof v2 · growth (P5): what this seat costs, decided inside the transaction.
+    const priced = { priceTnd: Number(cls.priceTnd ?? 0), covered: false, promotionPercent: null as number | null, promoNotice: null as string | null };
     try {
       outcome = await db.transaction(async (tx): Promise<SeatOutcome> => {
         // phase-a lane L3 (A6): FIRST statement — it may take the (student, tutor) lock.
         const isFree = await freeFirstSeatFor(tx, uid, cls.tutorId, isEffectivelyFreeFirst(tut.offersFreeFirstSession, cls.isFreeFirst));
+        /* espace prof v2 · growth (P5, C7): a subscriber's seat is covered by their
+           month, up to the quota (lib/subscription-seat.ts). SECOND statement: it
+           may take the subscription's lock, still before any row lock. A free
+           first session is never charged to the quota. */
+        const covering = isFree ? null : await coveringSubscription(tx, uid, cls.tutorId, new Date(cls.scheduledAt));
         const [existing] = await tx
           .select()
           .from(bookings)
@@ -201,6 +211,28 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
           .returning({ id: classes.id });
         if (claimed.length === 0) return "full"; // sold out — nobody oversells
 
+        /* espace prof v2 · growth (P5): THE PRICE SHOWN — the class price after the one
+           best promotion (pricing.ts, C6), recorded on the booking with the promotion
+           it used, for online payment later. The use is claimed only now, after the
+           seat: a full class or a double-submit never spends one. Free or covered
+           seats cost nothing on their own and take no promotion. */
+        let promotionId: string | null = null;
+        if (isFree || covering) {
+          priced.priceTnd = 0;
+          priced.covered = Boolean(covering);
+        } else {
+          const { quote, notice } = await quoteItem(tx, cls.tutorId, { kind: "class", id: cls.id, priceTnd: priced.priceTnd }, parsed.data.promoCode);
+          priced.promoNotice = notice;
+          if (quote.promotion && (await claimPromotionUse(tx, quote.promotion.id))) {
+            priced.priceTnd = quote.finalTnd;
+            priced.promotionPercent = quote.percent;
+            promotionId = quote.promotion.id;
+          } else if (quote.promotion) {
+            priced.promoNotice = "exhausted"; // the last use went a moment ago — the normal price, calmly
+          }
+        }
+        const growth = { subscriptionId: covering?.id ?? null, priceTnd: priced.priceTnd.toFixed(2), promotionId };
+
         if (existing) {
           /* phase-a lane L3 (A8): a re-booking is a NEW reservation on the old row.
              It used to flip only the status, so is_free kept the first booking's
@@ -213,6 +245,7 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
               status: "reserved",
               isFree, // phase-a lane L3 (A6): the CURRENT rule, once per student per tutor
               createdAt: raw`now()`,
+              ...growth, // espace prof v2 · growth (P5): this booking's own price, promotion and cover
             })
             .where(eq(bookings.id, existing.id));
         } else {
@@ -229,6 +262,7 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
             // phase-a lane L3 (A6): and once per student per tutor (D2) — freeFirstSeatFor.
             isFree,
             status: "reserved",
+            ...growth, // espace prof v2 · growth (P5)
           });
         }
 
@@ -281,7 +315,17 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
     /* seats_left just moved and the storefront caches it for 60s — a class the
        cache still shows as "3 places" is how a student reaches the checkout of a
        sold-out session. The web busts it from this envelope. */
-    return { ok: true, revalidate: { tutors: [tut.slug] } };
+    /* espace prof v2 · growth (P5): the price recorded, whether the subscription
+       covered the seat, the promotion applied — and, when a code they brought did
+       not apply, why (the checkout says it calmly; the normal price was booked). */
+    return {
+      ok: true,
+      revalidate: { tutors: [tut.slug] },
+      priceTnd: priced.priceTnd,
+      covered: priced.covered,
+      promotionPercent: priced.promotionPercent,
+      ...(priced.promoNotice ? { promoNotice: priced.promoNotice } : {}),
+    };
   });
 
   /* ── POST /bookings/cancel ───────────────────────────────────────────────── */
@@ -339,7 +383,9 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
 
     const outcome = cancellationOutcome({
       scheduledAt: cls.scheduledAt,
-      amountTnd: bk.isFree ? 0 : Number(cls.priceTnd ?? 0),
+      // espace prof v2 · growth (P5): the price THIS seat was booked at (after its
+      // promotion); a seat covered by a monthly subscription is worth 0 on its own.
+      amountTnd: bk.isFree || bk.subscriptionId ? 0 : Number(bk.priceTnd ?? cls.priceTnd ?? 0),
       now,
       waived: movedAfterBooking,
     });
@@ -420,6 +466,8 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
       await recomputeTutorStats(cls.tutorId, tx);
       // The link this student may have fetched stops working (lib/room-rotation.ts).
       await rotateRoomToken(tx, cls.id);
+      // espace prof v2 · growth (P5): the promotion use this seat took goes back.
+      if (bk.promotionId) await releasePromotionUse(tx, bk.promotionId);
       return true;
     });
 
@@ -480,6 +528,9 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
         isFree: bookings.isFree,
         // phase-a lane L3 (A21): what a late cancel of this seat would retain.
         priceTnd: classes.priceTnd,
+        // espace prof v2 · growth (P5): the seat's own price (after its promotion), and its cover.
+        bookedPriceTnd: bookings.priceTnd,
+        subscriptionId: bookings.subscriptionId,
         bookedAt: bookings.createdAt,
         rescheduledAt: classes.rescheduledAt,
         classId: classes.id,
@@ -515,7 +566,8 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
         /* phase-a lane L3 (A21): the confirm box states THIS, not a flat "40 %" —
            0 for a free seat and for a class moved after the booking. */
         lateCancelRetainedTnd: lateCancelRetainedTnd({
-          amountTnd: r.isFree ? 0 : Number(r.priceTnd ?? 0),
+          // espace prof v2 · growth (P5): the same amount POST /bookings/cancel will use.
+          amountTnd: r.isFree || r.subscriptionId ? 0 : Number(r.bookedPriceTnd ?? r.priceTnd ?? 0),
           waived: isMovedAfterBooking(r.bookedAt, r.rescheduledAt),
         }),
         status: r.status ?? "scheduled",

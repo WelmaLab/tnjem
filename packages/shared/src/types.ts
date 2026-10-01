@@ -1,5 +1,6 @@
 import type { LevelCode } from "./levels"; // phase-a lane L5 (A18.7)
 import type { ClassPhase } from "./class-phase"; // phase-a lane L5 (A18.10)
+import type { PublicOffer, PublicPromotion } from "./offers"; // espace prof v2 · growth (P5)
 
 export type Locale = "fr" | "ar";
 export type Role = "tutor" | "student" | "guardian";
@@ -95,7 +96,16 @@ export type ActivityItem = {
   amount_tnd: number;    // +264, etc.
 };
 
-export type Storefront = { tutor: Tutor; classes: ClassItem[]; packs: Pack[] };
+export type Storefront = {
+  tutor: Tutor;
+  classes: ClassItem[];
+  packs: Pack[];
+  /* espace prof v2 · growth (P5): the active monthly offers, and the LIVE PUBLIC
+     promotions (no code) — anonymous data, safe in the ISR page. Optional so a
+     producer that predates them (demo fixtures) still type-checks. */
+  offers?: PublicOffer[];
+  promotions?: PublicPromotion[];
+};
 
 export type TutorStats = {
   balance_tnd: number;
@@ -418,6 +428,10 @@ export type ExploreTutor = {
   review_count: number;
   students_count: number;
   price_from_tnd: number | null; // cheapest upcoming class; null if none published
+  /* espace prof v2 · growth (P5): the "from" price after the best PUBLIC promotion
+     (pricing.ts), when one applies — the card strikes price_from_tnd through, shows
+     "−15 %" and the end date. Absent/null = no promotion. */
+  price_from_promo?: { final_tnd: number; percent: number; ends_at: string } | null;
   /* Step 16. This tutor is on a plan that buys a higher position in the list.
      The card MUST mark it: an ordering somebody paid for and the reader cannot
      see is an advertisement disguised as a recommendation. False for everyone
@@ -452,7 +466,16 @@ export type NotificationKind =
   | "message"             // Step 8b: someone wrote in a booking thread
   // espace prof v2 · growth (P4): follows
   | "new_follower"        // the tutor: a student now follows them (first name only)
-  | "follow_digest";      // a follower: the daily digest of new classes and fiches
+  | "follow_digest"       // a follower: the daily digest of new classes and fiches
+  // espace prof v2 · growth (P5): monthly subscriptions
+  | "subscription_requested"  // the tutor: a student asked to subscribe
+  | "subscription_confirmed"  // the student: the tutor confirmed (payment received outside Tnajem)
+  | "subscription_renewed"    // the student: one more month
+  | "subscription_paused"     // the student
+  | "subscription_resumed"    // the student
+  | "subscription_cancelled"  // the other party
+  | "subscription_ending"     // both: 3 days before period_end
+  | "subscription_expired";   // both: the nightly job closed it
 
 export type NotificationItem = {
   id: string;
@@ -543,7 +566,8 @@ export type AdminAccount = {
   blockedReason: string | null;
   /** On the ADMIN_EMAILS allowlist — cannot be blocked from this page. */
   isAdmin: boolean;
-  tutor: { slug: string; status: string; suspended: boolean } | null;
+  /** id: the tutors row — the admin read-only promotions view (growth, phase 5) asks by it. */
+  tutor: { id: string; slug: string; status: string; suspended: boolean } | null;
   /** Scheduled, not yet started. A block refuses while either is > 0 unless asked to cancel them. */
   upcomingClasses: number;
   upcomingBookings: number;

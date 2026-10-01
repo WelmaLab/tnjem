@@ -16,6 +16,9 @@ import { ShareButton } from "./ShareButton";
 import { MaterialsPanel } from "./MaterialsPanel";
 import { VitrineBeacon } from "@/components/share/VitrineBeacon"; // espace prof v2 · growth (P3)
 import { FollowButton } from "@/components/follow/FollowButton"; // espace prof v2 · growth (P4)
+import { PromoPrice } from "@/components/pricing/PromoPrice"; // espace prof v2 · growth (P5)
+import { PromoCodeBanner } from "@/components/pricing/PromoCodeBanner"; // espace prof v2 · growth (P5)
+import { OffersSection } from "@/components/offers/OffersSection"; // espace prof v2 · growth (P5)
 import { ReportButton } from "@/components/ReportButton";
 import { dict, bilingual } from "@/lib/i18n";
 import type { AppLocale } from "@/lib/locale";
@@ -231,10 +234,28 @@ export function StorefrontView({
 
   const localMonth = (m: string) => monthLabel(m, locale);
 
+  /* espace prof v2 · growth (P5): live PUBLIC promotions (anonymous, cached with the
+     page) and the instant this HTML was rendered — <PromoPrice> prices from both,
+     plus the visitor's own ?promo= code once in the browser. */
+  const promotions = data.promotions ?? [];
+  const renderedAt = new Date().toISOString();
+
   /* One price renderer for every surface, so the storefront can never show
      "1ère gratuite" and "15 TND" side by side as if both applied. A free-first
      class reads: Gratuite → puis 15 TND la séance. */
   function PriceBlock({ cls, big }: { cls: ClassItem; big?: boolean }) {
+    // espace prof v2 · growth (P5): a paid seat may carry a promotion (struck price, "−15 %", end date).
+    if (!cls.is_free_first && cls.price_tnd > 0) {
+      return (
+        <PromoPrice
+          slug={tutor.slug}
+          item={{ kind: "class", id: cls.id, priceTnd: cls.price_tnd }}
+          promotions={promotions}
+          renderedAt={renderedAt}
+          variant={big ? "panel" : "row"}
+        />
+      );
+    }
     if (cls.is_free_first) {
       return (
         <div className="sf-price-block">
@@ -358,6 +379,9 @@ export function StorefrontView({
                   reviews/bookings tables. Don't reintroduce this without a
                   real per-tutor "booked this week" count. */}
 
+              {/* espace prof v2 · growth (P5): /{slug}?promo=CODE — one calm line, in the browser. */}
+              <PromoCodeBanner slug={tutor.slug} className="sf-promo" />
+
               {/* Bio — guarded so an empty bio doesn't leave a gapped blank block. */}
               {tutor.bio && <UserText as="p" className="web-lead sf-bio">{tutor.bio}</UserText>}
 
@@ -418,6 +442,11 @@ export function StorefrontView({
                 </ul>
               )}
 
+              {/* ── Monthly offers (espace prof v2 · growth, P5) — "S'abonner — X TND / mois".
+                   Renders nothing when the tutor has none; the viewer's own status is
+                   fetched in the browser, never baked into this cached HTML. ── */}
+              <OffersSection slug={tutor.slug} offers={data.offers ?? []} promotions={promotions} renderedAt={renderedAt} />
+
               {/* ── How it works — three lines that answer "what happens to my money".
                    Placed right after the list, where the visitor is deciding. ── */}
               <div className="sf-how">
@@ -456,7 +485,19 @@ export function StorefrontView({
                             as theirs. Nothing is bought here (packsNote says so), so no
                             "Bientôt" and no payment wording. */}
                         <div className="sf-pack-price" data-e2e="pack-price">
-                          <b>{pack.price_tnd > 0 ? <>{pack.price_tnd} {t.common.tnd}</> : c.packFree}</b>
+                          {/* espace prof v2 · growth (P5): a pack can carry a promotion too. */}
+                          {pack.price_tnd > 0 ? (
+                            <PromoPrice
+                              slug={tutor.slug}
+                              item={{ kind: "pack", id: pack.id, priceTnd: pack.price_tnd }}
+                              promotions={promotions}
+                              renderedAt={renderedAt}
+                              variant="card"
+                              unit="none"
+                            />
+                          ) : (
+                            <b>{c.packFree}</b>
+                          )}
                           <span>{c.packPriceLabel}</span>
                         </div>
                       </li>
@@ -633,12 +674,14 @@ export function StorefrontView({
                   <span>{c.freeFirst}</span>
                 </>
               ) : (
-                <>
-                  <b>
-                    {firstClass.price_tnd} {t.common.tnd}
-                  </b>
-                  <span>{c.perSession}</span>
-                </>
+                /* espace prof v2 · growth (P5): the same promotion-aware price as the rows. */
+                <PromoPrice
+                  slug={tutor.slug}
+                  item={{ kind: "class", id: firstClass.id, priceTnd: firstClass.price_tnd }}
+                  promotions={promotions}
+                  renderedAt={renderedAt}
+                  variant="bar"
+                />
               )}
             </div>
             <Link
@@ -767,6 +810,8 @@ export function StorefrontView({
         .sf-pack-price{flex:none;margin-inline-start:auto;text-align:end;display:grid;gap:2px}
         .sf-pack-price b{font-family:var(--fd);font-size:15px;color:var(--ink);white-space:nowrap}
         .sf-pack-price span{font-size:13px;color:var(--muted);white-space:nowrap} /* 13px floor (ui-audit a11y); was 12px since phase-a A18.8 */
+        .sf-pack-price .pp{justify-items:end}
+        .sf-promo{margin-bottom:18px}
         .sf-pack-title{font-weight:700;font-size:13.5px;line-height:1.35;margin-bottom:4px;overflow-wrap:anywhere}
         .sf-packs-note{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.55}
 

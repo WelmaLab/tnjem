@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { seedTutor, seedClass, seedProfile } from "./support/seed";
+import { seedTutor, seedClass, seedProfile, seedOffer } from "./support/seed";
 import { loginAs } from "./support/session";
 
 /* phase-a lane L3 (A22) — ONE payment story on every public page, in both locales.
@@ -35,12 +35,27 @@ const OTHER_STORIES: RegExp[] = [
   /يد بيد|في يدك|بالشهر(?! الفارط)|تخلّص أستاذك مباشرة|يخلّصك مباشرة|خلاص مباشر|خلّص بالدينار|الخلاص بالدينار/,
 ];
 
+/* espace prof v2 · growth (phase 5) — ONE allowed sentence, by coordinator decision:
+   the monthly offer's note on a tutor's page, the spec's own words
+   (MONTHLY_PAYMENT_NOTE in packages/shared/src/offers.ts; the API twin asserts
+   these literals equal it). It opens with "Paiement en ligne bientôt" and sits
+   beside the "Bientôt" tag. EXACTLY this sentence is cut out of the page text
+   before the scan, so every other "règles directement" phrasing is still caught;
+   the crawl below visits a tutor WITH a monthly offer, so it is really rendered. */
+const ALLOWED = {
+  fr: "Paiement en ligne bientôt — pour l'instant tu règles directement avec ton prof.",
+  ar: "الخلاص أونلاين قريب — للوقت هذا تخلّص أستاذك مباشرة.",
+} as const;
+
 const count = (hay: string, needle: string) => hay.split(needle).length - 1;
 
-async function checkPage(page: Page, url: string, locale: "fr" | "ar") {
+/** Returns how many times the allowed monthly note was on the page. */
+async function checkPage(page: Page, url: string, locale: "fr" | "ar"): Promise<number> {
   await page.goto(url);
   await page.waitForLoadState("networkidle");
-  const text = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+  const raw = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+  const allowed = count(raw, ALLOWED[locale]);
+  const text = raw.split(ALLOWED[locale]).join(" ");
 
   for (const re of OTHER_STORIES) {
     expect(text, `${url}: another payment story (${re})`).not.toMatch(re);
@@ -69,12 +84,15 @@ async function checkPage(page: Page, url: string, locale: "fr" | "ar") {
   const s = STORY[locale];
   const sentences = count(text, s.sentence) + count(text, s.tutor);
   expect(sentences, `${url}: the payment sentence appears outside its labelled element`).toBe(n);
+  return allowed;
 }
 
 for (const locale of ["fr", "ar"] as const) {
   test(`/${locale}: every public page tells one payment story, labelled "${STORY[locale].soon}"`, async ({ page }) => {
     const tutor = await seedTutor({ status: "verified" });
     const klass = await seedClass({ tutorId: tutor.id, isFreeFirst: false, priceTnd: 25, hoursFromNow: 96 });
+    // growth (phase 5): a monthly offer, so the tutor page renders the allowed note.
+    await seedOffer({ tutorId: tutor.id });
 
     const PUBLIC = [
       "",
@@ -88,7 +106,13 @@ for (const locale of ["fr", "ar"] as const) {
       `/class/${klass.id}`,
       `/checkout?class=${klass.id}`,
     ];
-    for (const path of PUBLIC) await checkPage(page, `/${locale}${path}`, locale);
+    for (const path of PUBLIC) {
+      const notes = await checkPage(page, `/${locale}${path}`, locale);
+      if (path === `/${tutor.slug}`) {
+        expect(notes, `/${locale}${path}: the monthly offer's note is rendered, once`).toBe(1);
+        await expect(page.locator("[data-e2e=offer-payment-note]").getByText(STORY[locale].soon, { exact: true })).toBeVisible();
+      }
+    }
   });
 }
 

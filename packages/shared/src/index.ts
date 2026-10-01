@@ -69,3 +69,6 @@ export * from "./password-policy";
 export * from "./share-links";
 // espace prof v2 · growth (P4, contract C5) — the e-mail preference kinds. Pure.
 export * from "./email-prefs";
+// espace prof v2 · growth (P5, contract C6) — THE price calculation, and the offer/promotion DTOs. Pure.
+export * from "./pricing";
+export * from "./offers";

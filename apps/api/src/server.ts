@@ -161,6 +161,8 @@ export async function buildServer(opts: { logStream?: { write(line: string): voi
   await app.register((await import("./routes/vitrine")).vitrineRoutes); // espace prof v2 · growth (P3)
   await app.register((await import("./routes/follows")).followRoutes); // espace prof v2 · growth (P4)
   await app.register((await import("./routes/notification-prefs")).notificationPrefRoutes); // espace prof v2 · growth (P4, C5)
+  await app.register((await import("./routes/offers")).offerRoutes); // espace prof v2 · growth (P5)
+  await app.register((await import("./routes/promotions")).promotionRoutes); // espace prof v2 · growth (P5)
 
   app.get("/health", async (req) => {
     let dbOk = false;

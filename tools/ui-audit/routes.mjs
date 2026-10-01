@@ -268,6 +268,9 @@ export const ROUTES = [
   { path: "/dashboard/storefront", name: "dashboard-storefront", auth: true },
   { path: "/dashboard/storefront/preview", name: "dashboard-storefront-preview", auth: true },
   { path: "/dashboard/plan", name: "dashboard-plan", auth: true },
+  // espace prof v2 · growth (P5)
+  { path: "/dashboard/subscriptions", name: "dashboard-subscriptions", auth: true },
+  { path: "/dashboard/promotions", name: "dashboard-promotions", auth: true },
   /* The public « Ce prof arrive bientôt »: the harness tutor's own slug, seen anonymously. */
   { path: "/audit-harness", name: "coming-soon" },
 ];

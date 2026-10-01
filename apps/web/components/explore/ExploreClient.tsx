@@ -30,7 +30,7 @@ import { UserText } from "@/components/UserText";
 import { getExploreTutors } from "@/app/actions";
 import { PilotTag } from "@/components/PilotTag"; // Phase A+ (P4)
 import { demoStorefrontList } from "@/lib/demo";
-import { tutorStanding, type ExploreTutor } from "@tnajem/shared";
+import { tutorStanding, formatNumericDate, type ExploreTutor } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 import { LEVEL_CODES, LEVEL_LABELS, isLevelCode } from "@tnajem/shared"; // phase-a lane L5 (A18.7)
 
@@ -61,6 +61,9 @@ const copy = bilingual({
     // phase-a lane L5 (A18.7)
     levelsLabel: "Niveau",
     allLevels: "Tous niveaux",
+    // espace prof v2 · growth (P5): a public promotion on the "from" price.
+    was: "au lieu de",
+    until: (d: string) => `jusqu'au ${d}`,
   },
   ar: {
     heroSub: "أساتذة توانسة، منقّحين واحد واحد. كل واحد يحدد أسعارو.",
@@ -81,6 +84,8 @@ const copy = bilingual({
     // phase-a lane L5 (A18.7)
     levelsLabel: "المستوى",
     allLevels: "المستويات الكل",
+    was: "عوض",
+    until: (d: string) => `حتى لـ ${d}`,
   },
 });
 
@@ -475,15 +480,33 @@ export function ExploreClient({ initial, adultsOnly = false }: { initial: Explor
                         <TutorStanding standing={standing} locale={locale === "ar" ? "ar" : "fr"} variant="card" />
                       </div>
 
-                      {tutor.price_from_tnd !== null && (
-                        <p className="mt-2.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                          <span className="text-[13px] text-muted">{c.from}</span>
-                          <b className="font-display text-[18px] font-bold leading-none text-ink">
-                            {tutor.price_from_tnd}
-                          </b>
-                          <span className="text-[13px] font-semibold text-muted">{c.tnd}</span>
-                        </p>
-                      )}
+                      {tutor.price_from_tnd !== null && (() => {
+                        /* espace prof v2 · growth (P5): the "from" price after the best PUBLIC
+                           promotion (computed by the API with pricing.ts) — struck original,
+                           "−15 %" and the end date. Re-checked against the clock here. */
+                        const promo = tutor.price_from_promo && Date.parse(tutor.price_from_promo.ends_at) > Date.now() ? tutor.price_from_promo : null;
+                        return (
+                          <p className="mt-2.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5" data-e2e="explore-price">
+                            <span className="text-[13px] text-muted">{c.from}</span>
+                            {promo && (
+                              <>
+                                <span className="sr-only">{c.was}</span>
+                                <del className="text-[13px] text-muted" data-e2e="price-was">{tutor.price_from_tnd} {c.tnd}</del>
+                              </>
+                            )}
+                            <b className="font-display text-[18px] font-bold leading-none text-ink">
+                              {promo ? promo.final_tnd : tutor.price_from_tnd}
+                            </b>
+                            <span className="text-[13px] font-semibold text-muted">{c.tnd}</span>
+                            {promo && (
+                              <>
+                                <span className="tag tag-neutral" dir="ltr" data-e2e="promo-badge">−{promo.percent} %</span>
+                                <span className="text-[13px] text-muted">{c.until(formatNumericDate(promo.ends_at))}</span>
+                              </>
+                            )}
+                          </p>
+                        );
+                      })()}
                     </div>
                   </Link>
                 );

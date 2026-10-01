@@ -106,7 +106,7 @@ export async function adminAccountRoutes(app: FastifyInstance): Promise<void> {
       blockedAt: p.blockedAt ? new Date(p.blockedAt).toISOString() : null,
       blockedReason: p.blockedReason,
       isAdmin: isAllowlistedAdmin(p, adminAuthIdentities(process.env, channel), channel),
-      tutor: t ? { slug: t.slug, status: t.status ?? "draft", suspended: Boolean(t.suspendedAt) } : null,
+      tutor: t ? { id: t.id, slug: t.slug, status: t.status ?? "draft", suspended: Boolean(t.suspendedAt) } : null,
       upcomingClasses: classRows.length,
       upcomingBookings: bookingRows.length,
     };

@@ -460,9 +460,13 @@ export async function tutorRoutes(app: FastifyInstance): Promise<void> {
       const priceByTutor = new Map(priceAgg.map((r) => [r.tutorId, r.min]));
 
       const { toExploreTutor } = await import("../lib/explore-map");
-      return rows.map((t) =>
-        toExploreTutor(t, byTutor.get(t.id), priceByTutor.get(t.id), (t.boost ?? 0) > 0),
-      );
+      // espace prof v2 · growth (P5): the "from" price after the best PUBLIC promotion, when one applies.
+      const { explorePromoPrices } = await import("../lib/storefront-growth");
+      const promoByTutor = await explorePromoPrices(ids);
+      return rows.map((t) => ({
+        ...toExploreTutor(t, byTutor.get(t.id), priceByTutor.get(t.id), (t.boost ?? 0) > 0),
+        price_from_promo: promoByTutor.get(t.id) ?? null,
+      }));
     },
   );
 }

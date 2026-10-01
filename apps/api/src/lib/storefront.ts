@@ -14,6 +14,7 @@ import {
 } from "@tnajem/shared";
 import { db } from "../db";
 import { onSaleClassSql } from "./class-sale";
+import { storefrontGrowthExtras } from "./storefront-growth"; // espace prof v2 · growth (P5)
 
 /* The public storefront read, ported from apps/web/lib/data.ts::getStorefront.
 
@@ -132,5 +133,7 @@ async function buildStorefront(t: typeof tutors.$inferSelect): Promise<Storefron
     price_tnd: Number(p.priceTnd),
   });
 
-  return { tutor, classes: cls.map(mapClass), packs: pks.map(mapPack) };
+  // espace prof v2 · growth (P5): the monthly offers and the live PUBLIC promotions — anonymous too.
+  const { offers, promotions } = await storefrontGrowthExtras(t.id);
+  return { tutor, classes: cls.map(mapClass), packs: pks.map(mapPack), offers, promotions };
 }

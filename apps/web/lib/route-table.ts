@@ -29,9 +29,11 @@ export const ROUTE_PATTERNS: readonly string[] = [
   "dashboard/new-pack",
   "dashboard/payout",
   "dashboard/plan", // espace prof v2 · shell
+  "dashboard/promotions", // espace prof v2 · growth (P5)
   "dashboard/storefront", // espace prof v2 · shell
   "dashboard/storefront/preview", // espace prof v2 · shell
   "dashboard/students", // espace prof v2 · shell
+  "dashboard/subscriptions", // espace prof v2 · growth (P5)
   "email/unsubscribe", // espace prof v2 · growth (P4, C5)
   "explore",
   "guardian",

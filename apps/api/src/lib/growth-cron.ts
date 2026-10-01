@@ -1,6 +1,7 @@
 import { lt, sql as raw, vitrineStatsDaily } from "@tnajem/db";
 import { db as appDb } from "../db";
 import { runFollowDigest, type MailSender } from "./follow-digest";
+import { runSubscriptionJobs } from "./subscription-cron";
 
 /* THE GROWTH NIGHTLY JOBS (Espace prof v2 · Phases 3–5), run inside the existing
    /cron/purge call (routes/cron.ts) right after the retention run.
@@ -56,5 +57,6 @@ export async function runGrowthJobs(db: Db, opts: GrowthJobOptions = {}): Promis
   }
   await job("vitrineStats", () => pruneVitrineStats(db, opts));
   await job("followDigest", () => runFollowDigest(db, opts));
+  await job("studentSubscriptions", () => runSubscriptionJobs(db, opts));
   return { results, failedJobs };
 }

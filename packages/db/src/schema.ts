@@ -326,6 +326,12 @@ export const bookings = pgTable("bookings", {
   isFree: boolean("is_free").default(false),
   status: bookingStatus("status").default("reserved"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  // espace prof v2 · growth (P5). C7: set when a subscriber's seat is covered by
+  // their monthly subscription (0034). price_tnd + promotion_id: the price SHOWN at
+  // booking, after the one promotion applied (0035) — kept for online payment later.
+  subscriptionId: uuid("subscription_id").references((): AnyPgColumn => studentSubscriptions.id, { onDelete: "set null" }),
+  priceTnd: numeric("price_tnd", { precision: 7, scale: 2 }),
+  promotionId: uuid("promotion_id").references((): AnyPgColumn => promotions.id, { onDelete: "set null" }),
 }, (t) => ({
   /* Correctness first: one booking per (class, student). reserveSeat() relies on
      this to be idempotent — it catches the insert conflict and returns
@@ -338,6 +344,8 @@ export const bookings = pgTable("bookings", {
      getStudentDashboard does `where student_id = ? and status <> 'cancelled'`.
      status rides along so the cancelled rows are filtered in the index. */
   studentStatusIdx: index("bookings_student_id_status_idx").on(t.studentId, t.status),
+  // espace prof v2 · growth (P5): "how many sessions has this subscription used".
+  subscriptionIdx: index("bookings_subscription_id_idx").on(t.subscriptionId),
 }));
 
 /* THE CANCELLATION LEDGER.
@@ -963,7 +971,7 @@ export const otpCodes = pgTable("otp_codes", {
    schema edits merge cleanly; the extra pg-core helpers are imported here for the
    same reason (the import line at the top is everyone's).
    ══════════════════════════════════════════════════════════════════════════════ */
-import { date, primaryKey } from "drizzle-orm/pg-core";
+import { date, primaryKey, type AnyPgColumn } from "drizzle-orm/pg-core";
 
 /* VITRINE STATISTICS (Phase 3, 0037). An AGGREGATE: one row per (tutor, Tunis
    day, source) with two counters. No visitor, IP, user agent or session can be
@@ -1016,3 +1024,87 @@ export const followDigests = pgTable("follow_digests", {
   profileId: uuid("profile_id").primaryKey().references(() => profiles.id, { onDelete: "cascade" }),
   lastSentAt: timestamp("last_sent_at", { withTimezone: true }).notNull(),
 });
+
+/* MONTHLY OFFERS (Phase 5 A, 0034) — a tutor's "N séances / mois pour X TND". NOT
+   `subscriptions` (0017), which is the tutor's own Tnajem plan. At most 3
+   non-archived per tutor (API); 1–31 sessions and price > 0 (CHECKs + Zod). An
+   offer someone subscribed to is archived, never deleted. */
+export const tutorOffers = pgTable("tutor_offers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tutorId: uuid("tutor_id").notNull().references(() => tutors.id, { onDelete: "cascade" }),
+  /** Always "monthly" today (CHECK). A column, so another kind needs no table. */
+  kind: text("kind").notNull().default("monthly"),
+  title: text("title").notNull(),
+  sessionsPerMonth: integer("sessions_per_month").notNull(),
+  priceTndPerMonth: numeric("price_tnd_per_month", { precision: 7, scale: 2 }).notNull(),
+  /** Shown on the profile and open to new requests. */
+  active: boolean("active").notNull().default(true),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  tutorIdx: index("tutor_offers_tutor_id_created_at_idx").on(t.tutorId, t.createdAt),
+}));
+
+/* requested → active → (renewed) · paused · cancelled · expired. */
+export const studentSubscriptionStatus = pgEnum("student_subscription_status", ["requested", "active", "paused", "cancelled", "expired"]);
+
+/* A STUDENT'S SUBSCRIPTION to a monthly offer (Phase 5 A, 0034). Payments are off:
+   the tutor confirms each month by hand ("paiement reçu hors Tnajem"). The price
+   and quota AGREED are kept on the row (an offer edited later does not rewrite
+   them), with payments_enabled as the cancellation ledger keeps it — what was true
+   when written. At most one live (requested/active/paused) per student per tutor:
+   a partial unique index in the SQL (drizzle cannot express one). */
+export const studentSubscriptions = pgTable("student_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  offerId: uuid("offer_id").notNull().references(() => tutorOffers.id, { onDelete: "cascade" }),
+  /** Denormalised from the offer: every read is "this tutor's" or "this student's". */
+  tutorId: uuid("tutor_id").notNull().references(() => tutors.id, { onDelete: "cascade" }),
+  studentProfileId: uuid("student_profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+  status: studentSubscriptionStatus("status").notNull().default("requested"),
+  sessionsPerMonth: integer("sessions_per_month").notNull(),
+  /** The monthly price shown when requested, after the promotion (promotion_id, 0035). */
+  priceTnd: numeric("price_tnd", { precision: 7, scale: 2 }).notNull(),
+  paymentsEnabled: boolean("payments_enabled").notNull().default(false),
+  periodStart: timestamp("period_start", { withTimezone: true }),
+  periodEnd: timestamp("period_end", { withTimezone: true }),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  renewedAt: timestamp("renewed_at", { withTimezone: true }),
+  pausedAt: timestamp("paused_at", { withTimezone: true }),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  /** The period_end the 3-days-before reminder was sent for (a renewal resets it). */
+  reminderSentFor: timestamp("reminder_sent_for", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  promotionId: uuid("promotion_id").references((): AnyPgColumn => promotions.id, { onDelete: "set null" }),
+}, (t) => ({
+  tutorStatusIdx: index("student_subscriptions_tutor_id_status_idx").on(t.tutorId, t.status),
+  studentIdx: index("student_subscriptions_student_profile_id_idx").on(t.studentProfileId),
+  sweepIdx: index("student_subscriptions_status_period_end_idx").on(t.status, t.periodEnd),
+}));
+
+/* PROMOTIONS, 20 % MAXIMUM (Phase 5 B, 0035). The cap lives in three places: the
+   SQL CHECK, Zod (growth-input.ts) and the one price calculation (pricing.ts, C6).
+   code NULL = public; a code = only through ?promo=CODE. No stacking: the best
+   single promotion applies. `uses` moves atomically (WHERE uses < max_uses). */
+export const promotions = pgTable("promotions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tutorId: uuid("tutor_id").notNull().references(() => tutors.id, { onDelete: "cascade" }),
+  code: text("code"),
+  percent: integer("percent").notNull(),
+  /** all | class | pack | monthly (CHECK). */
+  scope: text("scope").notNull().default("all"),
+  targetId: uuid("target_id"),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull().defaultNow(),
+  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+  maxUses: integer("max_uses"),
+  uses: integer("uses").notNull().default(0),
+  /** false = paused (reversible). */
+  active: boolean("active").notNull().default(true),
+  /** Ended for good (audited). */
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  tutorIdx: index("promotions_tutor_id_created_at_idx").on(t.tutorId, t.createdAt),
+}));
