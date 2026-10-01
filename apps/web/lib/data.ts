@@ -2,7 +2,7 @@ import "server-only";
 import { callAnonymous } from "./api";
 import { demoFallback, backendReady } from "./backend";
 import { demoEnabled, demoStorefrontFor } from "@/lib/demo";
-import type { Storefront, Tutor, ClassItem, Pack } from "@tnajem/shared";
+import type { Storefront, Tutor, ClassItem, Pack, TutorVisibility } from "@tnajem/shared";
 
 /* ══════════════════════════════════════════════════════════════════════════════
    Server-side reads.
@@ -74,6 +74,17 @@ export async function getStorefront(slug: string): Promise<Storefront | null> {
      (lib/cache.ts::getCachedStorefront), where cookies() throws, and outside that
      wrapper it would silently opt the route out of ISR. */
   return callAnonymous<Storefront | null>(`/tutors/${encodeURIComponent(slug)}/storefront`);
+}
+
+/* espace prof v2 · shell — what /{slug} shows when there is no public storefront:
+   "coming-soon" (a tutor on the way: « Ce prof arrive bientôt ») or "missing" (the
+   404). Anonymous, for the same ISR reason as getStorefront (callAnonymous, never
+   call). Demo mode: a fixture slug is public, anything else is missing. */
+export async function getTutorVisibility(slug: string): Promise<TutorVisibility> {
+  assertBackendOrDemo("getTutorVisibility");
+  if (demoFallback) return demoStorefrontFor(slug) ? "public" : "missing";
+  const res = await callAnonymous<{ visibility: TutorVisibility }>(`/tutors/${encodeURIComponent(slug)}/visibility`);
+  return res?.visibility ?? "missing";
 }
 
 /** One public storefront, for app/sitemap.ts. */

@@ -1,15 +1,19 @@
 "use client";
-import { useEffect, useState } from "react";
-import { logout, logoutEverywhere, getMe } from "@/app/actions";
+import { useCallback, useEffect, useState } from "react";
+import { logout, logoutEverywhere, getMe, getDashboard } from "@/app/actions";
 import { Button } from "@/components/ui";
 import { LocaleToggle } from "@/components/LocaleToggle";
 import { useLocale } from "@/components/LocaleProvider";
+import { Link } from "@/components/Link";
 import { Phone, User, Forward } from "@/components/icons";
 import { SiteShell } from "@/components/SiteShell";
 import { DeleteAccount } from "@/components/account/DeleteAccount";
+import { FreeFirstToggle } from "@/components/account/FreeFirstToggle";
+import { AvatarUpload } from "@/components/dashboard/AvatarUpload";
+import { AppPage, useInAppShell } from "@/components/app/AppShell";
 import { UserText } from "@/components/UserText";
 import { bilingual } from "@/lib/i18n";
-import { supportWhatsAppHref } from "@tnajem/shared";
+import { initials, supportWhatsAppHref, type DashboardData } from "@tnajem/shared";
 import { accountRole } from "@tnajem/shared"; // phase-a lane L5 (A18.13)
 
 /* phase-a A12 (decision D5): the support number is InnoviaBurst's, read from the
@@ -17,26 +21,53 @@ import { accountRole } from "@tnajem/shared"; // phase-a lane L5 (A18.13)
    digits only. Written as process.env.NEXT_PUBLIC_… so Next inlines it at build. */
 const WA_LINK = supportWhatsAppHref(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP);
 
+const CONTACT_EMAIL = "contact@tnajem.com";
+
 /* Page-local copy (lib/i18n.ts is shared/read-only). */
 const copy = bilingual({
   fr: {
     sub: "Ta langue, ton rôle, et comment nous joindre.",
     logoutAll: "Se déconnecter de tous les appareils",
     logoutAllHint: "Un téléphone perdu ou prêté ? Toutes tes connexions s'arrêtent, celle-ci comprise.",
+    // espace prof v2 · shell — « Réglages » for a tutor, inside the AppShell.
+    settings: "Réglages",
+    settingsSub: "Ton compte, ta page et tes connexions.",
+    legal: "Informations légales",
   },
   ar: {
     sub: "لغتك، دورك، وكيفاش تتصل بينا.",
     logoutAll: "اخرج من حسابك في الأجهزة الكل",
     logoutAllHint: "تليفون ضاع ولا سلّفتو؟ الدخول يتسكّر في الأجهزة الكل، حتى هذا.",
+    settings: "الإعدادات",
+    settingsSub: "حسابك، صفحتك والدخول متاعك.",
+    legal: "المعلومات القانونية",
   },
 });
 
 export default function AccountPage() {
   const { t, locale } = useLocale();
   const c = copy[locale];
+  const inShell = useInAppShell();
   const [me, setMe] = useState<{ name: string | null; role: string; email: string | null; phone: string | null; isAdmin?: boolean } | null>(null); // phase-a lane L5 (A18.13): + isAdmin
+  /* espace prof v2 · shell — a tutor's page settings moved here from the old
+     dashboard: the photo (also a step of the home checklist) and « 1re séance
+     offerte ». Phase 6 sorts them into Réglages › Vitrine. */
+  const [tutor, setTutor] = useState<DashboardData | null>(null);
 
-  useEffect(() => { getMe().then(setMe).catch(() => setMe(null)); }, []);
+  const loadTutor = useCallback(() => {
+    getDashboard()
+      .then((d) => setTutor(d && !("wrongRole" in d) ? d : null))
+      .catch(() => setTutor(null));
+  }, []);
+
+  useEffect(() => {
+    getMe()
+      .then((m) => {
+        setMe(m);
+        if (m?.role === "tutor") loadTutor();
+      })
+      .catch(() => setMe(null));
+  }, [loadTutor]);
 
   async function handleLogoutEverywhere() {
     await logoutEverywhere();
@@ -52,6 +83,184 @@ export default function AccountPage() {
     window.location.href = "/";
   }
 
+  const body = (
+    <>
+      {/* Settings panel */}
+      <div className="panel panel-pad">
+
+        {/* Avatar + identity block */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "clamp(14px, 2vw, 22px)",
+            paddingBottom: "clamp(16px, 2vw, 22px)",
+            borderBottom: "1px solid var(--line)",
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{
+              width: 72,
+              height: 72,
+              minWidth: 72,
+              borderRadius: 22,
+              background: "linear-gradient(150deg, var(--blue), var(--blue900))",
+              display: "grid",
+              placeItems: "center",
+              color: "#fff",
+              fontFamily: "var(--fd)",
+              fontSize: 28,
+              boxShadow: "var(--sh)",
+              flexShrink: 0,
+            }}
+            aria-hidden="true"
+          >
+            <User style={{ width: 32, height: 32, stroke: "#fff" }} />
+          </div>
+          <div className="flex-[1_1_160px] min-w-0">
+            <UserText as="div" style={{ fontFamily: "var(--fd)", fontSize: "clamp(16px, 2vw, 20px)", fontWeight: 700, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {me?.name || "—"}
+            </UserText>
+            {/* The login identity first — that is what they type to get back in.
+                The phone is an optional contact and may simply not be set. */}
+            {me?.email && (
+              <div dir="ltr" className="text-[14px] text-muted text-start break-all">{me.email}</div>
+            )}
+            {me?.phone && (
+              <div dir="ltr" className="text-[14px] text-muted text-start">{me.phone}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Language row */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "clamp(14px, 2vw, 18px) 0",
+            borderBottom: "1px solid var(--line)",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span className="text-[15px] font-semibold">{t.account.language}</span>
+          <LocaleToggle />
+        </div>
+
+        {/* Role row */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "clamp(14px, 2vw, 18px) 0",
+            borderBottom: WA_LINK ? "1px solid var(--line)" : "none",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span className="text-[15px] font-semibold">{t.account.role}</span>
+          <span
+            className="text-[13px] font-bold py-1.5 px-3.5 rounded-[999px] bg-blue50 text-blue shrink-0 min-h-8 inline-flex items-center"
+          >
+            {/* phase-a lane L5 (A18.13): a role NAME (Élève · Prof · Parent · Admin), not the sign-up button text. */}
+            {me ? t.roles[accountRole(me)] : null}
+          </span>
+        </div>
+
+        {/* Help / WhatsApp row — only when a real number is configured (A12). */}
+        {WA_LINK && (
+        <a
+          data-testid="support-whatsapp"
+          href={WA_LINK}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "clamp(14px, 2vw, 18px) 0",
+            gap: 12,
+            textDecoration: "none",
+            color: "var(--ink)",
+            minHeight: 44,
+          }}
+          aria-label={t.account.help}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-10 h-10 min-w-10 rounded-[11px] bg-blue50 grid place-items-center shrink-0" /* Phase A+ (U1): decorative, not a success */
+              aria-hidden="true"
+            >
+              <Phone style={{ width: 18, height: 18, stroke: "var(--blue)" }} />
+            </div>
+            <span className="text-[15px] font-semibold min-w-0">{t.account.help}</span>
+          </div>
+          <Forward className="text-muted w-[18px] h-[18px] shrink-0" aria-hidden="true" />
+        </a>
+        )}
+
+      </div>
+
+      {/* espace prof v2 · shell — the tutor's page settings (photo, free first session). */}
+      {tutor?.has_storefront && tutor.slug && (
+        <div className="mt-[clamp(14px,2vw,22px)] flex flex-col gap-[clamp(14px,2vw,22px)]">
+          <div id="photo" style={{ scrollMarginTop: 84 }}>
+            <AvatarUpload
+              slug={tutor.slug}
+              initials={initials(tutor.name ?? "")}
+              status={tutor.avatarStatus}
+              onChanged={loadTutor}
+            />
+          </div>
+          <FreeFirstToggle initial={tutor.offersFreeFirstSession} />
+        </div>
+      )}
+
+      {/* Logout buttons */}
+      <div className="mt-[clamp(14px,_2vw,_22px)] max-w-[320px] flex flex-col gap-2.5">
+        <Button variant="ghost" onClick={handleLogout}>
+          {t.account.logout}
+        </Button>
+        <Button variant="ghost" onClick={handleLogoutEverywhere}>
+          {c.logoutAll}
+        </Button>
+        <p className="muted text-[13px] m-0">{c.logoutAllHint}</p>
+      </div>
+
+      {/* Step 15. LAST on the page, and behind a two-step confirm: the
+          destructive control must never be the one under the cursor when the
+          section first renders. */}
+      <div className="mt-[clamp(20px,3vw,32px)]">
+        <DeleteAccount />
+      </div>
+
+      {/* espace prof v2 · shell (rule 2): inside the shell there is no marketing
+          footer, so the legal links it carried live here (phase 6 folds them into
+          Réglages › Sécurité, « Ce qui est effacé ▸ »). */}
+      {inShell && (
+        <nav className="panel panel-pad mt-[clamp(20px,3vw,32px)]" aria-labelledby="acc-legal" data-e2e="account-legal">
+          <h2 id="acc-legal" className="font-display text-[16px] font-bold mb-1">{c.legal}</h2>
+          <ul className="flex flex-wrap gap-x-5 list-none">
+            <li><Link href="/terms" className="linklike text-[13.5px]">{t.footer.terms}</Link></li>
+            <li><Link href="/privacy" className="linklike text-[13.5px]">{t.footer.privacy}</Link></li>
+            <li><a href={`mailto:${CONTACT_EMAIL}`} className="linklike text-[13.5px]">{t.footer.contact}</a></li>
+          </ul>
+        </nav>
+      )}
+    </>
+  );
+
+  if (inShell) {
+    return (
+      <AppPage title={c.settings} subtitle={c.settingsSub} width="narrow">
+        {body}
+      </AppPage>
+    );
+  }
+
   return (
     <SiteShell>
       <section className="web-section">
@@ -63,143 +272,7 @@ export default function AccountPage() {
             <p className="muted text-[13.5px] mt-1.5">{c.sub}</p>
           </div>
 
-          {/* Settings panel */}
-          <div className="panel panel-pad">
-
-            {/* Avatar + identity block */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "clamp(14px, 2vw, 22px)",
-                paddingBottom: "clamp(16px, 2vw, 22px)",
-                borderBottom: "1px solid var(--line)",
-                flexWrap: "wrap",
-              }}
-            >
-              <div
-                style={{
-                  width: 72,
-                  height: 72,
-                  minWidth: 72,
-                  borderRadius: 22,
-                  background: "linear-gradient(150deg, var(--blue), var(--blue900))",
-                  display: "grid",
-                  placeItems: "center",
-                  color: "#fff",
-                  fontFamily: "var(--fd)",
-                  fontSize: 28,
-                  boxShadow: "var(--sh)",
-                  flexShrink: 0,
-                }}
-                aria-hidden="true"
-              >
-                <User style={{ width: 32, height: 32, stroke: "#fff" }} />
-              </div>
-              <div className="flex-[1_1_160px] min-w-0">
-                <UserText as="div" style={{ fontFamily: "var(--fd)", fontSize: "clamp(16px, 2vw, 20px)", fontWeight: 700, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {me?.name || "—"}
-                </UserText>
-                {/* The login identity first — that is what they type to get back in.
-                    The phone is an optional contact and may simply not be set. */}
-                {me?.email && (
-                  <div dir="ltr" className="text-[14px] text-muted text-start break-all">{me.email}</div>
-                )}
-                {me?.phone && (
-                  <div dir="ltr" className="text-[14px] text-muted text-start">{me.phone}</div>
-                )}
-              </div>
-            </div>
-
-            {/* Language row */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "clamp(14px, 2vw, 18px) 0",
-                borderBottom: "1px solid var(--line)",
-                gap: 12,
-                flexWrap: "wrap",
-              }}
-            >
-              <span className="text-[15px] font-semibold">{t.account.language}</span>
-              <LocaleToggle />
-            </div>
-
-            {/* Role row */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "clamp(14px, 2vw, 18px) 0",
-                borderBottom: "1px solid var(--line)",
-                gap: 12,
-                flexWrap: "wrap",
-              }}
-            >
-              <span className="text-[15px] font-semibold">{t.account.role}</span>
-              <span
-                className="text-[13px] font-bold py-1.5 px-3.5 rounded-[999px] bg-blue50 text-blue shrink-0 min-h-8 inline-flex items-center"
-              >
-                {/* phase-a lane L5 (A18.13): a role NAME (Élève · Prof · Parent · Admin), not the sign-up button text. */}
-                {me ? t.roles[accountRole(me)] : null}
-              </span>
-            </div>
-
-            {/* Help / WhatsApp row — only when a real number is configured (A12). */}
-            {WA_LINK && (
-            <a
-              data-testid="support-whatsapp"
-              href={WA_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "clamp(14px, 2vw, 18px) 0",
-                gap: 12,
-                textDecoration: "none",
-                color: "var(--ink)",
-                minHeight: 44,
-              }}
-              aria-label={t.account.help}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className="w-10 h-10 min-w-10 rounded-[11px] bg-blue50 grid place-items-center shrink-0" /* Phase A+ (U1): decorative, not a success */
-                  aria-hidden="true"
-                >
-                  <Phone style={{ width: 18, height: 18, stroke: "var(--blue)" }} />
-                </div>
-                <span className="text-[15px] font-semibold min-w-0">{t.account.help}</span>
-              </div>
-              <Forward className="text-muted w-[18px] h-[18px] shrink-0" aria-hidden="true" />
-            </a>
-            )}
-
-          </div>
-
-          {/* Logout buttons */}
-          <div className="mt-[clamp(14px,_2vw,_22px)] max-w-[320px] flex flex-col gap-2.5">
-            <Button variant="ghost" onClick={handleLogout}>
-              {t.account.logout}
-            </Button>
-            <Button variant="ghost" onClick={handleLogoutEverywhere}>
-              {c.logoutAll}
-            </Button>
-            <p className="muted text-[13px] m-0">{c.logoutAllHint}</p>
-          </div>
-
-          {/* Step 15. LAST on the page, and behind a two-step confirm: the
-              destructive control must never be the one under the cursor when the
-              section first renders. */}
-          <div className="mt-[clamp(20px,3vw,32px)]">
-            <DeleteAccount />
-          </div>
-
+          {body}
         </div>
       </section>
     </SiteShell>

@@ -466,6 +466,8 @@ export function VerifyInner({ state }: { state: OnboardingState | null }) {
               status: state?.status ?? "draft",
               hasClass: state?.hasClass ?? false,
               hasSlug: state?.hasSlug ?? true,
+              photo: state?.avatarStatus ?? null, // espace prof v2 · shell: the 5-step ladder
+              linkShared: Boolean(state?.linkShared),
             }}
           />
         </div>

@@ -60,3 +60,5 @@ export * from "./class-phase";
 export * from "./subjects";
 // phase-a lane L5 — which role /account names: Élève · Prof · Parent · Admin (A18.13). Pure.
 export * from "./account-role";
+// espace prof v2 · shell — the tutor space payloads (AppShell, Mes élèves, vitrine visibility). Pure.
+export * from "./tutor-space";

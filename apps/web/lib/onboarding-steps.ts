@@ -25,7 +25,7 @@ import type { Locale, TutorVerifStatus } from "@tnajem/shared";
 export type StepState = "done" | "current" | "todo" | "waiting";
 
 export type OnboardingStep = {
-  key: "store" | "verify" | "class" | "share";
+  key: "store" | "verify" | "photo" | "class" | "share"; // espace prof v2 · shell: + photo (5 steps)
   /** Full title, for the dashboard's expanded checklist. */
   title: string;
   body: string;
@@ -41,12 +41,17 @@ export type TutorProgress = {
   status: TutorVerifStatus;
   hasClass: boolean;
   hasSlug: boolean;
+  /* espace prof v2 · shell — the home checklist has FIVE steps (page created,
+     verification, photo, first class, link shared). Optional so a caller that does
+     not know them yet still builds the ladder: unknown = not done. */
+  photo?: "pending" | "approved" | "rejected" | null;
+  linkShared?: boolean;
 };
 
 export const STEP_COPY = {
   fr: {
     nextTitle: "À faire maintenant",
-    nextSub: "Quatre étapes, dans l'ordre. Chacune prend quelques minutes.",
+    nextSub: "Cinq étapes. Chacune prend quelques minutes.", // espace prof v2 · shell
     done: "Fait",
     inProgress: "En cours",
     progressLabel: "Progression de ton inscription",
@@ -69,6 +74,19 @@ export const STEP_COPY = {
     st2bDone: "Ta page est publique et listée dans Explorer.",
     st2short: "Vérification",
 
+    // espace prof v2 · shell — the photo step (it used to be a panel on the dashboard).
+    stPhotoT: "Ajoute ta photo",
+    stPhotoB: "Une photo rassure les élèves et leurs parents. Une personne la vérifie avant qu'elle apparaisse.",
+    stPhotoCta: "Ajouter ma photo",
+    stPhotoTPending: "Photo en attente de vérification",
+    stPhotoBPending: "On la regarde. En attendant, ta page affiche tes initiales.",
+    stPhotoTRejected: "Photo refusée",
+    stPhotoBRejected: "Envoie une autre photo de toi, de face et nette.",
+    stPhotoCtaRejected: "Changer ma photo",
+    stPhotoTDone: "Ta photo est validée",
+    stPhotoBDone: "Elle apparaît sur ta page.",
+    stPhotoShort: "Ta photo",
+
     st3t: "Publie ta 1ʳᵉ classe",
     st3b: "Un titre, une date, ton prix. Tu fixes le tarif, et pendant le pilote tu gardes 100 %.",
     st3cta: "Créer ma classe",
@@ -80,10 +98,12 @@ export const STEP_COPY = {
     st4b: "WhatsApp, Insta, TikTok. C'est comme ça que les élèves arrivent.",
     st4cta: "Voir mon lien",
     st4short: "Partage",
+    st4tDone: "Lien partagé", // espace prof v2 · shell
+    st4bDone: "Continue : chaque partage amène de nouveaux élèves sur ta page.",
   },
   ar: {
     nextTitle: "اللي لازم تعملو توّا",
-    nextSub: "أربع مراحل، وحدة وحدة. كل وحدة تاخذ دقايق.",
+    nextSub: "خمسة مراحل. كل وحدة تاخذ دقايق.", // espace prof v2 · shell
     done: "تعمل",
     inProgress: "في الطريق",
     progressLabel: "تقدّم التسجيل متاعك",
@@ -106,6 +126,19 @@ export const STEP_COPY = {
     st2bDone: "صفحتك ظاهرة للناس وموجودة في «اكتشف».",
     st2short: "التثبّت",
 
+    // espace prof v2 · shell
+    stPhotoT: "زيد تصويرتك",
+    stPhotoB: "تصويرة متاعك تطمّن التلامذة والأولياء. إنسان يشوفها قبل ما تظهر.",
+    stPhotoCta: "زيد تصويرتي",
+    stPhotoTPending: "التصويرة تستنّى في التثبّت",
+    stPhotoBPending: "قاعدين نشوفوها. في الأثناء، صفحتك تورّي الحروف الأولى متاع إسمك.",
+    stPhotoTRejected: "التصويرة ما تقبلتش",
+    stPhotoBRejected: "ابعث تصويرة أخرى ليك، من القدّام وواضحة.",
+    stPhotoCtaRejected: "بدّل تصويرتي",
+    stPhotoTDone: "التصويرة متاعك تقبلت",
+    stPhotoBDone: "تبان في صفحتك.",
+    stPhotoShort: "تصويرتك",
+
     st3t: "انشر أول حصة متاعك",
     st3b: "عنوان، وقت، وثمنك. إنتي تحدّد التعريفة، وفي فترة التجربة تحتفظ بـ 100 %.",
     st3cta: "اعمل حصتي",
@@ -117,6 +150,8 @@ export const STEP_COPY = {
     st4b: "واتساب، إنستا، تيكتوك. هكّا التلامذة يجيو.",
     st4cta: "شوف اللينك متاعي",
     st4short: "المشاركة",
+    st4tDone: "اللينك تشارك", // espace prof v2 · shell
+    st4bDone: "كمّل: كل مشاركة تجيب تلامذة جدد لصفحتك.",
   },
 } as const;
 
@@ -124,10 +159,17 @@ export type StepCopy = (typeof STEP_COPY)["fr"] | (typeof STEP_COPY)["ar"];
 
 /* Build the ladder from real progress.
 
-   Steps 3 and 4 stay LOCKED until verification passes: createClass() enforces the
-   same rule server-side and the storefront is unlisted until approval, so offering
-   a button here would be offering one that fails. */
-export function buildTutorSteps(p: TutorProgress, locale: Locale): OnboardingStep[] {
+   The first class stays LOCKED until verification passes: createClass() enforces
+   the same rule server-side, so offering a button here would be offering one that
+   fails. Sharing is open as soon as the page exists (espace prof v2): before
+   verification the link opens « Ce prof arrive bientôt », not a 404. */
+export function buildTutorSteps(
+  p: TutorProgress,
+  locale: Locale,
+  /* espace prof v2 · shell: the home keeps every step's own action and drops the ones
+     already on the page itself (components/dashboard/home/SetupProgress.tsx). */
+  opts: { everyCta?: boolean } = {},
+): OnboardingStep[] {
   const c = STEP_COPY[locale];
   const verifDone = p.status === "verified";
   const verifWaiting = p.status === "pending";
@@ -153,6 +195,30 @@ export function buildTutorSteps(p: TutorProgress, locale: Locale): OnboardingSte
           ? undefined
           : { label: rejected ? c.st2ctaRejected : c.st2cta, href: "/onboarding/verify" },
     },
+    /* espace prof v2 · shell — the photo. Not locked behind verification: a tutor
+       can add one as soon as the page exists, and it is reviewed on its own. */
+    {
+      key: "photo",
+      title:
+        p.photo === "approved" ? c.stPhotoTDone
+          : p.photo === "pending" ? c.stPhotoTPending
+          : p.photo === "rejected" ? c.stPhotoTRejected
+          : c.stPhotoT,
+      body:
+        p.photo === "approved" ? c.stPhotoBDone
+          : p.photo === "pending" ? c.stPhotoBPending
+          : p.photo === "rejected" ? c.stPhotoBRejected
+          : c.stPhotoB,
+      short: c.stPhotoShort,
+      state:
+        p.photo === "approved" ? "done"
+          : p.photo === "pending" ? "waiting"
+          : p.hasStorefront ? "current" : "todo",
+      cta:
+        p.photo === "approved" || p.photo === "pending" || !p.hasStorefront
+          ? undefined
+          : { label: p.photo === "rejected" ? c.stPhotoCtaRejected : c.stPhotoCta, href: "/account#photo" },
+    },
     {
       key: "class",
       title: p.hasClass ? c.st3tDone : c.st3t,
@@ -163,15 +229,17 @@ export function buildTutorSteps(p: TutorProgress, locale: Locale): OnboardingSte
     },
     {
       key: "share",
-      title: c.st4t,
-      body: c.st4b,
+      // espace prof v2 · shell (0036): done the first time the owner copies or shares their link.
+      title: p.linkShared ? c.st4tDone : c.st4t,
+      body: p.linkShared ? c.st4bDone : c.st4b,
       short: c.st4short,
-      state: verifDone && p.hasSlug ? "current" : "todo",
-      cta: verifDone && p.hasSlug ? { label: c.st4cta, href: "#share" } : undefined,
+      state: p.linkShared ? "done" : p.hasSlug && p.hasStorefront ? "current" : "todo",
+      cta: !p.linkShared && p.hasSlug && p.hasStorefront ? { label: c.st4cta, href: "#share" } : undefined,
     },
   ];
 
   // Only the FIRST actionable step keeps its button: one dominant next action.
+  if (opts.everyCta) return steps;
   let ctaGiven = false;
   for (const s of steps) {
     if (s.state !== "current") continue;

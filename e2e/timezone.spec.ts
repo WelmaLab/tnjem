@@ -2,6 +2,7 @@ import { test, expect, type Browser } from "@playwright/test";
 import { sql } from "./support/db";
 import { seedProfile, seedTutor, seedClass } from "./support/seed";
 import { mintSession, sessionCookie } from "./support/session";
+import { fillWallTime, wallTimeOf } from "./support/datetime"; // espace prof v2 · shell
 
 /* ════════════════════════════════════════════════════════════════════════════
    timezone: every class time is Tunis time — for a browser in São Paulo and a
@@ -166,9 +167,10 @@ test.describe("timezone: class times are Tunis time", () => {
     const ctx = await contextAs(browser, me.id);
     const page = await ctx.newPage();
     await page.goto("/fr/dashboard/new-class");
-    await expect(page.getByText("Heure de Tunisie.")).toBeVisible();
+    // espace prof v2 · shell: the DD/MM/YYYY + 24 h picker, still read as Tunis time.
+    await expect(page.getByText("Heure de Tunisie, sur 24 h.")).toBeVisible();
     await page.locator("form input[type=text]").first().fill("Révision fuseau horaire");
-    await page.locator('input[type="datetime-local"]').fill(want.wallInput);
+    await fillWallTime(page, want.wallInput);
     await page.getByPlaceholder("15").fill("20");
     await page.locator('form button[type="submit"]').click();
 
@@ -194,13 +196,14 @@ test.describe("timezone: class times are Tunis time", () => {
 
     const ctx = await contextAs(browser, tutorProfile.id);
     const page = await ctx.newPage();
-    await page.goto("/fr/dashboard");
-    await page.getByRole("button", { name: "Déplacer", exact: true }).click({ timeout: 15_000 });
-    const input = page.locator('input[type="datetime-local"]');
-    await expect(input, "prefilled with the class's own time, in Tunis").toHaveValue(want.wallInput);
-    await expect(page.getByText("Heure de Tunisie.")).toBeVisible();
-    await input.fill(wantMoved.wallInput);
-    await page.getByRole("button", { name: "Déplacer la séance" }).click();
+    // espace prof v2 · shell: moving a class is « Modifier la date » on « Mes classes ».
+    await page.goto("/fr/dashboard/classes");
+    await page.getByRole("button", { name: "Modifier la date" }).click({ timeout: 15_000 });
+    const dialog = page.locator("dialog[open]");
+    await expect.poll(() => wallTimeOf(dialog), { message: "prefilled with the class's own time, in Tunis" }).toBe(want.wallInput);
+    await expect(dialog.getByText("Heure de Tunisie, sur 24 h.")).toBeVisible();
+    await fillWallTime(dialog, wantMoved.wallInput);
+    await dialog.getByRole("button", { name: "Déplacer la séance" }).click();
 
     await expect.poll(() => scheduledAt(klass.id), { timeout: 15_000 }).toBe(moved.toISOString());
     await expect(page.locator(`time[datetime="${moved.toISOString()}"]`).first()).toContainText("19:30", { timeout: 15_000 });

@@ -64,7 +64,16 @@ const PAIRS = [
   ["Buttons", W, "--rose", "normal", "student LIVE badge", "student/page.tsx"],
   // UI Option A (A3): cobalt carries STATE and the header way-in; the rose pill is destructive.
   ["Buttons", "--blue", "--bg", "normal", ".btn-outline label (header Tableau de bord)", "SiteHeader.tsx"],
-  ["Buttons", "--blue", "--blue50", "normal", "selected language / sidebar current / .btn-outline:hover", "LocaleToggle.tsx, DashboardSidebar.tsx"],
+  ["Buttons", "--blue", "--blue50", "normal", "selected language / sidebar current / .btn-outline:hover", "LocaleToggle.tsx, components/app/AppShell.tsx (.aps-link current)"],
+  // espace prof v2 · shell (phase 1): the AppShell and its pages.
+  ["Buttons", W, "--rose", "normal", ".aps-count unread badge (bell, messages) · .aps-danger", "globals.css .aps-count"],
+  ["Buttons", W, "--blue", "normal", ".aps-fab « + » · .aps-dp-day.is-sel (picked date)", "globals.css .aps-fab"],
+  ["Chips", "--ochre-ink", "--ochre-tint", "normal", ".aps-badge (Vérification) · .hp-mark-current", "globals.css .aps-badge"],
+  ["Body text", "--ink", "--ochre-tint", "normal", ".aps-blocker title (Fais-toi vérifier)", "globals.css .aps-blocker"],
+  ["Body text", "--ink2", "--ochre-tint", "normal", ".aps-blocker body", "globals.css .aps-blocker-txt"],
+  ["Body text", "--muted", "--paper", "normal", ".aps-group-t · .aps-tab · .hp-kpi-v.is-zero (a greyed zero)", "globals.css .aps-*"],
+  ["Accent text", "--blue", "--cream", "normal", ".hp-linkbox-url (tnajem.com/slug)", "globals.css .hp-linkbox"],
+  ["Body text", "--ink2", "--paper", "normal", ".aps-link · .hp-kpi-l", "globals.css .aps-link"],
   ["Buttons", W, "--blue", "normal", "step numbers (HowItWorks, .lpp-node)", "dashboard/page.tsx, pour-les-profs"],
   ["Buttons", W, "--rose", "normal", "withdraw-consent confirm (rose destructive pill)", "guardian/page.tsx"],
 

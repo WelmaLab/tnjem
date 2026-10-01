@@ -5,6 +5,7 @@ import { Link } from "@/components/Link";
 import { useLocale } from "@/components/LocaleProvider";
 import { Button, Spinner } from "@/components/ui";
 import { SiteShell } from "@/components/SiteShell";
+import { useShell } from "@/components/app/ShellContext"; // espace prof v2 · shell
 import { Shield, Forward, Lock } from "@/components/icons";
 import { UserText } from "@/components/UserText";
 import { getThread, sendMessage, reportMessage } from "@/app/actions";
@@ -26,6 +27,7 @@ import { bilingual } from "@/lib/i18n";
 const copy = bilingual({
   fr: {
     back: "Toutes les conversations",
+    crumb: "Messages", // espace prof v2 · shell: the top bar's breadcrumb
     loading: "Chargement…",
     gone: "Cette conversation n'existe pas, ou tu n'en fais pas partie.",
     backCta: "Retour aux messages",
@@ -66,6 +68,7 @@ const copy = bilingual({
   },
   ar: {
     back: "المحادثات الكل",
+    crumb: "الرسائل",
     loading: "قاعد يحمّل…",
     gone: "المحادثة هاذي ما موجودةش، ولا إنت ماكش فيها.",
     backCta: "ارجع للرسائل",
@@ -122,6 +125,20 @@ export default function ThreadPage() {
   }, [threadId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  /* espace prof v2 · shell — inside the AppShell (a tutor), the top bar reads
+     « Messages › <the class> ». Opening the thread read it (GET /threads/:id moves
+     this side's read mark), so the messages badge is refreshed too. */
+  const shell = useShell();
+  const setCrumbs = shell?.setCrumbs;
+  const refreshCounts = shell?.refreshCounts;
+  const threadTitle = thread?.classTitle ?? null;
+  useEffect(() => {
+    if (!setCrumbs || !threadTitle) return;
+    setCrumbs([{ label: c.crumb, href: "/messages" }, { label: threadTitle }]);
+    refreshCounts?.();
+    return () => setCrumbs(null);
+  }, [setCrumbs, refreshCounts, threadTitle, c.crumb]);
 
   /* Scroll to the newest message. `behavior:"auto"` rather than "smooth": the
      reduced-motion backstop in globals.css exempts only the spinner, and a

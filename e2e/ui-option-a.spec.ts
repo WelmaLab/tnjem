@@ -77,8 +77,10 @@ test.describe("A3 — the header, the language toggle and the sidebar speak coba
     await signedInTutor(ctx);
     const page = await ctx.newPage();
     await page.goto("/fr/dashboard");
-    const cur = await colours(page, '.qs-nav a[aria-current="page"]');
-    expect(cur).toEqual({ bg: BLUE50, color: BLUE, border: BLUE });
+    /* espace prof v2 · shell: the sidebar is the AppShell's (image 1) — the current
+       item is cobalt on blue50, a filled pill with no outline. */
+    const cur = await colours(page, '.aps-side .aps-link[aria-current="page"]');
+    expect({ bg: cur.bg, color: cur.color }).toEqual({ bg: BLUE50, color: BLUE });
     await ctx.close();
   });
 });

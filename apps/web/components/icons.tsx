@@ -44,3 +44,12 @@ export const Book = (p: P) => <S {...p}><path d="M12 6.6C10.4 5.1 7.8 4.6 4 5.2v
 export const Box = (p: P) => <S {...p}><path d="M3.6 7.5 12 3l8.4 4.5v9L12 21l-8.4-4.5z" /><path d="M3.6 7.5 12 12l8.4-4.5" /><path d="M12 12v9" /></S>;
 export const Upload = (p: P) => <S {...p}><path d="M12 16V4" /><path d="M7 9l5-5 5 5" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></S>;
 export const Bank = (p: P) => <S {...p}><path d="M12 3l8.5 5H3.5z" /><path d="M5 11v6M9.5 11v6M14.5 11v6M19 11v6" /><path d="M3.5 20.5h17" /></S>;
+// espace prof v2 · shell — the AppShell's nav (Abonnements, Promotions, Ma vitrine), the avatar menu and the date picker.
+export const Repeat = (p: P) => <S {...p}><path d="M17 2.5l3 3-3 3" /><path d="M4 11.5V10a4.5 4.5 0 0 1 4.5-4.5H20" /><path d="M7 21.5l-3-3 3-3" /><path d="M20 12.5V14a4.5 4.5 0 0 1-4.5 4.5H4" /></S>;
+export const Percent = (p: P) => <S {...p}><line x1="18.5" y1="5.5" x2="5.5" y2="18.5" /><circle cx="7" cy="7" r="2.4" /><circle cx="17" cy="17" r="2.4" /></S>;
+export const Store = (p: P) => <S {...p}><path d="M4 9.5 5.6 4.5h12.8L20 9.5" /><path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0" /><path d="M5.5 12v8h13v-8" /><path d="M10 20v-4.5h4V20" /></S>;
+export const LogOut = (p: P) => <S className={`flip ${p.className ?? ""}`} style={p.style}><path d="M9.5 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3.5" /><polyline points="15.5 16.5 20 12 15.5 7.5" /><line x1="20" y1="12" x2="9.5" y2="12" /></S>;
+export const Help = (p: P) => <S {...p}><circle cx="12" cy="12" r="8.5" /><path d="M9.6 9.4a2.5 2.5 0 1 1 3.3 2.4c-.6.2-.9.7-.9 1.3v.6" /><circle cx="12" cy="16.6" r=".6" className="fill" /></S>;
+export const ChevronUp = (p: P) => <S {...p}><polyline points="6 15 12 9 18 15" /></S>;
+export const Chain = (p: P) => <S {...p}><path d="M10 13.5a4 4 0 0 0 5.7.3l2.9-2.9a4 4 0 0 0-5.7-5.7l-1.4 1.4" /><path d="M14 10.5a4 4 0 0 0-5.7-.3l-2.9 2.9a4 4 0 0 0 5.7 5.7l1.4-1.4" /></S>;
+export const Close = (p: P) => <S {...p}><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></S>;

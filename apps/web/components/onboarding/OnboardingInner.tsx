@@ -333,6 +333,8 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
     status: state?.status ?? ("draft" as const),
     hasClass: Boolean(state?.hasClass),
     hasSlug: published || Boolean(state?.hasSlug),
+    photo: state?.avatarStatus ?? null, // espace prof v2 · shell: the 5-step ladder
+    linkShared: Boolean(state?.linkShared),
   };
 
   const inits = name ? initials(name) : "??";

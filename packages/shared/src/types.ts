@@ -199,6 +199,9 @@ export type DashboardData = {
   classes: DashboardClass[];
   packs: DashboardPack[];
   bookings: DashboardBooking[]; // who actually booked (across all their classes)
+  /* espace prof v2 · shell (0036): the owner has copied or shared their own link at
+     least once — the last step of the home checklist. Optional: an older API omits it. */
+  linkShared?: boolean;
 };
 
 // A booked class as shown on the student's dashboard.
@@ -394,6 +397,9 @@ export type OnboardingState = {
   offersFreeFirstSession: boolean;
   // phase-a lane L5 (A18.7): the storefront's saved levels, to pre-fill the form ([] when none).
   levels?: LevelCode[];
+  // espace prof v2 · shell: the photo and link-shared steps of the 5-step ladder (lib/onboarding-steps.ts).
+  avatarStatus?: "pending" | "approved" | "rejected" | null;
+  linkShared?: boolean;
 };
 
 // ---- Explore feed ----

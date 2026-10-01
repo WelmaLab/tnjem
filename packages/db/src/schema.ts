@@ -201,6 +201,8 @@ export const tutors = pgTable("tutors", {
   // phase-a lane L4 (A26, 0029): a VERIFIED tutor's requested new name, waiting for
   // review. fullName stays the approved, public one until an admin approves this.
   pendingFullName: text("pending_full_name"),
+  // espace prof v2 · shell (0036): the first time the owner copied or shared their own link. NULL = never.
+  linkSharedAt: timestamp("link_shared_at", { withTimezone: true }),
 }, (t) => ({
   /* /explore: `where status = 'verified' order by rating desc` (getExploreTutors),
      the sitemap's `where status = 'verified'`, and the admin queue's
@@ -451,6 +453,10 @@ export const messageThreads = pgTable("message_threads", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   /** Denormalised so the thread LIST does not need a per-row subquery. */
   lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
+  /* espace prof v2 · shell (0036): when each side last opened the thread. Unread =
+     the other side's messages after it; NULL = never opened. */
+  tutorReadAt: timestamp("tutor_read_at", { withTimezone: true }),
+  studentReadAt: timestamp("student_read_at", { withTimezone: true }),
 }, (t) => ({
   // "my conversations, most recent first" — the only list query there is.
   tutorIdx: index("message_threads_tutor_profile_id_idx").on(t.tutorProfileId, t.lastMessageAt),

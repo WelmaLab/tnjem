@@ -1,6 +1,7 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { seedProfile, seedTutor } from "./support/seed";
 import { mintSession, sessionCookie } from "./support/session";
+import { fillWallTime } from "./support/datetime"; // espace prof v2 · shell
 
 /* ════════════════════════════════════════════════════════════════════════════
    a11y: a form that refuses a field says so ON the field, and puts you there.
@@ -94,7 +95,7 @@ test("a11y /fr/dashboard/new-class: a server refusal lands on the field it names
   await page.locator("form input[type=text]").first().fill("Révision express");
   const when = new Date(Date.now() + 3 * 86_400_000);
   const local = `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, "0")}-${String(when.getDate()).padStart(2, "0")}T18:00`;
-  await page.locator('input[type="datetime-local"]').fill(local);
+  await fillWallTime(page, local); // espace prof v2 · shell: the DD/MM/YYYY + 24 h picker
   // Passes the browser's own checks (no max on price) — only the server refuses it.
   const price = page.getByPlaceholder("15");
   await price.fill("6000");

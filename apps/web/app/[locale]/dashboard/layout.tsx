@@ -4,6 +4,7 @@ import { bilingual } from "@/lib/i18n";
 import { isLocale, DEFAULT_LOCALE } from "@/lib/locale";
 import { pageMetadata } from "@/lib/metadata";
 import { pageGuard, localeOf, localePath } from "@/lib/page-guard";
+import { TutorShellLayout } from "@/components/app/TutorShellLayout";
 
 /* Metadata for the tutor dashboard and everything under it (materials, new class,
    new pack, payout). The pages are client components, so this pass-through layout
@@ -36,7 +37,10 @@ export const dynamic = "force-dynamic";
    sent to their own space before anything renders. (GET /dashboard also answers
    { wrongRole } now, so the client pages stay safe if this ever stops running.)
    Guests and the build-time "inert" state fall through: the page has its own
-   signed-out screen. */
+   signed-out screen.
+
+   espace prof v2 · shell — a TUTOR gets every page under /dashboard inside the
+   AppShell (components/app/AppShell.tsx), including pages added later. */
 export default async function DashboardLayout(props: {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
@@ -45,5 +49,5 @@ export default async function DashboardLayout(props: {
   if (guard.kind === "user" && guard.profile.role === "student") {
     redirect(localePath(localeOf((await props.params).locale), "/student"));
   }
-  return <>{props.children}</>;
+  return <TutorShellLayout guard={guard}>{props.children}</TutorShellLayout>;
 }

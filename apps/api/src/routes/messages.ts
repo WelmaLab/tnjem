@@ -278,6 +278,15 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           .limit(1)
       : [undefined];
 
+    /* espace prof v2 · shell (0036): opening the conversation reads it — this side's
+       mark moves to now, so the shell's unread count (GET /messages/unread-count)
+       drops. Only a PARTICIPANT gets here; a guardian reads through /guardian and
+       never moves the child's mark. */
+    await db
+      .update(messageThreads)
+      .set(me.role === "tutor" ? { tutorReadAt: raw`now()` } : { studentReadAt: raw`now()` })
+      .where(eq(messageThreads.id, me.threadId));
+
     return {
       id: me.threadId,
       classTitle: me.classTitle,

@@ -257,6 +257,17 @@ export const ROUTES = [
   { path: "/messages", name: "messages", auth: true },
   { path: "/dashboard/materials", name: "dashboard-materials", auth: true },
   { path: "/guardian", name: "guardian", auth: "student" },
+
+  /* espace prof v2 · phase 1 (shell): the AppShell's new pages. The harness tutor is
+     a DRAFT storefront, so these show the « not verified yet » state — the blocker,
+     the owner preview banner, the empty lists — which is the state a new tutor sees. */
+  { path: "/dashboard/classes", name: "dashboard-classes", auth: true },
+  { path: "/dashboard/students", name: "dashboard-students", auth: true },
+  { path: "/dashboard/storefront", name: "dashboard-storefront", auth: true },
+  { path: "/dashboard/storefront/preview", name: "dashboard-storefront-preview", auth: true },
+  { path: "/dashboard/plan", name: "dashboard-plan", auth: true },
+  /* The public « Ce prof arrive bientôt »: the harness tutor's own slug, seen anonymously. */
+  { path: "/audit-harness", name: "coming-soon" },
 ];
 
 /** Expand the bare routes across both locales. */

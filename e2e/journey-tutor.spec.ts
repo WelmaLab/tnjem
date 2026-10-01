@@ -8,6 +8,7 @@ import { mintSession } from "./support/session";
 import { e2eStore } from "./support/store";
 import { openForE2E } from "./support/doc-crypto";
 import { api, contextAs, specimenIdPng, notificationBodies } from "./support/journey";
+import { fillWallTime, wallTimeOf } from "./support/datetime"; // espace prof v2 · shell
 
 /* ════════════════════════════════════════════════════════════════════════════
    THE TUTOR JOURNEY, in one browser session, against the real API and database:
@@ -110,7 +111,7 @@ test("tutor journey: signup → storefront → ID → approved → class → boo
     await page.goto("/fr/dashboard/new-class", { waitUntil: "networkidle" }); // hydrated: a fill before hydration is wiped by React
     await page.locator("form input[type=text]").first().fill("Ondes — révision express");
     const d = new Date(Date.now() + 6 * 86_400_000);
-    await page.locator('input[type="datetime-local"]').fill(`${d.toISOString().slice(0, 10)}T18:00`);
+    await fillWallTime(page, `${d.toISOString().slice(0, 10)}T18:00`); // espace prof v2: DD/MM/YYYY + 24 h
     await page.getByPlaceholder("15").fill("25");
     await page.locator('form button[type="submit"]').click();
     await expect.poll(async () => (await sql<{ n: number }[]>`select count(*)::int n from classes where tutor_id = ${tutorId}`)[0].n, { timeout: 15_000 }).toBe(1);
@@ -124,16 +125,19 @@ test("tutor journey: signup → storefront → ID → approved → class → boo
     expect(await notificationBodies(profileId, "new_booking")).toHaveLength(1);
     await page.goto("/fr/dashboard");
     await expect(page.locator("main")).toContainText("Ondes — révision express", { timeout: 15_000 });
-    await expect(page.locator("main")).toContainText("Yosra");
+    // espace prof v2 · shell: who booked is on « Mes élèves »; the class actions on « Mes classes ».
+    await page.goto("/fr/dashboard/students");
+    await expect(page.locator("main")).toContainText("Yosra", { timeout: 15_000 });
   });
 
   await test.step("move the class; the student is told and may cancel free", async () => {
-    await page.getByRole("button", { name: "Déplacer", exact: true }).click();
-    const input = page.locator('input[type="datetime-local"]');
-    const current = await input.inputValue();
+    await page.goto("/fr/dashboard/classes");
+    await page.getByRole("button", { name: "Modifier la date" }).click();
+    const dialog = page.locator("dialog[open]");
+    const current = await wallTimeOf(dialog);
     expect(current, "the form opens on the class's own time").toMatch(/T18:00$/);
-    await input.fill(current.replace("T18:00", "T19:30"));
-    await page.getByRole("button", { name: "Déplacer la séance" }).click();
+    await fillWallTime(dialog, current.replace("T18:00", "T19:30"));
+    await dialog.getByRole("button", { name: "Déplacer la séance" }).click();
     await expect.poll(async () => {
       const [c] = await sql<{ rescheduled_at: Date | null }[]>`select rescheduled_at from classes where id = ${classId}`;
       return Boolean(c.rescheduled_at);
@@ -144,9 +148,9 @@ test("tutor journey: signup → storefront → ID → approved → class → boo
   });
 
   await test.step("cancel the class; the student is released in full and told", async () => {
-    await page.goto("/fr/dashboard");
-    await page.getByRole("button", { name: "Annuler la séance" }).click();
-    await page.getByRole("button", { name: "Oui, annuler" }).click();
+    await page.goto("/fr/dashboard/classes");
+    await page.locator("[data-e2e=class-cancel]").click();
+    await page.locator("dialog[open]").getByRole("button", { name: "Oui, annuler" }).click();
     await expect.poll(async () => (await sql<{ status: string }[]>`select status from classes where id = ${classId}`)[0].status, { timeout: 15_000 }).toBe("cancelled");
     const [b] = await sql<{ status: string }[]>`select status from bookings where class_id = ${classId} and student_id = ${student.id}`;
     expect(b.status).toBe("cancelled");

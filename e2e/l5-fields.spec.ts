@@ -53,7 +53,8 @@ test.describe("A18.6 — the free-first box is disabled while the option is off"
     await expect(box).toHaveAttribute("aria-disabled", "true");
     const link = page.locator("[data-e2e=free-first-off] a");
     await expect(link).toHaveText("Active d'abord l'option dans tes réglages");
-    await expect(link).toHaveAttribute("href", "/fr/dashboard#free-first");
+    // espace prof v2 · shell: the option moved from the dashboard to /account (Réglages).
+    await expect(link).toHaveAttribute("href", "/fr/account#free-first");
     await box.click({ force: true });
     await expect(box).toHaveAttribute("aria-checked", "false");
     await ctx.close();
@@ -145,8 +146,9 @@ test.describe("A18.10 — dashboard status badges", () => {
 
     const ctx = await contextAs(browser, me.id);
     const page = await ctx.newPage();
-    await page.goto("/fr/dashboard", { waitUntil: "networkidle" });
-    const badge = (id: string) => page.locator(`a[href="/fr/class/${id}"] [data-e2e=class-phase]`);
+    // espace prof v2 · shell: the class list is « Mes classes ».
+    await page.goto("/fr/dashboard/classes", { waitUntil: "networkidle" });
+    const badge = (id: string) => page.locator(`[data-e2e=class-row][data-class-id="${id}"] [data-e2e=class-phase]`);
     await expect(badge(upcoming.id)).toHaveText("À venir");
     await expect(badge(finished.id)).toHaveText("Terminée");
     await expect(badge(cancelled.id)).toHaveText("Annulée");

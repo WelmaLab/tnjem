@@ -3,13 +3,13 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { Link } from "@/components/Link";
 import { useLocale } from "@/components/LocaleProvider";
 import { Button, Spinner } from "@/components/ui";
-import { SiteShell } from "@/components/SiteShell";
-import { Book, Video, Forward } from "@/components/icons";
+import { AppPage } from "@/components/app/AppShell"; // espace prof v2 · shell
+import { Book, Video, Plus } from "@/components/icons";
 import { UserText } from "@/components/UserText";
 import { getMyMaterials, createMaterial, deleteMaterial } from "@/app/actions";
 import { getDashboard } from "@/app/actions"; // phase-a lane L5 (A18.9)
 import type { MaterialItem } from "@tnajem/shared";
-import { monthLabel, type DashboardClass } from "@tnajem/shared"; // phase-a lane L5 (A18.9)
+import { monthLabel, type DashboardClass, type DashboardPack } from "@tnajem/shared"; // phase-a lane L5 (A18.9)
 import { bilingual } from "@/lib/i18n";
 
 /* THE TUTOR'S LIBRARY (Step 10).
@@ -26,10 +26,12 @@ import { bilingual } from "@/lib/i18n";
 
 const copy = bilingual({
   fr: {
-    eyebrow: "MES DOCUMENTS",
-    title: "Documents et vidéos",
+    // espace prof v2 · shell: « Mes fiches » in the sidebar — the library and the packs on sale.
+    title: "Mes fiches",
     sub: "Partage tes fiches, tes corrigés et tes vidéos avec tes élèves.",
-    back: "Retour au tableau de bord",
+    newPack: "Nouvelle fiche",
+    packsTitle: "Tes packs en vente",
+    packsEmpty: "Aucun pack pour l'instant.",
 
     addTitle: "Ajouter",
     fTitle: "Titre",
@@ -72,10 +74,11 @@ const copy = bilingual({
     errGeneric: "Ça n'a pas marché. Réessaie.",
   },
   ar: {
-    eyebrow: "وثائقي",
-    title: "وثائق وفيديوهات",
+    title: "ملخّصاتي",
     sub: "شارك ملخّصاتك، إصلاحاتك وفيديوهاتك مع تلامذتك.",
-    back: "ارجع للوحة",
+    newPack: "ملخّص جديد",
+    packsTitle: "الپاكات اللي تبيع فيها",
+    packsEmpty: "ما فمّا حتى پاك لتوّا.",
 
     addTitle: "زيد",
     fTitle: "العنوان",
@@ -139,6 +142,8 @@ export default function MaterialsPage() {
      there was no way to set it. A material attached to a class is for "Élèves de
      cette séance" — the students booked in THAT class (enforced by canRead). */
   const [classes, setClasses] = useState<DashboardClass[]>([]);
+  // espace prof v2 · shell: the packs on sale moved here from the old dashboard.
+  const [packs, setPacks] = useState<DashboardPack[] | null>(null);
   const [classId, setClassId] = useState("");
   useEffect(() => {
     let alive = true;
@@ -146,6 +151,7 @@ export default function MaterialsPage() {
       .then((d) => {
         if (!alive || !d || "wrongRole" in d) return;
         setClasses(d.classes.filter((k) => k.status !== "cancelled"));
+        setPacks(d.packs);
       })
       .catch(() => {});
     return () => { alive = false; };
@@ -204,24 +210,17 @@ export default function MaterialsPage() {
   }
 
   return (
-    <SiteShell>
-      <section className="web-section">
-        <div className="container container-narrow max-w-[760px]">
-          {/* min-h-11 (44px): the label is 16px tall, so without it the whole
-              back-navigation target on this page was a 16px strip. */}
-          <Link href="/dashboard" className="text-[13px] text-muted inline-flex items-center gap-1.5 mb-3 min-h-11">
-            <Forward className="w-3 h-3 rotate-180" aria-hidden="true" />
-            {c.back}
-          </Link>
-
-          <div className="mb-[clamp(20px,3vw,36px)]">
-            <div className="text-[13px] font-bold text-muted uppercase tracking-[.5px] mb-1.5">
-              {c.eyebrow}
-            </div>
-            <h1 className="web-h1">{c.title}</h1>
-            <p className="text-[14px] text-muted mt-1.5">{c.sub}</p>
-          </div>
-
+    <AppPage
+      title={c.title}
+      subtitle={c.sub}
+      actions={
+        <Link href="/dashboard/new-pack" className="btn btn-outline btn-sm aps-hide-mobile">
+          <Plus />
+          {c.newPack}
+        </Link>
+      }
+      width="narrow"
+    >
           {flash && (
             <div
               role={flash.kind === "err" ? "alert" : "status"}
@@ -364,8 +363,29 @@ export default function MaterialsPage() {
               </ul>
             )}
           </div>
-        </div>
-      </section>
-    </SiteShell>
+
+          {/* espace prof v2 · shell: the packs on sale (they used to be listed on the dashboard). */}
+          <section className="panel panel-pad mt-[clamp(14px,2vw,22px)]" aria-labelledby="mp-packs">
+            <h2 id="mp-packs" className="font-display text-[16px] font-bold mb-3">{c.packsTitle}</h2>
+            {packs === null ? null : packs.length === 0 ? (
+              <p className="text-[13px] text-muted">{c.packsEmpty}</p>
+            ) : (
+              <ul className="flex flex-col" role="list">
+                {packs.map((pk) => (
+                  <li key={pk.id} className="flex items-center gap-3 py-3 border-b border-line last:border-b-0">
+                    <span aria-hidden="true" className="w-9 h-9 rounded-[11px] grid place-items-center flex-none bg-blue50 text-blue">
+                      <Book />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <UserText as="div" className="text-[14px] font-semibold">{pk.title}</UserText>
+                      {pk.meta && <UserText as="div" className="text-[13px] text-muted mt-0.5">{pk.meta}</UserText>}
+                    </div>
+                    <div className="hp-num font-display font-bold text-ink flex-none">{pk.price_tnd} TND</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+    </AppPage>
   );
 }

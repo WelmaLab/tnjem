@@ -163,6 +163,8 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
         status: tutors.status,
         offersFreeFirstSession: tutors.offersFreeFirstSession,
         levels: tutors.levels, // phase-a lane L5 (A18.7)
+        avatarStatus: tutors.avatarStatus, // espace prof v2 · shell: the photo step
+        linkSharedAt: tutors.linkSharedAt, // espace prof v2 · shell (0036): the share step
       })
       .from(tutors)
       .where(eq(tutors.profileId, session.profile.id))
@@ -207,6 +209,8 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
       },
       offersFreeFirstSession: mine.offersFreeFirstSession,
       levels: sortLevels(mine.levels), // phase-a lane L5 (A18.7)
+      avatarStatus: mine.avatarStatus ?? null, // espace prof v2 · shell
+      linkShared: Boolean(mine.linkSharedAt),
     };
   });
 }

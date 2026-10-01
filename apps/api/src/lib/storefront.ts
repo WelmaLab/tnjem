@@ -9,6 +9,8 @@ import {
   type Tutor,
   type ClassItem,
   type Pack,
+  type TutorVerifStatus, // espace prof v2 · shell
+  type TutorVisibility, // espace prof v2 · shell
 } from "@tnajem/shared";
 import { db } from "../db";
 import { onSaleClassSql } from "./class-sale";
@@ -29,7 +31,42 @@ export async function getStorefrontData(slug: string): Promise<Storefront | null
   if (!t) return null;
   if (t.status !== "verified") return null; // pending/unverified tutors aren't public
   if (t.suspendedAt) return null; // A blocked account's storefront is suspended (0019): off every public read.
+  return buildStorefront(t);
+}
 
+/* espace prof v2 · shell — WHAT /{slug} SHOWS, for the middleware and the page.
+   "public" is exactly getStorefrontData's rule. "coming-soon" is a tutor who exists
+   and is on the way (draft: not submitted yet · pending: under review) — the page
+   says « Ce prof arrive bientôt » instead of a bare 404. A rejected, suspended or
+   erased tutor stays "missing": we have decided against them, or they are gone, and
+   announcing them as on the way would be untrue. Anonymous by construction. */
+export async function tutorVisibility(slug: string): Promise<TutorVisibility> {
+  const [t] = await db
+    .select({ status: tutors.status, suspendedAt: tutors.suspendedAt, erasedAt: tutors.erasedAt })
+    .from(tutors)
+    .where(eq(tutors.slug, slug))
+    .limit(1);
+  if (!t || t.suspendedAt || t.erasedAt) return "missing";
+  if (t.status === "verified") return "public";
+  return t.status === "draft" || t.status === "pending" ? "coming-soon" : "missing";
+}
+
+/* espace prof v2 · shell — THE OWNER PREVIEW: the caller's own page, built exactly
+   as the public one, whatever its status. SESSION-BOUND (the profile id comes from
+   the session, never from the request), so it can never feed a cached page. The one
+   difference: the owner also sees their own photo while it waits for review — the
+   avatar route already serves it to them alone. */
+export async function getOwnerPreviewData(
+  profileId: string,
+): Promise<{ storefront: Storefront; status: TutorVerifStatus; suspended: boolean } | null> {
+  const [t] = await db.select().from(tutors).where(eq(tutors.profileId, profileId)).limit(1);
+  if (!t) return null;
+  const storefront = await buildStorefront(t);
+  storefront.tutor.has_photo = Boolean(t.avatarPath) && t.avatarStatus !== "rejected";
+  return { storefront, status: t.status, suspended: Boolean(t.suspendedAt) };
+}
+
+async function buildStorefront(t: typeof tutors.$inferSelect): Promise<Storefront> {
   /* Only classes still on sale, soonest first — the storefront's "Prochaine
      séance" is the first bookable row of this list, so the order is the product. */
   const cls = await db

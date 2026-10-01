@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 import { StorefrontView } from "@/components/storefront/StorefrontView";
 import { NotFoundScreen } from "@/components/NotFoundScreen";
+import { ComingSoonScreen } from "@/components/storefront/ComingSoonScreen"; // espace prof v2 · shell
 import { JsonLd } from "@/components/JsonLd";
-import { getCachedStorefront, STOREFRONT_TTL, tutorTag } from "@/lib/cache";
+import { getCachedStorefront, getCachedVisibility, STOREFRONT_TTL, tutorTag } from "@/lib/cache";
 import { getTutorReviews } from "@/app/actions";
 import { isLocale, DEFAULT_LOCALE, type AppLocale } from "@/lib/locale";
 import { dict } from "@/lib/i18n";
@@ -14,6 +15,9 @@ import { advertisesFreeFirst } from "@tnajem/shared"; // phase-a lane L3 (A5)
 type Props = { params: Promise<{ locale: string; slug: string }> };
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.com";
+
+/* espace prof v2 · shell — the tab title of « Ce prof arrive bientôt » (no name: see ComingSoonScreen). */
+const COMING_SOON_TITLE = { fr: "Ce prof arrive bientôt", ar: "الأستاذ هذا جاي قريب" } as const;
 
 /** hreflang alternates for a locale-agnostic subpath (relative → resolved by metadataBase). */
 function altLanguages(subpath: string): Record<string, string> {
@@ -101,9 +105,14 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const data = await getCachedStorefront(params.slug);
   const locale: AppLocale = isLocale(params.locale) ? params.locale : DEFAULT_LOCALE;
 
-  /* Unknown / unverified slug → the body renders <NotFoundScreen>, middleware
-     sets the 404 status, and this keeps the dead URL out of the index. */
+  /* Unknown slug → the body renders <NotFoundScreen>, middleware sets the 404
+     status, and this keeps the dead URL out of the index. A tutor on the way
+     (espace prof v2) → « Ce prof arrive bientôt », noindex all the same: nothing on
+     it is theirs to rank yet. */
   if (!data) {
+    if ((await getCachedVisibility(params.slug)) === "coming-soon") {
+      return { title: COMING_SOON_TITLE[locale], robots: { index: false, follow: false } };
+    }
     return { title: dict[locale].err.nfTitle, robots: { index: false, follow: false } };
   }
 
@@ -194,7 +203,16 @@ export default async function StorefrontPage(props: Props) {
      (same cache entry as this read) and sets it before this render starts. It
      used to be a 200 — that was reversed by the 14 Sept review, because a soft
      404 gives Google unlimited duplicate URLs on the route that must rank. */
-  if (!data) return <NotFoundScreen locale={loc} />;
+  /* espace prof v2 · shell — no public storefront, but a tutor on the way (draft or
+     under review): « Ce prof arrive bientôt », a 200 the proxy lets through. It
+     shows nothing of theirs; its owner is sent to /dashboard/storefront/preview
+     client-side (components/storefront/OwnerCheck.tsx), so this stays ISR. */
+  if (!data) {
+    if ((await getCachedVisibility(params.slug)) === "coming-soon") {
+      return <ComingSoonScreen locale={loc} slug={params.slug} />;
+    }
+    return <NotFoundScreen locale={loc} />;
+  }
 
   const { tutor } = data;
   const shownName = publicTutorName(tutor.full_name) ?? ""; // phase-a lane L2 (A23): JSON-LD says "Mohamed B."

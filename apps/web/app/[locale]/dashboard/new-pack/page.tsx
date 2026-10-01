@@ -1,52 +1,58 @@
 "use client";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "@/components/Link";
 import { Button, Field } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
-import { Back, Box, Bulb, Shield } from "@/components/icons";
+import { Bulb } from "@/components/icons";
 import { useToast } from "@/components/useToast";
-import { SiteShell } from "@/components/SiteShell";
-import { DashboardSidebar } from "@/components/DashboardSidebar";
-import { createPack } from "@/app/actions";
+import { AppPage, Blocker, ActionBar } from "@/components/app/AppShell";
+import { createPack, getOnboardingState } from "@/app/actions";
+import type { TutorVerifStatus } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 
 /* Page-local copy (never edit lib/i18n.ts from here). FR + Derija, RTL-safe. */
 const copy = bilingual({
   fr: {
-    hintTitle: "Fiches, PDFs, vidéos",
     hintBody: "Décris ton pack, fixe ton prix. Tes élèves le voient sur ta vitrine.",
     /* phase-a A4: tutors never see a student's phone or e-mail, so "send it
        yourself" was an instruction nobody could follow — and Mes documents does
        upload. Files go there; questions go through Tnajem's messages. */
-    deliveryTitle: "Tes fichiers passent par « Mes documents »",
+    deliveryTitle: "Tes fichiers passent par « Mes fiches »", // espace prof v2: the library's name in the shell
     deliveryBody:
-      "Publie ici la description et le prix de ton pack. Le fichier lui-même, ajoute-le dans « Mes documents » : tes élèves inscrits le retrouvent sur ta page. Une question d'un élève ? Réponds-lui dans les messages Tnajem.",
-    deliveryCta: "Ouvrir Mes documents",
+      "Publie ici la description et le prix de ton pack. Le fichier lui-même, ajoute-le dans « Mes fiches » : tes élèves inscrits le retrouvent sur ta page. Une question d'un élève ? Réponds-lui dans les messages Tnajem.",
+    deliveryCta: "Ouvrir Mes fiches",
     metaHelp: "ex. 42 pages · 6 vidéos · 3 exercices corrigés",
     // Publishing requires a verified profile (enforced server-side in createPack).
     notVerified: "Ton profil doit d'abord être vérifié. Va dans « Vérification » pour envoyer tes documents.",
     titlePh: "ex. Pack révision : Dérivées & Limites",
     metaPh: "42 pages · 6 vidéos",
-    verifNote: "Ton pack se publie une fois ton compte vérifié.",
+    verifNote: "tu pourras publier ton pack dès que ton compte est vérifié.",
     verifCta: "Vérifier mon compte",
+    verifT: "Fais-toi vérifier", // espace prof v2 · shell: the blocker at the top
+    pendingT: "Vérification en cours",
+    pendingB: "tu pourras publier ton pack dès qu'elle est validée, en général sous 24–48 h.",
+    cancel: "Annuler",
     // Field refusals from createPack (apps/api/src/routes/classes.ts validators).
     errTitle: "Le titre doit faire au moins 3 caractères.",
     errMeta: "Ce détail ne peut pas dépasser 200 caractères.",
     errPrice: "Le prix doit être entre 0 et 5000 TND.",
   },
   ar: {
-    hintTitle: "فيشات، PDF، فيديوهات",
     hintBody: "وصّف الپاك متاعك، وحطّ السوم. تلاميذك يشوفوه في واجهتك.",
-    deliveryTitle: "ملفّاتك تتعدّى من « وثائقي »",
+    deliveryTitle: "ملفّاتك تتعدّى من « ملخّصاتي »",
     deliveryBody:
-      "انشر هوني الوصف والسوم متاع الپاك. أمّا الملف في حدّ ذاتو، زيدو في « وثائقي »: تلاميذك المسجّلين يلقاوه في صفحتك. تلميذ عندو سؤال؟ جاوبو في الرسائل متاع Tnajem.",
-    deliveryCta: "حلّ « وثائقي »",
+      "انشر هوني الوصف والسوم متاع الپاك. أمّا الملف في حدّ ذاتو، زيدو في « ملخّصاتي »: تلاميذك المسجّلين يلقاوه في صفحتك. تلميذ عندو سؤال؟ جاوبو في الرسائل متاع Tnajem.",
+    deliveryCta: "حلّ « ملخّصاتي »",
     metaHelp: "مثال: 42 صفحة · 6 فيديوهات · 3 تمارين مصحّحة",
     notVerified: "لازم بروفايلك يتثبّت الأول. امشي لـ « التثبّت » وابعث وثائقك.", // phase-a lane L6 (A18.derija-2)
     titlePh: "مثال: پاك مراجعة : المشتقات والنهايات",
     metaPh: "42 صفحة · 6 فيديوهات",
-    verifNote: "الپاك يتنشر كي يتثبّت حسابك.",
+    verifNote: "تنجّم تنشر الپاك متاعك أوّل ما حسابك يتثبّت.",
     verifCta: "ثبّت حسابي",
+    verifT: "تثبّت من هويتك",
+    pendingT: "التثبّت في الطريق",
+    pendingB: "تنجّم تنشر الپاك أوّل ما يتقبل، عادةً في 24–48 ساعة.",
+    cancel: "ارجع",
     errTitle: "العنوان لازم يكون فيه 3 حروف على الأقل.",
     errMeta: "التفاصيل ما تنجّمش تفوت 200 حرف.",
     errPrice: "السوم لازم يكون بين 0 و 5000 د.ت.",
@@ -87,6 +93,14 @@ export default function NewPackPage() {
 
   const { toast, showToast } = useToast();
 
+  // espace prof v2 · shell: the verification state, for the blocker at the top (rule 4).
+  const [status, setStatus] = useState<TutorVerifStatus | null>(null);
+  useEffect(() => {
+    let alive = true;
+    getOnboardingState().then((s) => { if (alive) setStatus(s?.status ?? null); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitted(true);
@@ -108,154 +122,104 @@ export default function NewPackPage() {
     }
   }
 
+  const blocker =
+    status === "draft" || status === "rejected" ? (
+      <Blocker title={c.verifT} action={{ href: "/onboarding/verify", label: c.verifCta }}>{c.verifNote}</Blocker>
+    ) : status === "pending" ? (
+      <Blocker title={c.pendingT}>{c.pendingB}</Blocker>
+    ) : null;
+
   return (
-    <SiteShell>
-      <section className="web-section tight">
-        <div className="container">
-          <div className="app-layout">
-            {/* This page does not fetch getDashboard(), so the flag is not in scope.
-                Hardcoded false is correct while payments are off; when PAYMENTS_ENABLED
-                ships, thread the real flag here (grep: DashboardSidebar paymentsEnabled={false}). */}
-            <DashboardSidebar paymentsEnabled={false} />
+    <AppPage title={t.createPack.title} blockers={blocker} note={c.hintBody} width="narrow">
+      <form onSubmit={handleSubmit} className="u-card u-card-pad">
+        {/* Title */}
+        <Field label={t.createPack.name} error={errorFor("title")}>
+          <div className="inp">
+            <input
+              type="text"
+              placeholder={c.titlePh}
+              ref={refs.title}
+              value={title}
+              onChange={(e) => { setTitle(e.target.value); clearError("title"); }}
+              required
+              maxLength={80}
+            />
+          </div>
+        </Field>
 
-            {/* Main content column */}
-            <div className="min-w-0">
-              {/* Page header */}
-              <div className="flex items-center gap-3 mb-[clamp(18px,3vw,28px)]">
-                <Link href="/dashboard" className="iconbtn flex-none" aria-label={t.common.back}>
-                  <Back />
-                </Link>
-                <h1 className="font-display text-[clamp(20px,2.6vw,28px)] tracking-[-0.6px] text-ink min-w-0">
-                  {t.createPack.title}
-                </h1>
-              </div>
+        {/* Meta */}
+        <Field
+          label={t.createPack.meta}
+          help={c.metaHelp}
+          error={errorFor("meta")}
+        >
+          <div className="inp">
+            <input
+              type="text"
+              placeholder={c.metaPh}
+              ref={refs.meta}
+              value={meta}
+              onChange={(e) => { setMeta(e.target.value); clearError("meta"); }}
+              maxLength={80}
+            />
+          </div>
+        </Field>
 
-              {/* Form card */}
-              <div className="panel panel-pad max-w-[620px] w-full">
+        {/* Price */}
+        <Field label={t.createPack.price} error={errorFor("price")}>
+          <div className="inp">
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              placeholder="8"
+              ref={refs.price}
+              value={price}
+              onChange={(e) => { setPrice(e.target.value); clearError("price"); }}
+              required
+            />
+            <span className="pre">{t.common.tnd}</span>
+          </div>
+        </Field>
 
-                {/* Illustration / hint card */}
-                <div className="flex gap-[13px] items-center py-3.5 px-4 mb-[22px] bg-blue50 rounded-brand">
-                  <div aria-hidden="true" className="w-[46px] h-[46px] min-w-[46px] rounded-[13px] bg-blue text-white grid place-items-center flex-none">
-                    <Box className="w-6 h-6" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[13.5px] font-bold text-blue">
-                      {c.hintTitle}
-                    </div>
-                    <div className="text-[13px] text-blue700 mt-[3px] leading-[1.5]">
-                      {c.hintBody}
-                    </div>
-                  </div>
-                </div>
-
-                <form onSubmit={handleSubmit}>
-                  {/* Title */}
-                  <Field label={t.createPack.name} error={errorFor("title")}>
-                    <div className="inp">
-                      <input
-                        type="text"
-                        placeholder={c.titlePh}
-                        ref={refs.title}
-                        value={title}
-                        onChange={(e) => { setTitle(e.target.value); clearError("title"); }}
-                        required
-                        maxLength={80}
-                      />
-                    </div>
-                  </Field>
-
-                  {/* Meta */}
-                  <Field
-                    label={t.createPack.meta}
-                    help={c.metaHelp}
-                    error={errorFor("meta")}
-                  >
-                    <div className="inp">
-                      <input
-                        type="text"
-                        placeholder={c.metaPh}
-                        ref={refs.meta}
-                        value={meta}
-                        onChange={(e) => { setMeta(e.target.value); clearError("meta"); }}
-                        maxLength={80}
-                      />
-                    </div>
-                  </Field>
-
-                  {/* Price */}
-                  <Field label={t.createPack.price} error={errorFor("price")}>
-                    <div className="inp">
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.5}
-                        placeholder="8"
-                        ref={refs.price}
-                        value={price}
-                        onChange={(e) => { setPrice(e.target.value); clearError("price"); }}
-                        required
-                      />
-                      <span className="pre">{t.common.tnd}</span>
-                    </div>
-                  </Field>
-
-                  {/* Honest note — no dropzone HERE: files live in Mes documents
-                      (/dashboard/materials, Step 10), which does upload. phase-a A4. */}
-                  <div style={{
-                    display: "flex",
-                    gap: 12,
-                    alignItems: "flex-start",
-                    padding: "14px 16px",
-                    borderRadius: 14,
-                    background: "var(--cream)",
-                    border: "1px solid var(--line)",
-                    marginBottom: 20,
-                  }}>
-                    <span className="text-ochre inline-flex shrink-0 mt-[1px]">
-                      <Bulb className="w-[18px] h-[18px]" />
-                    </span>
-                    <div>
-                      <div className="text-[13px] font-bold mb-[3px]">
-                        {c.deliveryTitle}
-                      </div>
-                      <div className="text-[13px] text-muted leading-[1.6]">
-                        {c.deliveryBody}
-                      </div>
-                      <Link href="/dashboard/materials" className="linklike text-[13px] mt-1.5 inline-block">
-                        {c.deliveryCta}
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Submit */}
-                  <Button type="submit" variant="primary" disabled={submitted}>
-                    {t.createPack.create}
-                  </Button>
-
-                  {/* Publishing needs a verified profile (server-side rule) — say it
-                      BEFORE they submit instead of only failing afterwards. */}
-                  <p className="flex items-center justify-center gap-1.5 flex-wrap text-[13px] text-muted mt-3 leading-[1.5]">
-                    <Shield className="w-3.5 h-3.5 flex-none" />
-                    {c.verifNote}
-                    <Link href="/onboarding/verify" className="linklike text-[13px]">
-                      {c.verifCta}
-                    </Link>
-                  </p>
-
-                  {/* Shown ONLY when the server action reports demo mode (no DB connected). */}
-                  {demo && (
-                    <p className="text-center text-[13px] text-muted mt-3 leading-[1.5]">
-                      {t.common.demoMode}
-                    </p>
-                  )}
-                </form>
-              </div>
+        {/* Honest note — no dropzone HERE: files live in Mes fiches
+            (/dashboard/materials, Step 10), which does upload. phase-a A4.
+            Phase 6 brings the upload onto this form. */}
+        <div style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "flex-start",
+          padding: "14px 16px",
+          borderRadius: 14,
+          background: "var(--cream)",
+          border: "1px solid var(--line)",
+          marginBottom: 4,
+        }}>
+          <span className="text-ochre inline-flex shrink-0 mt-[1px]">
+            <Bulb className="w-[18px] h-[18px]" />
+          </span>
+          <div>
+            <div className="text-[13px] font-bold mb-[3px]">
+              {c.deliveryTitle}
             </div>
-            {/* end main column */}
+            <div className="text-[13px] text-muted leading-[1.6]">
+              {c.deliveryBody}
+            </div>
+            <Link href="/dashboard/materials" className="linklike text-[13px] mt-1.5 inline-block">
+              {c.deliveryCta}
+            </Link>
           </div>
         </div>
-      </section>
+
+        {/* Rule 5: the sticky action bar, inside the form so its submit is the form's. */}
+        <ActionBar status={demo ? t.common.demoMode : null}>
+          <Link href="/dashboard/materials" className="btn btn-ghost btn-sm">{c.cancel}</Link>
+          <Button type="submit" variant="primary" sm disabled={submitted}>
+            {t.createPack.create}
+          </Button>
+        </ActionBar>
+      </form>
       {toast}
-    </SiteShell>
+    </AppPage>
   );
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import { unstable_cache, revalidateTag } from "next/cache";
-import { getStorefront, getPublicTutorRefs, type PublicTutorRef } from "@/lib/data";
-import type { Storefront } from "@tnajem/shared";
+import { getStorefront, getPublicTutorRefs, getTutorVisibility, type PublicTutorRef } from "@/lib/data";
+import type { Storefront, TutorVisibility } from "@tnajem/shared";
 
 /* ══════════════════════════════════════════════════════════════════════════════
    Cache layer for the PUBLIC, ANONYMOUS surface only.
@@ -86,6 +86,17 @@ export function getCachedStorefront(slug: string): Promise<Storefront | null> {
     // every storefront with a global tag would mean one approval invalidates all
     // of them at once and the next second re-reads the whole catalogue: a
     // self-inflicted thundering herd, exactly when an admin is busiest.
+    { revalidate: STOREFRONT_TTL, tags: [tutorTag(slug)] },
+  )(slug);
+}
+
+/** espace prof v2 · shell — "public" | "coming-soon" | "missing" for /{slug}, cached
+    and tagged exactly like the storefront, so an approval (revalidateTutor) flips
+    « Ce prof arrive bientôt » to the real page in the same breath. */
+export function getCachedVisibility(slug: string): Promise<TutorVisibility> {
+  return unstable_cache(
+    async (s: string) => getTutorVisibility(s),
+    ["tutor-visibility"],
     { revalidate: STOREFRONT_TTL, tags: [tutorTag(slug)] },
   )(slug);
 }

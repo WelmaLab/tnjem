@@ -23,10 +23,15 @@ export const ROUTE_PATTERNS: readonly string[] = [
   "checkout",
   "class/[id]",
   "dashboard",
+  "dashboard/classes", // espace prof v2 · shell
   "dashboard/materials",
   "dashboard/new-class",
   "dashboard/new-pack",
   "dashboard/payout",
+  "dashboard/plan", // espace prof v2 · shell
+  "dashboard/storefront", // espace prof v2 · shell
+  "dashboard/storefront/preview", // espace prof v2 · shell
+  "dashboard/students", // espace prof v2 · shell
   "explore",
   "guardian",
   "guardian/threads/[id]",

@@ -4,6 +4,7 @@ import { Link } from "@/components/Link";
 import { useLocale } from "@/components/LocaleProvider";
 import { Spinner } from "@/components/ui";
 import { SiteShell } from "@/components/SiteShell";
+import { AppPage, useInAppShell } from "@/components/app/AppShell"; // espace prof v2 · shell
 import { Forward, Shield } from "@/components/icons";
 import { UserText } from "@/components/UserText";
 import { getThreads } from "@/app/actions";
@@ -29,6 +30,7 @@ const copy = bilingual({
       "Une conversation s'ouvre dès qu'une place est réservée — côté élève comme côté prof. Il n'y a pas de messagerie ouverte : on ne peut écrire qu'à quelqu'un avec qui on a une séance.",
     exploreCta: "Trouver un prof",
     dashboardCta: "Voir mes séances",
+    classesCta: "Voir mes classes", // espace prof v2 · shell: the tutor's way on, inside the shell
     noMessagesYet: "Aucun message pour l'instant",
     minor: "Élève mineur",
     withTutor: "avec ton prof",
@@ -45,6 +47,7 @@ const copy = bilingual({
       "المحادثة تتحلّ كي تتحجز بلاصة — من جهة التلميذ ومن جهة الأستاذ. ما فمّاش مراسلة مفتوحة: تنجّم تكتب برك لواحد عندك معاه حصة.",
     exploreCta: "لقّي أستاذ",
     dashboardCta: "شوف حصصي",
+    classesCta: "شوف حصصي",
     noMessagesYet: "ما فمّاش رسائل لتوّا",
     minor: "تلميذ قاصر",
     withTutor: "مع أستاذك",
@@ -63,6 +66,7 @@ export default function MessagesPage() {
   const c = copy[locale];
   const [threads, setThreads] = useState<MessageThreadSummary[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const inShell = useInAppShell();
 
   useEffect(() => {
     getThreads()
@@ -71,23 +75,8 @@ export default function MessagesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  return (
-    <SiteShell>
-      <section className="web-section">
-        <div className="container container-narrow max-w-[760px]">
-          <div className="mb-[clamp(20px,3vw,36px)]">
-            <div className="text-[13px] font-bold text-muted uppercase tracking-[.5px] mb-1.5">
-              {c.eyebrow}
-            </div>
-            <h1 className="web-h1">{c.title}</h1>
-            <p className="text-[14px] text-muted mt-1.5">{c.sub}</p>
-          </div>
-
-          <div className="panel panel-pad mb-[clamp(14px,2vw,22px)] flex items-start gap-2.5">
-            <Shield className="w-4 h-4 flex-none mt-0.5" />
-            <p className="text-[13px] text-muted leading-[1.6]">{c.privacy}</p>
-          </div>
-
+  const list = (
+    <>
           {loading ? (
             <div className="panel panel-pad grid place-items-center min-h-[160px]">
               <Spinner />
@@ -126,12 +115,50 @@ export default function MessagesPage() {
             <div className="panel panel-pad text-center">
               <h2 className="font-display text-[16px] font-bold mb-1.5">{c.emptyTitle}</h2>
               <p className="text-[13px] text-muted leading-[1.6] mb-3.5">{c.emptyBody}</p>
-              <div className="flex gap-2 justify-center flex-wrap">
-                <Link href="/explore" className="btn btn-primary btn-sm">{c.exploreCta}</Link>
-                <Link href="/student" className="btn btn-ghost btn-sm">{c.dashboardCta}</Link>
-              </div>
+              {/* A tutor's conversations come from bookings on their classes: their way on is Mes classes. */}
+              {inShell ? (
+                <div className="flex gap-2 justify-center flex-wrap">
+                  <Link href="/dashboard/classes" className="btn btn-ghost btn-sm">{c.classesCta}</Link>
+                </div>
+              ) : (
+                <div className="flex gap-2 justify-center flex-wrap">
+                  <Link href="/explore" className="btn btn-primary btn-sm">{c.exploreCta}</Link>
+                  <Link href="/student" className="btn btn-ghost btn-sm">{c.dashboardCta}</Link>
+                </div>
+              )}
             </div>
           )}
+    </>
+  );
+
+  /* espace prof v2 · shell — a tutor reads their messages inside the AppShell, with
+     the privacy line as the page's one info note. A student keeps the page below. */
+  if (inShell) {
+    return (
+      <AppPage title={c.title} subtitle={c.sub} note={c.privacy} width="narrow">
+        {list}
+      </AppPage>
+    );
+  }
+
+  return (
+    <SiteShell>
+      <section className="web-section">
+        <div className="container container-narrow max-w-[760px]">
+          <div className="mb-[clamp(20px,3vw,36px)]">
+            <div className="text-[13px] font-bold text-muted uppercase tracking-[.5px] mb-1.5">
+              {c.eyebrow}
+            </div>
+            <h1 className="web-h1">{c.title}</h1>
+            <p className="text-[14px] text-muted mt-1.5">{c.sub}</p>
+          </div>
+
+          <div className="panel panel-pad mb-[clamp(14px,2vw,22px)] flex items-start gap-2.5">
+            <Shield className="w-4 h-4 flex-none mt-0.5" />
+            <p className="text-[13px] text-muted leading-[1.6]">{c.privacy}</p>
+          </div>
+
+          {list}
         </div>
       </section>
     </SiteShell>

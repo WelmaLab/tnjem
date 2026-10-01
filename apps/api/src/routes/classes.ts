@@ -468,6 +468,7 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
         classes: [],
         packs: [],
         bookings: [],
+        linkShared: false, // espace prof v2 · shell: no page, nothing to share yet
       };
     }
 
@@ -585,6 +586,7 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
       classes: mapped,
       packs: mappedPacks,
       bookings: mappedBookings,
+      linkShared: Boolean(mine.linkSharedAt), // espace prof v2 · shell (0036): the last checklist step
     };
   });
 }

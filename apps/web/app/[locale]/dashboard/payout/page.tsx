@@ -3,9 +3,8 @@ import React, { useEffect, useState } from "react";
 import { Link } from "@/components/Link";
 import { Button, Spinner } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
-import { Back, Wallet, Shield, Bank, Bulb, Info } from "@/components/icons";
-import { SiteShell } from "@/components/SiteShell";
-import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { Wallet, Shield, Bank, Bulb, Info } from "@/components/icons";
+import { AppPage } from "@/components/app/AppShell"; // espace prof v2 · shell
 import { getDashboard } from "@/app/actions";
 import { WrongRoleNotice } from "@/components/WrongRoleNotice";
 import type { DashboardData, DashboardResult } from "@tnajem/shared";
@@ -212,35 +211,9 @@ export default function PayoutPage() {
   }
 
   return (
-    <SiteShell>
+    <AppPage title={t.payout.title} width="narrow">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <section className="web-section tight">
-        <div className="container">
-          <div className="app-layout">
-            <DashboardSidebar paymentsEnabled={paymentsEnabled} />
-
-            {/* Main content column */}
-            <div className="min-w-0">
-              {/* Page header */}
-              <div
-                className="flex items-center gap-3 mb-[clamp(18px,3vw,28px)]"
-              >
-                <Link href="/dashboard" className="iconbtn flex-none" aria-label={t.common.back}>
-                  <Back />
-                </Link>
-                <h1
-                  className="font-display text-[clamp(20px,2.6vw,28px)] tracking-[-0.6px] text-ink min-w-0"
-                >
-                  {t.payout.title}
-                </h1>
-              </div>
-
-              <div className="max-w-[620px] w-full">{body}</div>
-            </div>
-            {/* end main column */}
-          </div>
-        </div>
-      </section>
-    </SiteShell>
+      {body}
+    </AppPage>
   );
 }

@@ -39,6 +39,7 @@ import { moderationRoutes } from "./routes/moderation";
 import { subscriptionRoutes } from "./routes/subscriptions";
 import { adminAccountRoutes } from "./routes/admin-accounts";
 import { debugRoutes } from "./routes/debug";
+import { tutorSpaceRoutes } from "./routes/tutor-space"; // espace prof v2 · shell
 
 /** logStream: tests capture every log line (test/log-pii.test.ts). */
 export async function buildServer(opts: { logStream?: { write(line: string): void } } = {}): Promise<FastifyInstance> {
@@ -155,6 +156,7 @@ export async function buildServer(opts: { logStream?: { write(line: string): voi
   await app.register(adminAccountRoutes);
   await app.register(cronRoutes);
   await app.register(debugRoutes);
+  await app.register(tutorSpaceRoutes); // espace prof v2 · shell
 
   app.get("/health", async (req) => {
     let dbOk = false;

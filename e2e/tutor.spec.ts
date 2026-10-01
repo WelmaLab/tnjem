@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { sql } from "./support/db";
 import { seedProfile, seedTutor, seedClass } from "./support/seed";
+import { fillWallTime, wallDaysAhead } from "./support/datetime"; // espace prof v2 · shell
 import { mintSession, sessionCookie } from "./support/session";
 
 async function asTutor(browser: any, profileId: string) {
@@ -40,17 +41,18 @@ test("an unverified tutor's storefront exposes nothing and is noindex", async ({
 
   const res = await page.goto(`/fr/${tutor.slug}`);
 
-  /* 404 — this used to assert 200, deliberately: a runtime notFound() on Next
-     14.2 ships an empty <body>, so the page renders <NotFoundScreen> inline. That
-     is still true; the 14 Sept review reversed only the STATUS, which proxy.ts
-     now sets. e2e/not-found.spec.ts pins the readable no-JS body. What this test
-     protects is unchanged: an unverified tutor's details never reach the page,
-     and the URL stays out of the index. */
-  expect(res?.status()).toBe(404);
+  /* espace prof v2 · shell — a 200 now: a tutor who exists and is on the way gets
+     « Ce prof arrive bientôt » instead of a bare 404 (it was a 404 from the 14 Sept
+     review until then). Unknown slugs are still a hard 404 (e2e/not-found.spec.ts),
+     and e2e/ep2-shell.spec.ts covers the owner preview. What this test protects is
+     unchanged: an unverified tutor's details never reach the page, and the URL
+     stays out of the index. */
+  expect(res?.status()).toBe(200);
+  await expect(page.locator("main h1")).toHaveText("Ce prof arrive bientôt");
 
   const html = await page.content();
   expect(html, "an unverified tutor's name must not be served").not.toContain("Pending Person");
-  expect(html, "a dead/unverified slug must be noindex").toMatch(/noindex/);
+  expect(html, "an unverified tutor's page must be noindex").toMatch(/noindex/);
 });
 
 test("a verified tutor's storefront is public and shows no contact details", async ({ page }) => {
@@ -86,7 +88,9 @@ test("the tutor dashboard shows a booking on their own class", async ({ browser 
   const page = await ctx.newPage();
   await page.goto("/fr/dashboard");
 
+  // espace prof v2 · shell: the home lists the class; who booked it is « Mes élèves ».
   await expect(page.locator("main")).toContainText(klass.title);
+  await page.goto("/fr/dashboard/students");
   await expect(page.locator("main")).toContainText("Amine");
 
   await ctx.close();
@@ -102,8 +106,7 @@ test("a tutor publishes a class, and only a verified tutor can", async ({ browse
 
   const title = `E2E Published ${Date.now()}`;
   await page.getByPlaceholder(/Intégrales/).fill(title);
-  await page.locator('input[type="datetime-local"]').first()
-    .fill(new Date(Date.now() + 5 * 86400_000).toISOString().slice(0, 16));
+  await fillWallTime(page, wallDaysAhead(5)); // espace prof v2: the DD/MM/YYYY + 24 h picker
   /* price starts EMPTY and is `required`, so leaving it blank makes HTML5
      validation swallow the submit with no error anywhere -- the form just does
      nothing. duration (90) and seats (20) already have defaults. */
@@ -139,8 +142,7 @@ test("an UNVERIFIED tutor cannot publish a class", async ({ browser }) => {
      row is written. That is what must survive the move to Fastify. */
   if (await nameField.count()) {
     await nameField.fill(title);
-    await page.locator('input[type="datetime-local"]').first()
-      .fill(new Date(Date.now() + 5 * 86400_000).toISOString().slice(0, 16));
+    await fillWallTime(page, wallDaysAhead(5)); // espace prof v2: the DD/MM/YYYY + 24 h picker
     const price = page.getByPlaceholder("15");
     if (await price.count()) await price.fill("40");
     const btn = page.getByRole("button", { name: /Publier la classe/i });
