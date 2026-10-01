@@ -7,7 +7,7 @@
 
    GONE
      identity     e-mail, phone, name, birth year, level, subjects
-     access       every session and pending login code
+     access       every session and pending login code, and the password hash (0032)
      private      notifications addressed to the account; consents and guardian
                   links; messages it wrote (see KEEP_REPORTED_MESSAGES_ON_ERASURE)
      tutor        the public page (name, bio, photo, links, intro video) — hidden,
@@ -315,6 +315,10 @@ export async function eraseAccount(
         fullName: null,
         birthYear: null,
         birthMonth: null, // phase-a lane L2 (A24): 0025's profiles_purged_has_no_birth_month
+        // espace prof v2 · auth: 0032's profiles_purged_has_no_password — the hash goes with the account.
+        passwordHash: null,
+        passwordSetAt: null,
+        passwordPromptedAt: null,
         level: null,
         subjects: null,
         deletionStatus: "purged",

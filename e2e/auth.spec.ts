@@ -3,6 +3,7 @@ import { sql } from "./support/db";
 import { recoverOtp, resetRateLimits } from "./support/otp";
 import { email } from "./support/seed";
 import { fillOtp } from "./support/otp-ui";
+import { completePasswordStep } from "./support/password-ui"; // espace prof v2 · auth
 import { randomBytes } from "node:crypto";
 
 /* The REAL login flow, end to end, through the browser.
@@ -89,6 +90,10 @@ test("a student signs up with a real OTP and lands signed in", async ({ page }) 
      verifies ever to reach the server, it is race-safe — one code, one winner
      (otp-race.spec.ts). */
   await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
+
+  /* espace prof v2 · auth: a new account then creates its password (required at
+     sign-up) before it leaves the page — support/password-ui.ts. */
+  await completePasswordStep(page);
 
   // A profile now exists, and the browser holds a session for it.
   await expect.poll(async () => {

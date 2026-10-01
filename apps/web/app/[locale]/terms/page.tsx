@@ -109,9 +109,10 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         ],
       },
       {
-        h: "3. Compte, e-mail et code de connexion",
+        h: "3. Compte, mot de passe, e-mail et code de connexion",
         p: [
-          "La connexion se fait avec ton adresse e-mail et un code à usage unique qu'on t'envoie par e-mail. Ce code est personnel et temporaire : ne le communique jamais, à personne. Tnajem ne te demandera jamais ton code par téléphone, par WhatsApp ou par message.",
+          // espace prof v2 · auth (phase 2): a password is created at sign-up; the code still works (apps/api/src/routes/passwords.ts).
+          "La connexion se fait avec ton adresse e-mail et ton mot de passe, ou avec un code à usage unique qu'on t'envoie par e-mail. Ton mot de passe et ce code sont personnels : ne les communique jamais, à personne. Tnajem ne te demandera jamais ton mot de passe ni ton code, par téléphone, par WhatsApp ou par message. Si tu oublies ton mot de passe, « Mot de passe oublié » t'en fait choisir un nouveau avec un code envoyé à ton adresse.",
           // A3: the phone feeds notify()'s SMS only (booking confirmation, verification result); no API sends it to the other party.
           "Ton numéro de téléphone est facultatif. Il sert uniquement aux messages que Tnajem peut t'envoyer sur ton compte et tes séances ; il n'est jamais montré à un prof ou à un élève, et ne sert jamais à te connecter.",
           "Si tu perds l'accès à ton adresse e-mail, écris-nous : nous pouvons devoir vérifier ton identité avant de rétablir l'accès.",
@@ -290,9 +291,9 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         ],
       },
       {
-        h: "3. الحساب، الإيميل وكود الدخول",
+        h: "3. الحساب، كلمة السرّ، الإيميل وكود الدخول",
         p: [
-          "الدخول يتمّ بالإيميل متاعك وبكود وحيد يوصلك في الإيميل. الكود هذا شخصي ووقتي: ما تعطيه لحتى واحد. تنجّم عمرها ما تطلب منّك الكود بالتليفون ولا بواتساب ولا برسالة.",
+          "الدخول يتمّ بالإيميل متاعك وكلمة السرّ متاعك، ولا بالإيميل وبكود وحيد يوصلك في الإيميل. كلمة السرّ شخصية، والكود هذا شخصي ووقتي: ما تعطيهم لحتى واحد. تنجّم عمرها ما تطلب منّك الكود بالتليفون ولا بواتساب ولا برسالة، ولا كلمة السرّ. كان نسيت كلمة السرّ، « نسيت كلمة السرّ » يخلّيك تختار وحدة جديدة بكود يوصلك للعنوان متاعك.",
           "رقم التليفون اختياري. ما يخدم كان للرسائل اللي تنجّم تبعثهملك Tnajem على حسابك وحصصك؛ عمرو ما يتوّرى لأستاذ ولا لتلميذ، وعمرو ما يخدم للدخول.",
           "إذا ضيّعت الإيميل متاعك، اكتبلنا: نجّمو نحتاجو نتثبّتو في هويتك قبل ما نرجّعولك الدخول.",
         ],

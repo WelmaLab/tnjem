@@ -21,6 +21,10 @@ const STUDENT = `pii-student-${run}@tnajem.invalid`;
 const OTHER = `pii-other-${run}@tnajem.invalid`;
 // Numbers that are unmistakably this test's, in the format the app stores.
 const PHONE = `+2169${String(Date.now()).slice(-7)}`;
+// espace prof v2 · phase 2: passwords that are unmistakably this test's.
+const PW_1 = `Pii-premier-${run}-mot`;
+const PW_2 = `Pii-second-${run}-mot`;
+const PW_3 = `Pii-troisieme-${run}-mot`;
 
 const lines: string[] = [];
 const consoleOriginals = { log: console.log, warn: console.warn, error: console.error, info: console.info };
@@ -76,6 +80,8 @@ async function login(address: string, role: "student" | "tutor" | undefined, bir
 before(async () => {
   // inject() always comes from 127.0.0.1: start from a fresh per-IP OTP budget.
   await db.delete(rateLimits).where(or(like(rateLimits.key, "otp:vfy:ip:127.0.0.1"), like(rateLimits.key, "otp:req:ip:127.0.0.1")));
+  // espace prof v2 · phase 2: the password and account-status budgets of the same address.
+  await db.delete(rateLimits).where(or(like(rateLimits.key, "pw:%:ip:127.0.0.1"), like(rateLimits.key, "acct:status:ip:127.0.0.1")));
   process.env.ADMIN_EMAILS = ADMIN;
   for (const k of ["MAIL_HOST", "MAIL_USER", "MAIL_PASS", "MAIL_FROM_ADDRESS"]) process.env[k] = "";
   const capture = (level: string) => (...args: unknown[]) => {
@@ -118,6 +124,20 @@ describe("security: no personal data reaches a log line", () => {
     }
     assert.equal(last?.error, "too-many-attempts");
 
+    /* espace prof v2 · phase 2 — passwords: create one with a code, sign in right and
+       wrong, change it, reset it. None of the three may appear in any line. */
+    const code = String((await call("POST", "/auth/password/code", STUDENT, { locale: "fr" })).body?.devCode);
+    assert.equal((await call("POST", "/auth/password/set", STUDENT, { password: PW_1, code })).body?.ok, true);
+    assert.equal((await call("POST", "/auth/password/login", null, { identifier: STUDENT, password: PW_2 })).body?.error, "invalid-credentials");
+    assert.equal((await call("POST", "/auth/password/login", null, { identifier: STUDENT, password: PW_1 })).body?.ok, true);
+    assert.equal((await call("POST", "/auth/password/change", STUDENT, { currentPassword: PW_1, newPassword: PW_2 })).body?.ok, true);
+    const resetCode = String((await call("POST", "/auth/otp/request", null, { identifier: STUDENT, locale: "fr", purpose: "password" })).body?.devCode);
+    assert.equal((await call("POST", "/auth/password/reset", null, { identifier: STUDENT, code: resetCode, password: PW_3 })).body?.ok, true);
+    await call("POST", "/auth/account-status", null, { identifier: STUDENT });
+    // The reset ended every session; sign back in for the deletion request below.
+    const back = await call("POST", "/auth/password/login", null, { identifier: STUDENT, password: PW_3 });
+    cookieJar.set(STUDENT, (back.body?.session as { token: string }).token);
+
     // A deletion request, a malformed body and an unknown route.
     await call("POST", "/account/delete", STUDENT, {});
     await app.inject({ method: "POST", url: "/auth/otp/verify", payload: "{not json", headers: { "content-type": "application/json" } });
@@ -134,6 +154,10 @@ describe("security: no personal data reaches a log line", () => {
     assert.deepEqual(leaks, [], `personal data in ${leaks.length} log line(s)`);
     for (const secret of [STUDENT, OTHER, ADMIN, PHONE, PHONE.slice(4)]) {
       assert.ok(!lines.some((l) => l.includes(secret) || l.includes(encodeURIComponent(secret))), "no line may contain the test's own address or number");
+    }
+    // espace prof v2 · phase 2: nor a password, nor its argon2 hash.
+    for (const secret of [PW_1, PW_2, PW_3, "$argon2id$"]) {
+      assert.ok(!lines.some((l) => l.includes(secret) || l.includes(encodeURIComponent(secret))), "no line may contain a password or a password hash");
     }
   });
 });

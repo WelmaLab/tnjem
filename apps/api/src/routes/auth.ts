@@ -1,16 +1,7 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { and, eq, isNull, profiles, consents, tutors } from "@tnajem/db";
+import { and, eq, isNull, profiles } from "@tnajem/db";
 import {
-  otpChannel,
-  OTP_RESEND_COOLDOWN_SEC,
-  OTP_TTL_SEC,
-} from "@tnajem/shared/auth-core";
-import {
-  normalizeEmail,
-  normalizePhone,
-  isValidEmail,
-  isValidPhone,
   vBirthYear,
   TERMS_VERSION,
   // phase-a lane L2 (A24)
@@ -18,14 +9,11 @@ import {
   isAdult,
   minorsAllowed,
 } from "@tnajem/shared";
-import { mailEnabled, sendMail } from "@tnajem/shared/mail";
-import { smsEnabled, sendSms } from "@tnajem/shared/sms";
 import { db } from "../db";
-import { IS_PROD } from "../env";
-import { checkRateLimit, ipBucket, peekRateLimit, rlSubject } from "../lib/rate-limit";
-import { createOtp, otpCooldownRemaining, verifyOtpCode } from "../lib/otp";
 import { createSession, destroyProfileSessions, destroySession, getSession } from "../lib/session";
-import { OTP_MAIL } from "../lib/otp-copy";
+// espace prof v2 · phase 2: the send / prove / post-login steps are shared with routes/passwords.ts.
+import { identityColumn, postLoginState, proveCode, resolveIdentity, sendCode } from "../lib/auth-flow";
+import { issuePasswordGrant } from "../lib/password";
 
 /* auth-write. Ported from apps/web/app/actions.ts, branch for branch.
 
@@ -46,11 +34,20 @@ import { OTP_MAIL } from "../lib/otp-copy";
    cookies itself and Set-Cookie pass-through becomes the natural design.
 
    ROLE_HINT_COOKIE stays 100% on the web side. It is a forgeable UI hint that
-   only decides which nav link renders; the API must not know it exists. */
+   only decides which nav link renders; the API must not know it exists.
+
+   espace prof v2 · phase 2 — PASSWORDS. A code is still a complete way in. What
+   changed here: the code e-mail can say it is for a password (purpose), and a
+   successful verify tells the web whether to ask for a password next —
+   needsPassword on a brand-new account (the sign-up step), promptPassword ONCE for
+   an older account without one — with the short-lived grant that lets it be set
+   without a second code (lib/password.ts). The password routes are in passwords.ts. */
 
 const requestOtpBody = z.object({
   identifier: z.string(),
   locale: z.string().optional(),
+  // espace prof v2 · phase 2: only the e-mail's wording depends on it (otp-copy.ts).
+  purpose: z.enum(["login", "password"]).optional(),
 });
 
 const verifyOtpBody = z.object({
@@ -62,13 +59,6 @@ const verifyOtpBody = z.object({
   birthMonth: z.number().optional(), // phase-a lane L2 (A24)
 });
 
-/** The client address, as forwarded by the web app. Fastify resolves this through
-    trustProxy, which trusts SPECIFIC hops only — see env.ts. Never an authz
-    input; it is a throttle key. */
-function clientIp(req: FastifyRequest): string {
-  return ipBucket(req.ip);
-}
-
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   /* ── POST /auth/otp/request ─────────────────────────────────────────────── */
   app.post("/auth/otp/request", async (req, reply) => {
@@ -76,69 +66,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return reply.code(400).send({ error: "bad-request" });
     const input = parsed.data;
 
-    const timing = { resendAfter: OTP_RESEND_COOLDOWN_SEC, expiresIn: OTP_TTL_SEC };
-
-    /* Normalise, then validate, then use the NORMALISED value — never the raw
-       input. normalizeEmail lower-cases, which is what stops "Sam@x.com" and
-       "sam@x.com" becoming two accounts against a case-sensitive unique index. */
-    const channel = otpChannel();
-    const id = channel === "email" ? normalizeEmail(input.identifier) : normalizePhone(input.identifier);
-    const idOk = channel === "email" ? isValidEmail(id) : isValidPhone(id);
-    if (!idOk) {
+    const { channel, id, ok } = resolveIdentity(input.identifier);
+    if (!ok) {
       return { ok: false, error: channel === "email" ? "invalid-email" : "invalid-phone" };
     }
-
-    /* Anti-abuse, two layers:
-         1. per-IP — the per-identity cooldown below is keyed on a value the
-            ATTACKER supplies, so alone it stops nothing: rotate the address and
-            you can send unlimited messages. On SMS that was a direct billing
-            drain and an SMS-bombing service pointed at arbitrary Tunisians from
-            our sender id. Email is cheaper but not consequence-free: the
-            equivalent abuse is mail-bombing a stranger's inbox from our domain,
-            which is how a sending domain earns a spam reputation and stops
-            delivering for everyone.
-         2. per-identity cooldown — protects one victim from repeat messages. */
-    const ip = await checkRateLimit(`otp:req:ip:${clientIp(req)}`, 10, 10 * 60_000);
-    if (!ip.ok) return { ok: false, error: "too-soon", retryAfter: ip.retryAfter };
-
-    const wait = await otpCooldownRemaining(id);
-    if (wait > 0) return { ok: false, error: "too-soon", retryAfter: wait };
-
-    // createOtp re-checks the cooldown under an advisory lock and returns null if
-    // a concurrent call already minted a code for this identity.
-    const code = await createOtp(id);
-    if (!code) return { ok: false, error: "too-soon", retryAfter: 60 };
-
-    const m = OTP_MAIL[input.locale === "ar" ? "ar" : "fr"];
-
-    /* Production posture: the code is NEVER returned to the client when a
-       provider is configured. If delivery fails, surface a retryable error — do
-       not fall through and leak it. */
-    if (channel === "email") {
-      if (mailEnabled()) {
-        const sent = await sendMail(id, m.subject(code), m.body(code));
-        return sent ? { ok: true, ...timing } : { ok: false, error: "send-failed" };
-      }
-    } else if (smsEnabled()) {
-      const sent = await sendSms(id, m.sms(code));
-      return sent ? { ok: true, ...timing } : { ok: false, error: "send-failed" };
-    }
-
-    /* No provider configured. Two very different situations, and conflating them
-       was an account-takeover hole: this used to return the OTP unconditionally,
-       gated only on mailEnabled()/smsEnabled(). Those are env-PRESENCE checks, so
-       a production deploy shipped without MAIL_* became an oracle — type any
-       stranger's address, read their login code off the screen, own the account.
-       Fail closed in production; keep the on-screen code for local dev only. */
-    if (IS_PROD) {
-      req.log.error(
-        "requestOtp: no OTP provider configured in production — refusing to return " +
-          "the code. Set MAIL_HOST/MAIL_USER/MAIL_PASS/MAIL_FROM_ADDRESS (or TWILIO_* " +
-          "with OTP_CHANNEL=sms). Nobody can sign in until this is fixed.",
-      );
-      return { ok: false, error: "send-failed" };
-    }
-    return { ok: true, devCode: code, ...timing };
+    // The throttles, the advisory-locked mint and the fail-closed delivery: lib/auth-flow.ts.
+    return sendCode(req, id, input.locale, input.purpose ?? "login");
   });
 
   /* ── POST /auth/otp/verify ──────────────────────────────────────────────── */
@@ -151,40 +84,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
        invalid identity is reported as "invalid-code", NOT "invalid-email": this
        endpoint must not become an oracle that distinguishes a malformed address
        from a wrong code. */
-    const channel = otpChannel();
-    const id = channel === "email" ? normalizeEmail(input.identifier) : normalizePhone(input.identifier);
-    const idOk = channel === "email" ? isValidEmail(id) : isValidPhone(id);
-    if (!idOk) return { ok: false, error: "invalid-code" };
+    const { channel, id, ok } = resolveIdentity(input.identifier);
+    if (!ok) return { ok: false, error: "invalid-code" };
 
-    /* Brute-force budget. otp_codes.attempts caps guesses at 5 PER CODE, but that
-       counter is reset by every new code — and requesting one only costs a 60s
-       cooldown. So the pre-existing ceiling was really "5 guesses per minute,
-       forever, per identity" against a 6-digit space. Two throttles close it:
-         • per-identity: 10 guesses / 15 min — with the 5-per-code cap this leaves
-           an attacker ~960 guesses/day against 1,000,000 codes (about 0.1%/day).
-         • per-IP: stops one host farming many identities in parallel.
-
-       Being THROTTLED is reported distinctly as "too-many-attempts". That is a
-       fact about the CALLER, not the account: it is returned for any identity
-       once the budget is spent, so it reveals nothing about whether an account
-       exists. Expiry, by contrast, stays folded into "invalid-code" — telling a
-       caller their code "expired" would confirm one had been issued, which is
-       exactly the enumeration oracle this opacity exists to prevent. */
-    /* ONLY A WRONG CODE SPENDS THE PER-IDENTITY BUDGET. It used to be spent by every
-       attempt, a person's own correct one included; brute force is made of failures,
-       so counting successes bought nothing. The key holds a keyed hash, never the
-       address. The per-IP budget still counts every attempt: it is about the host. */
-    const idKey = `otp:vfy:id:${rlSubject(id)}`;
-    const perId = await peekRateLimit(idKey, 10);
-    if (!perId.ok) return { ok: false, error: "too-many-attempts", retryAfter: perId.retryAfter };
-    const perIp = await checkRateLimit(`otp:vfy:ip:${clientIp(req)}`, 30, 15 * 60_000);
-    if (!perIp.ok) return { ok: false, error: "too-many-attempts", retryAfter: perIp.retryAfter };
-
-    const valid = await verifyOtpCode(id, (input.code || "").trim());
-    if (!valid) {
-      await checkRateLimit(idKey, 10, 15 * 60_000);
-      return { ok: false, error: "invalid-code" };
-    }
+    // The two brute-force throttles and the atomic consume: lib/auth-flow.ts::proveCode.
+    const proof = await proveCode(req, id, input.code);
+    if (!proof.ok) return proof;
 
     /* role and locale are pgEnum/text columns on a public surface: an arbitrary
        string would reach Postgres and blow up as "invalid input value for enum
@@ -208,7 +113,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
        OTP_CHANNEL=sms that is profiles.phone; under email, profiles.email. Both
        are nullable-and-unique, so the channels coexist without either forcing a
        value on the other. */
-    const idColumn = channel === "email" ? profiles.email : profiles.phone;
+    const idColumn = identityColumn(channel);
     let [profile] = await db.select().from(profiles).where(eq(idColumn, id)).limit(1);
     let created = false;
 
@@ -221,7 +126,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
          on success), so they need a fresh one to sign up. That is deliberate: the
          alternative is checking whether the identity has an account BEFORE they
          prove they own it, which is a user-enumeration oracle. One extra message
-         on a rare path beats letting anyone probe who is on the platform. */
+         on a rare path beats letting anyone probe who is on the platform.
+         (espace prof v2 · phase 2: POST /auth/account-status now answers that
+         question up front, by spec, rate-limited — see passwords.ts. This branch
+         stays for the "J'ai déjà un code" path, which skips it.) */
       if (!requestedRole) return { ok: false, error: "no-account" };
       /* phase-a lane L2 (A24) — THE ADULT-ONLY PILOT (D6), on EVERY sign-up path.
          The signup form's "J'ai déjà un code" link skips the send step, and the
@@ -281,41 +189,33 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
     const { token, expiresAt } = await createSession(profile.id);
 
-    let needsConsent = false;
-    /* Guardian consent is a MINORS-only requirement (INPDP). Adults skip it;
-       unknown age fails safe (isAdult treats a missing month or year as a minor),
-       matching reserveSeat's gate. phase-a lane L2 (A24): month-aware. */
-    if (profile.role === "student" && !isAdult(profile.birthYear, profile.birthMonth)) {
-      const [c] = await db
-        .select({ id: consents.id })
-        .from(consents)
-        .where(and(eq(consents.minorId, profile.id), isNull(consents.withdrawnAt)))
-        .limit(1);
-      needsConsent = !c;
-    }
+    // Consent → welcome → storefront: the same answer a password sign-in gets (auth-flow.ts).
+    const { needsConsent, needsProfile, hasStorefront } = await postLoginState(profile);
 
     /* The requested role differed from the one on file. We still sign them in —
        they proved they own the identity — but the caller must SAY so rather than
        redirect somewhere that silently contradicts what they just tapped. */
     const roleMismatch = !created && requestedRole != null && profile.role !== requestedRole;
 
-    /* A student with no name yet still owes us the welcome screen. Checked on
-       EVERY login, not just the first, so a student who skipped it (the skip link
-       exists so onboarding can never cost a booking) is asked again next time. */
-    const needsProfile = profile.role === "student" && !profile.fullName;
-
-    /* Does this tutor already have a storefront? Without it, postAuthDestination
-       could only ever send tutors to /onboarding, so a tutor publishing for
-       months landed on "create your page" at every single login. One indexed
-       lookup, and only for tutors. */
-    let hasStorefront = false;
-    if (profile.role === "tutor") {
-      const [mine] = await db
-        .select({ id: tutors.id })
-        .from(tutors)
-        .where(eq(tutors.profileId, profile.id))
-        .limit(1);
-      hasStorefront = Boolean(mine);
+    /* espace prof v2 · phase 2 — what to ask next, if anything.
+       • a NEW account owes the sign-up's « Crée ton mot de passe » step;
+       • an older account with no password is offered one ONCE: the marker is set
+         in the same statement that decides, so two tabs cannot both be offered it
+         and a closed tab does not mean "offer again". Not on a role mismatch: that
+         screen is about which account this is, not about passwords.
+       The grant lets that one step set the password without a second code. */
+    let needsPassword = false;
+    let promptPassword = false;
+    if (!profile.passwordHash) {
+      if (created) needsPassword = true;
+      else if (!roleMismatch) {
+        const marked = await db
+          .update(profiles)
+          .set({ passwordPromptedAt: new Date() })
+          .where(and(eq(profiles.id, profile.id), isNull(profiles.passwordPromptedAt), isNull(profiles.passwordHash)))
+          .returning({ id: profiles.id });
+        promptPassword = marked.length > 0;
+      }
     }
 
     return {
@@ -326,6 +226,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       roleMismatch,
       needsProfile,
       hasStorefront,
+      ...(needsPassword || promptPassword
+        ? { needsPassword, promptPassword, passwordGrant: issuePasswordGrant(profile.id) }
+        : {}),
       // For the web to set the cookie — see the header. Redacted in logs.
       session: { token, expiresAt: expiresAt.toISOString() },
     };

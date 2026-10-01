@@ -62,3 +62,6 @@ export * from "./subjects";
 export * from "./account-role";
 // espace prof v2 · shell — the tutor space payloads (AppShell, Mes élèves, vitrine visibility). Pure.
 export * from "./tutor-space";
+// espace prof v2 · auth (phase 2) — password length rules + the strength-meter heuristic. Pure.
+// The 10k common-password list is NOT here: server-only subpath "@tnajem/shared/password-check".
+export * from "./password-policy";

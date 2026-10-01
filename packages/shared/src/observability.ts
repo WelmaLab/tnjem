@@ -18,6 +18,7 @@
  *
  * NOT SENT, EVER:
  *   - a session token or an OTP (hashed or not) — they are credentials
+ *   - a password, its argon2 hash, or a set-password grant (espace prof v2 · phase 2)
  *   - an e-mail address or a phone number — they are the login identity here
  *   - a document storage path — it locates a national ID scan
  *   - the query string of a URL — /doc?sig=… carries a signed capability
@@ -37,6 +38,14 @@ export const SENTRY_SCRUB_KEYS = [
   "devCode",
   "token",
   "sessionToken",
+  // Passwords (espace prof v2 · auth, phase 2): the plaintext, its hash, the set-password grant
+  "password",
+  "currentPassword",
+  "newPassword",
+  "passwordHash",
+  "password_hash",
+  "passwordGrant",
+  "grant",
   // Document locations
   "storagePath",
   "storage_path",

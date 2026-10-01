@@ -177,3 +177,14 @@ export async function seedDeclaration(tutorId: string): Promise<void> {
                    public_teacher_declaration_version = '2026-09-15'
              where id = ${tutorId}`;
 }
+
+// espace prof v2 · auth (phase 2) ─────────────────────────────────────────────
+/** Give a seeded profile a password, hashed exactly as apps/api/src/lib/password.ts
+    does (argon2id, m=19456 t=2 p=1, NFKC first), so a spec can sign in with it via
+    the real POST /auth/password/login or the /auth page. The hash is written, never
+    the password (a CHECK refuses anything but "$argon2id$…"). */
+export async function seedPassword(profileId: string, password: string): Promise<void> {
+  const { default: argon2 } = await import("argon2");
+  const hash = await argon2.hash(password.normalize("NFKC"), { type: argon2.argon2id, memoryCost: 19_456, timeCost: 2, parallelism: 1 });
+  await sql`update profiles set password_hash = ${hash}, password_set_at = now() where id = ${profileId}`;
+}

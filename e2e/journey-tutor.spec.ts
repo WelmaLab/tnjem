@@ -4,6 +4,7 @@ import { sql } from "./support/db";
 import { email, seedAdmin, seedProfile } from "./support/seed";
 import { recoverOtp, resetRateLimits } from "./support/otp";
 import { fillOtp } from "./support/otp-ui";
+import { completePasswordStep } from "./support/password-ui"; // espace prof v2 · auth
 import { mintSession } from "./support/session";
 import { e2eStore } from "./support/store";
 import { openForE2E } from "./support/doc-crypto";
@@ -52,6 +53,7 @@ test("tutor journey: signup → storefront → ID → approved → class → boo
     await expect(page.locator('[data-e2e="auth-step-code"]')).toBeVisible({ timeout: 20_000 });
     await fillOtp(page, code);
     await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
+    await completePasswordStep(page); // espace prof v2 · auth: « Crée ton mot de passe » (support/password-ui.ts)
     await page.waitForURL((u) => !u.pathname.includes("/signup/"), { timeout: 20_000 });
     const [p] = await sql<{ id: string; role: string }[]>`select id, role from profiles where email = ${address}`;
     expect(p.role).toBe("tutor");

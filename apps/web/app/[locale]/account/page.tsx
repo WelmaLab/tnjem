@@ -1,7 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { logout, logoutEverywhere, getMe, getDashboard } from "@/app/actions";
-import { Button } from "@/components/ui";
+import { getMe, getDashboard } from "@/app/actions";
 import { LocaleToggle } from "@/components/LocaleToggle";
 import { useLocale } from "@/components/LocaleProvider";
 import { Link } from "@/components/Link";
@@ -11,6 +10,7 @@ import { DeleteAccount } from "@/components/account/DeleteAccount";
 import { FreeFirstToggle } from "@/components/account/FreeFirstToggle";
 import { AvatarUpload } from "@/components/dashboard/AvatarUpload";
 import { AppPage, useInAppShell } from "@/components/app/AppShell";
+import { SecurityPanel } from "@/components/settings/SecurityPanel"; // espace prof v2 · auth (C8) — moves to Réglages › Sécurité in P6
 import { UserText } from "@/components/UserText";
 import { bilingual } from "@/lib/i18n";
 import { initials, supportWhatsAppHref, type DashboardData } from "@tnajem/shared";
@@ -27,8 +27,6 @@ const CONTACT_EMAIL = "contact@tnajem.com";
 const copy = bilingual({
   fr: {
     sub: "Ta langue, ton rôle, et comment nous joindre.",
-    logoutAll: "Se déconnecter de tous les appareils",
-    logoutAllHint: "Un téléphone perdu ou prêté ? Toutes tes connexions s'arrêtent, celle-ci comprise.",
     // espace prof v2 · shell — « Réglages » for a tutor, inside the AppShell.
     settings: "Réglages",
     settingsSub: "Ton compte, ta page et tes connexions.",
@@ -36,8 +34,6 @@ const copy = bilingual({
   },
   ar: {
     sub: "لغتك، دورك، وكيفاش تتصل بينا.",
-    logoutAll: "اخرج من حسابك في الأجهزة الكل",
-    logoutAllHint: "تليفون ضاع ولا سلّفتو؟ الدخول يتسكّر في الأجهزة الكل، حتى هذا.",
     settings: "الإعدادات",
     settingsSub: "حسابك، صفحتك والدخول متاعك.",
     legal: "المعلومات القانونية",
@@ -68,20 +64,6 @@ export default function AccountPage() {
       })
       .catch(() => setMe(null));
   }, [loadTutor]);
-
-  async function handleLogoutEverywhere() {
-    await logoutEverywhere();
-    // Same hard navigation as a plain logout, for the same reason.
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = "/";
-  }
-
-  async function handleLogout() {
-    await logout();
-    // Hard navigation on purpose: a full reload drops every client cache of the signed-in user.
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = "/";
-  }
 
   const body = (
     <>
@@ -219,16 +201,10 @@ export default function AccountPage() {
         </div>
       )}
 
-      {/* Logout buttons */}
-      <div className="mt-[clamp(14px,_2vw,_22px)] max-w-[320px] flex flex-col gap-2.5">
-        <Button variant="ghost" onClick={handleLogout}>
-          {t.account.logout}
-        </Button>
-        <Button variant="ghost" onClick={handleLogoutEverywhere}>
-          {c.logoutAll}
-        </Button>
-        <p className="muted text-[13px] m-0">{c.logoutAllHint}</p>
-      </div>
+      {/* espace prof v2 · auth (C8): password + sessions. Its Sessions card carries
+          « Se déconnecter » / « Déconnecter partout », so the old logout buttons are gone.
+          Shell moves it into Réglages › Sécurité in phase 6. */}
+      <SecurityPanel />
 
       {/* Step 15. LAST on the page, and behind a two-step confirm: the
           destructive control must never be the one under the cursor when the

@@ -121,6 +121,12 @@ async function walk(browser, locale, width) {
   // ── 5. The right one — auto-submitting once the code is complete ────────
   // A whole code landing in the first box replaces what the wrong one left.
   await page.locator('main [data-e2e="otp"] input').first().fill(devCode);
+  // espace prof v2 · auth: a new account then creates its password (required at sign-up).
+  await must(page, 'main [data-e2e="new-password"]', "the « Crée ton mot de passe » step");
+  await shot(page, locale, width, "password-step");
+  await page.locator('main [data-e2e="new-password"]').fill(`Flow-${stamp()}-mot-de-passe`);
+  await page.locator('main button[type="submit"]').first().click();
+  note("password created");
   await page.waitForURL(/\/onboarding(\?|$)/, { timeout: 20_000 });
   await must(page, "main h1", "the onboarding heading");
   await shot(page, locale, width, "onboarding");

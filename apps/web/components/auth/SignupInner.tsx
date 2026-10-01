@@ -25,16 +25,25 @@
    Layout (Option B): <AuthShell> draws the page chrome and the brand panel; this
    file owns the form side. Two steps share ONE card and ONE <form>: the identifier
    step (address + birth date), then the code step, which REPLACES it rather than
-   being appended below. */
+   being appended below.
+
+   espace prof v2 · phase 2 — PASSWORDS. Continuer first asks the API whether the
+   address already has an account; if so, signing up is the wrong door and the
+   visitor goes to /auth, address prefilled, « Tu as déjà un compte — connecte-toi ».
+   After the code, a new account gets a third step, « Crée ton mot de passe »
+   (required: no skip), set with the grant the verify returned. */
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocalizedRouter } from "@/components/Link";
 import { Button, Field } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
-import { Phone, Calendar, Mail, Back, ChevronDown } from "@/components/icons";
+import { Phone, Calendar, Mail, Back, ChevronDown, Lock } from "@/components/icons";
 import { requestOtp, verifyOtp } from "@/app/actions";
+import { accountStatus, setPassword } from "@/app/actions-auth"; // espace prof v2 · auth
 import { AuthShell } from "@/components/auth/AuthShell";
 import { OtpInput, OTP_LENGTH } from "@/components/auth/OtpInput";
-import { postAuthDestination } from "@/lib/auth-destination";
+import { PasswordField, passwordHelp, weakPasswordMessage, clientPasswordProblem } from "@/components/auth/PasswordField";
+import { postAuthDestination, type PostAuth } from "@/lib/auth-destination";
+import { stashAuthPrefill } from "@/lib/auth-prefill";
 import { useCountdown, formatCountdown } from "@/components/useCountdown";
 // Pure module — the SAME validity check the server runs, so the form and the action
 // can never disagree about what a valid address is.
@@ -73,7 +82,9 @@ const COPY = {
     panelTrust: "Pilote · chaque prof est vérifié à la main par notre équipe",
 
     title: "Crée ton compte",
-    lead: "Sans mot de passe.",
+    // espace prof v2 · auth: was "Sans mot de passe." — a password is now created at sign-up.
+    leadEmail: "Un code par email pour vérifier ton adresse, puis ton mot de passe.",
+    leadSms: "Un code par SMS pour vérifier ton numéro, puis ton mot de passe.",
     cta: "Continuer",
     email: "Ton email",
     emailPh: "prenom@exemple.com",
@@ -149,6 +160,18 @@ const COPY = {
     bdTutorNote: "18 ans minimum pour enseigner. Jamais affichée publiquement.",
     errTutorMinor: "Il faut avoir 18 ans ou plus pour enseigner sur Tnajem.",
     // end phase-a lane L2
+    // espace prof v2 · auth (phase 2) — the password step
+    pwCreateTitle: "Crée ton mot de passe",
+    pwCreateLeadEmail: "Tu pourras aussi te connecter avec un code par email.",
+    pwCreateLeadSms: "Tu pourras aussi te connecter avec un code par SMS.",
+    pwPromptTitle: "Crée un mot de passe (recommandé)",
+    pwLabel: "Mot de passe",
+    pwCreateCta: "Continuer",
+    pwPromptCta: "Créer mon mot de passe",
+    pwPromptSkip: "Plus tard",
+    errGrantExpired: "Ce délai a expiré. Tu pourras créer ton mot de passe depuis ton profil.",
+    goOn: "Continuer",
+    // end espace prof v2 · auth
   },
   ar: {
     tutorEyebrow: "للأساتذة",
@@ -170,7 +193,9 @@ const COPY = {
     panelTrust: "فترة التجربة · كل أستاذ نتثبّتو منّو بيدينا",
 
     title: "اعمل حسابك",
-    lead: "بلا كلمة سرّ.",
+    // espace prof v2 · auth: كان "بلا كلمة سرّ." — توّا كلمة السرّ تتعمل كي تسجّل.
+    leadEmail: "كود في الإيميل باش نتثبّتو من العنوان متاعك، ومن بعد كلمة السرّ.",
+    leadSms: "كود بالـSMS باش نتثبّتو من نمرتك، ومن بعد كلمة السرّ.",
     cta: "كمّل",
     email: "الإيميل متاعك",
     emailPh: "esm@exemple.com",
@@ -242,6 +267,18 @@ const COPY = {
     bdTutorNote: "18 سنة على الأقل باش تقرّي. التاريخ ما يبان لحتّى حد.",
     errTutorMinor: "لازمك 18 سنة ولا أكثر باش تقرّي في Tnajem.",
     // end phase-a lane L2
+    // espace prof v2 · auth (phase 2) — the password step
+    pwCreateTitle: "اعمل كلمة السرّ متاعك",
+    pwCreateLeadEmail: "تنجّم زادة تدخل بكود يوصلك في الإيميل.",
+    pwCreateLeadSms: "تنجّم زادة تدخل بكود يوصلك بالـSMS.",
+    pwPromptTitle: "اعمل كلمة سرّ (ننصحوك)",
+    pwLabel: "كلمة السرّ",
+    pwCreateCta: "كمّل",
+    pwPromptCta: "اعمل كلمة السرّ",
+    pwPromptSkip: "من بعد",
+    errGrantExpired: "الوقت فات. تنجّم تعمل كلمة السرّ من حسابك.",
+    goOn: "كمّل",
+    // end espace prof v2 · auth
   },
 } as const;
 
@@ -416,6 +453,27 @@ export function SignupInner({
     setError(null);
     setFieldError(null);
     setNotice(null);
+    /* espace prof v2 · auth — « Tu as déjà un compte ». Before spending a code, ask
+       whether the address already has an account (POST /auth/account-status, the
+       spec's accepted trade-off — see the API route). If it does, signing up is the
+       wrong door: go to /auth with the address prefilled (sessionStorage, never the
+       URL) and the notice. A failed or throttled check falls through to the code,
+       where verifyOtp still tells an existing account apart (roleMismatch below). */
+    if (!resend) {
+      let status: Awaited<ReturnType<typeof accountStatus>> | null = null;
+      try {
+        status = await accountStatus(id);
+      } catch {
+        status = null;
+      }
+      if (status?.ok && status.exists) {
+        stashAuthPrefill(id);
+        const params = new URLSearchParams({ existing: "1" });
+        if (next) params.set("next", next);
+        router.push(`/auth?${params.toString()}`);
+        return; // stays "loading" while the next page loads: no double submit
+      }
+    }
     let res: Awaited<ReturnType<typeof requestOtp>>;
     try {
       // `id`, not `identifier`: only the display copy was trimmed before.
@@ -550,7 +608,64 @@ export function SignupInner({
       setExistingRole(res.role ?? null);
       return;
     }
+    /* espace prof v2 · auth — the account exists now (or already did, via "J'ai déjà
+       un code"). A new one owes « Crée ton mot de passe »; an older one without a
+       password is offered one ONCE (the API decides). The grant lets that step set
+       it without a second code. */
+    if ((res.needsPassword || res.promptPassword) && res.passwordGrant) {
+      setAfter(res);
+      setPwStep(res.needsPassword ? "create" : "prompt");
+      return;
+    }
     router.push(postAuthDestination(res, next));
+  }
+
+  /* ── espace prof v2 · auth: the password step ─────────────────────────────── */
+  const [pwStep, setPwStep] = useState<"create" | "prompt" | null>(null);
+  const [after, setAfter] = useState<(PostAuth & { passwordGrant?: string }) | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [grantGone, setGrantGone] = useState(false);
+  const newPasswordRef = useRef<HTMLInputElement>(null);
+
+  const leaveToDestination = () => router.push(postAuthDestination(after ?? {}, next));
+
+  async function handleCreatePassword() {
+    if (loading) return;
+    const problem = clientPasswordProblem(newPassword);
+    if (problem) {
+      setError(null);
+      setPwError(weakPasswordMessage(locale, problem));
+      newPasswordRef.current?.focus();
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setPwError(null);
+    let res: Awaited<ReturnType<typeof setPassword>>;
+    try {
+      res = await setPassword({ password: newPassword, grant: after?.passwordGrant });
+    } catch {
+      setLoading(false);
+      setError(t.extra.error);
+      return;
+    }
+    if (res.ok || res.error === "has-password") { leaveToDestination(); return; }
+    setLoading(false);
+    if (res.error === "weak-password") {
+      setPwError(weakPasswordMessage(locale, res.reason));
+      newPasswordRef.current?.focus();
+      return;
+    }
+    if (res.error === "grant-expired" || res.error === "proof-required") {
+      /* Rare (half an hour on this step): the account exists and is signed in, so
+         let them through — Réglages › Sécurité creates the password with a code. */
+      setGrantGone(true);
+      setError(c.errGrantExpired);
+      return;
+    }
+    if (res.error === "too-many-attempts") { setError(c.errTooManyAttempts(res.retryAfter ?? 900)); return; }
+    setError(t.extra.error);
   }
 
   // A ~5-year-old pupil down to a ~85-year-old learner. Inside vBirthYear's
@@ -588,10 +703,71 @@ export function SignupInner({
 
   /* role="alert" so screen readers announce it on change */
   const errorLine = error && (
-    <p role="alert" className="text-rose text-[13px] font-semibold leading-[1.5] mb-3 text-start">
+    <p role="alert" className="text-rose text-[13px] font-semibold leading-[1.5] mb-3 text-start" data-e2e="auth-error">
       {error}
     </p>
   );
+
+  /* ── espace prof v2 · auth: « Crée ton mot de passe » (sign-up, required) or the
+     one-time offer (an older account that came in through "J'ai déjà un code").
+     Its own card state: the code step is done and gone. ── */
+  if (pwStep) {
+    const creating = pwStep === "create";
+    return (
+      <AuthShell {...panel}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleCreatePassword();
+          }}
+          noValidate
+        >
+          <div key={`pw-${pwStep}`} data-e2e="auth-step-password-create" className="rise">
+            <div className="auth-icon-tile mb-4" aria-hidden="true"><Lock /></div>
+            <h1 className="auth-title">{creating ? c.pwCreateTitle : c.pwPromptTitle}</h1>
+            <p className="auth-lead mt-1.5 mb-5">{isEmail ? c.pwCreateLeadEmail : c.pwCreateLeadSms}</p>
+            {/* Password managers file the new password under the address next to it. */}
+            <input type="text" name="username" autoComplete="username" value={identifier.trim()} readOnly hidden />
+
+            <PasswordField
+              label={c.pwLabel}
+              value={newPassword}
+              onChange={(v) => {
+                setNewPassword(v);
+                if (pwError) setPwError(null);
+              }}
+              autoComplete="new-password"
+              meter
+              help={passwordHelp(locale)}
+              error={pwError ?? undefined}
+              inputRef={newPasswordRef}
+              autoFocus
+              name="new-password"
+              e2e="new-password"
+            />
+
+            {errorLine}
+
+            {grantGone ? (
+              <Button type="button" variant="primary" onClick={leaveToDestination}>{c.goOn}</Button>
+            ) : (
+              <Button type="submit" variant="primary" disabled={loading}>
+                {loading ? t.common.loading : creating ? c.pwCreateCta : c.pwPromptCta}
+              </Button>
+            )}
+            {/* Only the offer can be put off. At sign-up the password is part of the account. */}
+            {!creating && !grantGone && (
+              <div className="auth-alt">
+                <button type="button" data-e2e="prompt-skip" className="auth-link auth-tap text-[14px]" onClick={leaveToDestination} disabled={loading}>
+                  {c.pwPromptSkip}
+                </button>
+              </div>
+            )}
+          </div>
+        </form>
+      </AuthShell>
+    );
+  }
   const noticeLine = notice && !error && (
     <p role="status" className="text-[13px] text-ink2 font-semibold leading-[1.5] mb-3 text-start">
       {notice}
@@ -616,7 +792,7 @@ export function SignupInner({
         {!codeSent ? (
           <div key="identifier" data-e2e="auth-step-identifier">
             <h1 className="auth-title">{c.title}</h1>
-            <p className="auth-lead mb-6">{c.lead}</p>
+            <p className="auth-lead mb-6">{isEmail ? c.leadEmail : c.leadSms}</p>
 
             <Field
               label={isEmail ? c.email : t.auth.phone}

@@ -208,6 +208,15 @@ const PAIRS = [
   ["Alerts", "--rose600", "--rose50", "normal", ".lg-notice span", "privacy/page.tsx:48"],
   ["Alerts", "--blue", "--blue100", "normal", ".lpp-cross:hover", "pour-les-profs:710"],
 
+  // ── espace prof v2 · auth (phase 2): the password strength meter + Sécurité ──
+  // The segments carry the strength next to a word (.pw-meter-label), so 1.4.11's 3:1 applies.
+  ["Password meter", "--rose", "--paper", "ui", ".pw-meter-bars span.on (weak)", "components/auth/PasswordField.tsx"],
+  ["Password meter", "--ochre-ink", "--paper", "ui", ".pw-meter-bars[data-score=2] span.on (fair)", "components/auth/PasswordField.tsx"],
+  ["Password meter", "--blue", "--paper", "ui", ".pw-meter-bars[data-score=3|4] span.on (good/strong)", "components/auth/PasswordField.tsx"],
+  ["Password meter", "--ink2", "--paper", "normal", ".pw-meter-label", "components/auth/PasswordField.tsx"],
+  ["Chips", "--blue", "--blue50", "normal", ".sec-pill-current (Cet appareil)", "components/settings/SecurityPanel.tsx"],
+  ["UI (advisory)", "--muted", "--paper", "ui", ".pw-toggle eye icon", "components/auth/PasswordField.tsx"],
+
   // ── non-text UI (1.4.11) — ADVISORY, see NOTE ──
   ["UI (advisory)", "--blue", "--cream", "ui", ":focus-visible ring", "globals.css:49"],
   ["UI (advisory)", "--blue", "--paper", "ui", ":focus-visible ring", "globals.css:49"],

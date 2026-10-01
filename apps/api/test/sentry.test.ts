@@ -41,6 +41,27 @@ describe("sentry: the scrubber and the log redaction describe the same PII", () 
     );
   });
 
+  /* espace prof v2 · phase 2: a password, its hash and the set-password grant are
+     credentials like a session token — in a request body, an extra or a context. */
+  test("password fields are emptied, and the log redacts the same ones", () => {
+    const event = scrub({
+      request: { data: { identifier: "x@tnajem.invalid", password: "Le-soleil-de-Sousse-26" } },
+      extra: { body: { currentPassword: "ancien-mot-2026", newPassword: "nouveau-mot-2026", grant: "1.abc" } },
+      contexts: { row: { passwordHash: "$argon2id$v=19$m=19456,t=2,p=1$x$y", password_hash: "$argon2id$z", passwordGrant: "2.def" } },
+    });
+    assert.equal(event.request.data.password, "[redacted]");
+    assert.equal(event.extra.body.currentPassword, "[redacted]");
+    assert.equal(event.extra.body.newPassword, "[redacted]");
+    assert.equal(event.extra.body.grant, "[redacted]");
+    assert.equal(event.contexts.row.passwordHash, "[redacted]");
+    assert.equal(event.contexts.row.password_hash, "[redacted]");
+    assert.equal(event.contexts.row.passwordGrant, "[redacted]");
+    const leaves = new Set(REDACT_PATHS.map(leafOf));
+    for (const k of ["password", "currentPassword", "newPassword", "passwordHash", "password_hash", "passwordGrant", "grant"]) {
+      assert.ok(leaves.has(k), `REDACT_PATHS must cover *.${k}`);
+    }
+  });
+
   test("a named field is emptied wherever it sits in the event", () => {
     const event = {
       extra: { email: "parent@example.tn", phone: "+216 20 123 456", safe: "keep me" },

@@ -73,7 +73,7 @@ export type ActionResult = { ok: boolean; demo?: boolean; slug?: string; error?:
 /* `resendAfter` / `expiresIn` (seconds) travel with every successful send so the
    login screens can count down the cooldown and the code's life WITHOUT keeping
    their own copy of either constant — see the note on them in lib/auth.ts. */
-export async function requestOtp(input: { identifier: string; locale?: string }):
+export async function requestOtp(input: { identifier: string; locale?: string; purpose?: "login" | "password" /* espace prof v2 · auth: the e-mail's wording */ }):
   Promise<{
     ok: boolean; devCode?: string; demo?: boolean; error?: string; retryAfter?: number;
     resendAfter?: number; expiresIn?: number;
@@ -94,7 +94,11 @@ export async function requestOtp(input: { identifier: string; locale?: string })
 }
 
 export async function verifyOtp(input: { identifier: string; code: string; role?: "tutor" | "student"; locale?: string; birthYear?: number; birthMonth?: number /* phase-a lane L2 (A24) */ }):
-  Promise<{ ok: boolean; role?: string; needsConsent?: boolean; created?: boolean; roleMismatch?: boolean; needsProfile?: boolean; hasStorefront?: boolean; error?: string; retryAfter?: number }> {
+  Promise<{
+    ok: boolean; role?: string; needsConsent?: boolean; created?: boolean; roleMismatch?: boolean; needsProfile?: boolean; hasStorefront?: boolean; error?: string; retryAfter?: number;
+    // espace prof v2 · auth (phase 2): ask for a password next — and the grant that lets that one step set it.
+    needsPassword?: boolean; promptPassword?: boolean; passwordGrant?: string;
+  }> {
   if (demoFallback) {
     await setDemoCookie(input.role === "tutor" ? "tutor" : "student");
     const demoRole = input.role ?? "student";
@@ -121,6 +125,7 @@ export async function verifyOtp(input: { identifier: string; code: string; role?
     ok: boolean; role?: string; needsConsent?: boolean; created?: boolean;
     roleMismatch?: boolean; needsProfile?: boolean; hasStorefront?: boolean;
     error?: string; retryAfter?: number;
+    needsPassword?: boolean; promptPassword?: boolean; passwordGrant?: string; // espace prof v2 · auth
     session?: { token: string; expiresAt: string };
   }>("/auth/otp/verify", input);
 

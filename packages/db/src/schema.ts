@@ -132,6 +132,12 @@ export const profiles = pgTable("profiles", {
   termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
   /* The inactivity clock (0022), moved by getSession at most every 15 minutes. */
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  /* espace prof v2 · auth (0032_passwords.sql). argon2id PHC string, written only by
+     apps/api/src/lib/password.ts; a CHECK refuses anything else. NULL = signs in by code. */
+  passwordHash: text("password_hash"),
+  passwordSetAt: timestamp("password_set_at", { withTimezone: true }),
+  /* When a password-less account was offered "Crée un mot de passe" once (prompt-once). */
+  passwordPromptedAt: timestamp("password_prompted_at", { withTimezone: true }),
 
 
 });

@@ -41,6 +41,12 @@
    Proof: apps/api/test/legal-truth.test.ts (source) + e2e/legal-truth.spec.ts
    (rendered); phase-a-logs/l6.md names the behavioural test behind each claim.
 
+   espace prof v2 · auth (phase 2, 1 Oct 2026): passwords. An argon2id hash
+   (profiles.password_hash, 0032) and its date are stored, never the password; the
+   lockout (5 failures → 15 min, per address hash and per IP, in rate_limits); every
+   set/change/reset e-mails the account and signs other devices out; erasure clears
+   the hash (erasure.ts). Proof: apps/api/test/ep2-passwords.test.ts.
+
    Design system: SiteShell + .panel + .container-narrow. RTL-safe (logical
    properties). Page CSS prefixed `lg-`, injected via dangerouslySetInnerHTML.
    ─────────────────────────────────────────────────────────────────────────── */
@@ -126,7 +132,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           "Dossier de vérification (profs uniquement) : pièce d'identité (CIN ou passeport, recto/verso), éventuellement un selfie et des diplômes ou attestations, et ta déclaration de ne pas enseigner dans un établissement public, avec sa date. Les documents d'identité sont les données les plus sensibles que nous détenons.",
           "Réservations : quelles séances tu as réservées, chez quel prof, à quelle date, et leur statut.",
           "Messages et signalements : les messages échangés dans la conversation d'une séance, et les signalements que tu nous envoies (avec ton adresse e-mail seulement si tu choisis de la donner ; si tu es connecté, le signalement est rattaché à ton compte).",
-          "Technique : un cookie de session pour te garder connecté (le serveur n'en garde qu'une empreinte, jamais le jeton lui-même), les codes de connexion (stockés uniquement sous forme hachée) et des journaux techniques qui ne contiennent ni ton adresse e-mail ni ton numéro.",
+          "Technique : ton mot de passe, si tu en as un — jamais en clair : nous n'en gardons qu'une empreinte argon2id, qui ne permet pas de le retrouver — et la date de sa dernière modification ; un cookie de session pour te garder connecté (le serveur n'en garde qu'une empreinte, jamais le jeton lui-même), les codes de connexion (stockés uniquement sous forme hachée) et des journaux techniques qui ne contiennent ni ton adresse e-mail, ni ton numéro, ni ton mot de passe.",
         ],
         after: [
           "Nous ne collectons aucune donnée bancaire : les paiements ne sont pas actifs sur Tnajem. Nous ne collectons pas ta géolocalisation, ni tes contacts, ni de données de santé.",
@@ -144,7 +150,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         ],
         list: [
           // LEGAL-REVIEW: the lawful bases in parentheses are product-team proposals (see the bracket above).
-          "Adresse e-mail → créer ton compte et t'identifier par un code à usage unique (exécution du service que tu demandes). Numéro de téléphone, si tu le donnes → les messages que Tnajem peut t'envoyer sur ton compte et tes séances (une confirmation de réservation, par exemple), rien d'autre ; il n'est jamais montré à un prof ou à un élève.",
+          "Adresse e-mail → créer ton compte et t'identifier, avec ton mot de passe ou un code à usage unique envoyé à cette adresse (exécution du service que tu demandes). Mot de passe → te connecter sans attendre de code ; chaque fois qu'il est créé, changé ou réinitialisé, nous t'envoyons un e-mail et tes autres appareils sont déconnectés. Numéro de téléphone, si tu le donnes → les messages que Tnajem peut t'envoyer sur ton compte et tes séances (une confirmation de réservation, par exemple), rien d'autre ; il n'est jamais montré à un prof ou à un élève.",
           "Nom et rôle → permettre au prof de savoir qui a réservé, et à l'élève de savoir avec qui il apprend.",
           /* LEGAL-REVIEW: age threshold (MINOR_AGE_YEARS) and the lawful basis proposed for the age check.
              What the code does: packages/shared/src/age.ts isAdult() — adult only once the month of the
@@ -160,7 +166,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
              and, A27, the anonymised consent proof (packages/db/src/erasure.ts: guardian_name "Un compte
              supprimé", guardian_email NULL, guardian_phone ""; signed_at, policy_version, consent_text and
              withdrawn_at kept). A11: every object under avatars/<tutorId>/ is deleted, files first. */
-          `Suppression de ton compte → tu peux la demander depuis « Mon compte ». Ce n'est pas possible tant que tu as une séance à venir : annule-la d'abord. Nous te laissons ${DELETION_GRACE_DAYS} jours pour changer d'avis, et tes autres appareils sont déconnectés tout de suite. Ensuite, ton compte est anonymisé : ton nom, ton e-mail, ton téléphone, ton mois et ton année de naissance sont effacés, tu es déconnecté partout, les messages que tu as écrits sont supprimés et ton nom est retiré des notifications des autres. Si tu es le parent ou tuteur désigné dans l'accord parental d'un enfant, ton nom, ton e-mail et ton téléphone sont aussi effacés de cet accord : il n'en reste que le fait qu'il a été donné, sa date, son texte et sa version. Si tu es prof, ta page est retirée, son adresse ne peut plus être reprise par quelqu'un d'autre, et tes pièces d'identité, tes documents partagés et toutes tes photos — y compris les versions que tu avais remplacées — sont effacés du stockage. Ce qui reste ne permet pas de te reconnaître : la trace des places réservées (pour l'historique du prof et le registre des annulations), tes avis sans ton nom, les signalements, et un message que quelqu'un a signalé, gardé comme preuve. [À valider par l'avocat : la conservation des messages signalés après la suppression d'un compte, et celle d'un accord parental dont le signataire n'est plus identifiable.]`,
+          `Suppression de ton compte → tu peux la demander depuis « Mon compte ». Ce n'est pas possible tant que tu as une séance à venir : annule-la d'abord. Nous te laissons ${DELETION_GRACE_DAYS} jours pour changer d'avis, et tes autres appareils sont déconnectés tout de suite. Ensuite, ton compte est anonymisé : ton nom, ton e-mail, ton téléphone, l'empreinte de ton mot de passe, ton mois et ton année de naissance sont effacés, tu es déconnecté partout, les messages que tu as écrits sont supprimés et ton nom est retiré des notifications des autres. Si tu es le parent ou tuteur désigné dans l'accord parental d'un enfant, ton nom, ton e-mail et ton téléphone sont aussi effacés de cet accord : il n'en reste que le fait qu'il a été donné, sa date, son texte et sa version. Si tu es prof, ta page est retirée, son adresse ne peut plus être reprise par quelqu'un d'autre, et tes pièces d'identité, tes documents partagés et toutes tes photos — y compris les versions que tu avais remplacées — sont effacés du stockage. Ce qui reste ne permet pas de te reconnaître : la trace des places réservées (pour l'historique du prof et le registre des annulations), tes avis sans ton nom, les signalements, et un message que quelqu'un a signalé, gardé comme preuve. [À valider par l'avocat : la conservation des messages signalés après la suppression d'un compte, et celle d'un accord parental dont le signataire n'est plus identifiable.]`,
           // LEGAL-REVIEW: lawful basis (product-team proposal). "souvent mineurs" dropped: the pilot is adults only.
           "Documents d'identité → vérifier qu'un prof est bien la personne qu'il prétend être, avant de le présenter à des élèves (consentement du prof + intérêt légitime de sécurité de la communauté). Un prof qui refuse ne peut pas être vérifié, donc pas listé publiquement.",
           "Déclaration de ne pas enseigner dans le public → respecter le décret n° 2015-1619 : Tnajem ne met pas en avant un enseignant en exercice dans un établissement public. Sans cette déclaration, un dossier de vérification ne peut être ni envoyé ni approuvé, et l'administrateur la compare à l'établissement indiqué.",
@@ -175,7 +181,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           "Signalements → protéger les utilisateurs, en particulier les mineurs. Chacun peut signaler la page d'un prof, une séance ou un document avec le bouton « Signaler », même sans être connecté ; l'adresse e-mail est alors facultative. Un message, lui, se signale depuis sa conversation, par l'élève ou le prof qui y participe, connecté à son compte — même quand la conversation est fermée. Si tu signales en étant connecté, le signalement est rattaché à ton compte : l'équipe voit ton rôle et l'adresse e-mail de ton compte. Un signalement ne retire rien automatiquement : une personne de l'équipe le lit et décide. Elle peut masquer un message ou un avis : son texte est alors remplacé par « Contenu retiré par la modération » pour tout le monde, auteur compris ; il reste conservé comme preuve, et seuls les administrateurs peuvent encore le lire. Un ayant droit peut demander le retrait d'un document par le même bouton.",
           "Documents et vidéos partagés par un prof → permettre à ses élèves d'y accéder. Les fichiers sont stockés hors du web public et ne sont servis qu'après vérification de tes droits (public, élève inscrit chez ce prof — ou à cette séance, si le document y est rattaché —, ou le prof lui-même) — jamais par une adresse devinable. Une vidéo n'est pas hébergée ici : nous n'enregistrons que son identifiant YouTube et l'affichons sans cookie de suivi.",
           `Photo de profil d'un prof → mettre un visage sur sa page. Elle est vérifiée par une personne avant d'être visible. Nous ne conservons PAS le fichier d'origine : la photo est réencodée en trois tailles et toutes ses données cachées sont effacées, y compris la localisation GPS que ton téléphone y inscrit. Quand tu remplaces ou supprimes ta photo, l'ancienne est effacée du stockage, dans ses trois tailles. Les moins de ${MINOR_AGE_YEARS} ans n'ont jamais de photo, seulement leurs initiales.`,
-          "Journaux, codes hachés et limites de fréquence → sécurité, lutte contre la fraude et les abus. Une limite liée à une adresse e-mail n'en garde qu'une empreinte.",
+          "Journaux, codes hachés et limites de fréquence → sécurité, lutte contre la fraude et les abus. Une limite liée à une adresse e-mail n'en garde qu'une empreinte. Après 5 mots de passe erronés, la connexion par mot de passe est suspendue 15 minutes pour cette adresse e-mail et pour l'adresse IP d'où viennent les essais ; la connexion par code reste possible.",
         ],
         after: [
           "Nous n'utilisons pas tes données pour de la publicité. Nous ne les vendons pas, ne les louons pas et ne les échangeons pas.",
@@ -221,6 +227,8 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           "Accord parental : conservé tant que le compte de l'enfant existe, y compris après un retrait (avec sa date), et supprimé avec le compte de l'enfant ; si le compte du parent est supprimé, son nom, son e-mail et son téléphone en sont effacés. [Durée à fixer par l'avocat.]",
           "Signalements et journal des actions des administrateurs : conservés. [Durée à fixer par l'avocat.]",
           "Codes de connexion : hachés, inutilisables au bout de quelques minutes, puis supprimés.",
+          // espace prof v2 · auth (0032): profiles.password_hash, cleared by packages/db/src/erasure.ts.
+          "Mot de passe : seule son empreinte argon2id est conservée, tant que le compte existe ; elle est effacée avec le compte.",
           `Session de connexion : elle se termine ${SESSION_DAYS} jours après la connexion, après ${SESSION_IDLE_DAYS} jours sans utilisation, ou quand tu te déconnectes — y compris avec « Se déconnecter de tous les appareils ».`,
         ],
         after: [
@@ -231,7 +239,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
       {
         h: "6. Sécurité",
         p: [
-          "Les documents d'identité sont chiffrés et ne sont accessibles qu'à des administrateurs désignés, par un lien personnel et temporaire ; chaque consultation est enregistrée. Les codes de connexion et les jetons de session sont stockés sous forme d'empreinte. Les échanges avec le site sont chiffrés (HTTPS). L'accès administrateur est limité à une liste d'adresses e-mail définie côté serveur.",
+          "Les documents d'identité sont chiffrés et ne sont accessibles qu'à des administrateurs désignés, par un lien personnel et temporaire ; chaque consultation est enregistrée. Les mots de passe (argon2id), les codes de connexion et les jetons de session ne sont stockés que sous forme d'empreinte : ton mot de passe ne peut pas être relu à partir de ce que nous conservons. Les échanges avec le site sont chiffrés (HTTPS). L'accès administrateur est limité à une liste d'adresses e-mail définie côté serveur.",
           "Aucun système n'est infaillible. En cas d'incident de sécurité affectant tes données, nous t'informerons et informerons l'INPDP dans les conditions prévues par la loi.",
         ],
       },
@@ -269,7 +277,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
       {
         h: "9. Cookies",
         p: [
-          "Nous utilisons trois cookies, et aucun ne sert à te suivre : un cookie de session, indispensable, qui te garde connecté après la saisie de ton code ; un cookie qui retient ton rôle pour afficher le bon menu (il ne donne accès à rien) ; et un cookie qui retient la langue que tu as choisie.",
+          "Nous utilisons trois cookies, et aucun ne sert à te suivre : un cookie de session, indispensable, qui te garde connecté une fois que tu t'es identifié (mot de passe ou code) ; un cookie qui retient ton rôle pour afficher le bon menu (il ne donne accès à rien) ; et un cookie qui retient la langue que tu as choisie.",
           "Pas de cookie publicitaire, pas de pixel de réseau social, pas de mesure d'audience tierce. Une vidéo YouTube n'est chargée que si tu la lances, depuis le domaine sans cookie de YouTube.",
         ],
       },
@@ -319,7 +327,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           "ملف التوثيق (الأساتذة برك): وثيقة هوية (بطاقة تعريف وطنية ولا جواز سفر، وجه وظهر)، وأحيانًا صورة سيلفي وشهائد، وتصريحك إنّك ما تقرّيش في مؤسسة عمومية، مع تاريخو. وثائق الهوية هاذي أكثر معطيات حسّاسة عندنا.",
           "الحجوزات: أنهي حصص حجزت، مع أنهي أستاذ، في أنهي تاريخ، وشنوّة وضعيتها.",
           "الرسائل والتبليغات: الرسائل في محادثة الحصة، والتبليغات اللي تبعثهملنا (مع الإيميل متاعك كان تحب تعطيه برك؛ وكان إنت داخل لحسابك، التبليغ يتربط بحسابك).",
-          "تقني: كوكي للجلسة باش تبقى داخل (السيرفر ما يحتفظ كان ببصمة منّو، عمرو ما يحتفظ بالرمز روحو)، كودات الدخول (محفوظين مشفّرين بـhash برك)، وسجلاّت تقنية ما فيهاش لا الإيميل متاعك لا نمرتك.",
+          "تقني: كلمة السرّ متاعك كان عندك وحدة — عمرها ما تتحفظ كيما هي: نحتفظو كان ببصمة argon2id ما تخلّيناش نرجعولها — وتاريخ آخر تبديل ليها؛ كوكي للجلسة باش تبقى داخل (السيرفر ما يحتفظ كان ببصمة منّو، عمرو ما يحتفظ بالرمز روحو)، كودات الدخول (محفوظين مشفّرين بـhash برك)، وسجلاّت تقنية ما فيهاش لا الإيميل متاعك، لا نمرتك، لا كلمة السرّ.",
         ],
         after: [
           "ما نجمعو حتى معطيات بنكية: الخلاص موش مفعّل في تنجّم. ما نجمعوش موقعك الجغرافي، لا جهات الاتصال متاعك، لا معطيات صحّية.",
@@ -337,7 +345,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         ],
         list: [
           // LEGAL-REVIEW: the lawful bases in parentheses are product-team proposals (see the bracket above).
-          "الإيميل ← نعملو حسابك ونتثبّتو منّك بكود وحيد (تنفيذ الخدمة اللي طلبتها). رقم التليفون، إذا عطيتو ← للرسائل اللي تنجّم تبعثهملك Tnajem على حسابك وحصصك (تأكيد حجز مثلاً)، وخلاص؛ وعمرو ما يتوّرى لأستاذ ولا لتلميذ.",
+          "الإيميل ← نعملو حسابك ونتثبّتو منّك بكود وحيد يوصلك للعنوان هذا، ولا بكلمة السرّ متاعك (تنفيذ الخدمة اللي طلبتها). كلمة السرّ ← تدخل بلا ما تستنّى كود؛ كل مرّة تتعمل، تتبدّل ولا تتعاود، نبعثولك إيميل والأجهزة الأخرى يخرجو. رقم التليفون، إذا عطيتو ← للرسائل اللي تنجّم تبعثهملك Tnajem على حسابك وحصصك (تأكيد حجز مثلاً)، وخلاص؛ وعمرو ما يتوّرى لأستاذ ولا لتلميذ.",
           "الاسم والدور ← الأستاذ يعرف شكون حجز، والتلميذ يعرف مع شكون باش يقرا.",
           // LEGAL-REVIEW: age threshold (MINOR_AGE_YEARS) and the lawful basis proposed for the age check (age.ts isAdult).
           `شهر وعام الولادة ← نتأكّدو اللي عمرك 18 سنة ولا أكثر: في فترة التجربة تنجّم كان للكبار، والأستاذ لازم ديما يكون عمرو 18 سنة ولا أكثر (حماية القاصرين). ما نطلبوش النهار: تتحسب راشد من الشهر اللي بعد شهر الـ18 سنة متاعك. شهر ولا عام مجهول يتحسب « أقلّ من ${MINOR_AGE_YEARS} سنة ». كان الباب يتحلّ للّي عمرهم أقلّ من ${MINOR_AGE_YEARS} سنة، يخدمو زادة باش نطلبو موافقة الوليّ قبل أيّ حجز.`,
@@ -345,7 +353,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           "اسم الوليّ والإيميل متاعو ← نجمعو موافقتو ونثبّتوها (الموافقة). ما نطلبوش التليفون متاعو.",
           "إيميل الولي ← باش نربطو بولدو الحساب اللي يحلّو الولي بالإيميل هذا. بالحساب هذا الولي يشوف الحصص المحجوزة ويقرا محادثات ولدو — والولد يتعلم بيها في كل محادثة. الولي ما ينجّمش يكتب ولا يحجز في بلاصتو، ومعلومات الاتصال متاع الأساتذة عمرها ما تتعطالو. أما ينجّم يسحب موافقتو من فضاء الولي: ولدو ما عادش ينجّم يحجز، والحصص الجاية متاعو تتلغى بلا مصاريف. هو برك ينجّم يرجّع الموافقة هاذي.",
           // LEGAL-REVIEW: retention after erasure — reported messages, and the anonymised consent proof (A27). A11: every photo.
-          `مسح حسابك ← تنجّم تطلبو من « حسابي ». ما ينجّمش يصير ما دام عندك حصة جاية: ألغيها الأول. نخلّيولك ${DELETION_GRACE_DAYS} يوم باش تبدّل رايك، والأجهزة الأخرى تخرج من توّا. من بعد، حسابك يولّي مجهول: إسمك، الإيميل، التليفون، شهر وعام ولادتك يتمسحو، تخرج من الأجهزة الكل، الرسائل اللي كتبتهم يتمسحو، وإسمك يتنحّى من إشعارات الناس الأخرى. كان إنت الوليّ المذكور في موافقة متاع طفل، إسمك، الإيميل والتليفون متاعك يتمسحو زادة من الموافقة هاذي: ما يبقى منها كان إلّي الموافقة تعطات، تاريخها، نصّها ونسختها. كان إنت أستاذ، صفحتك تتنحّى، عنوانها ما عادش ينجّم ياخذو حد آخر، ووثائق هويتك، الملفات اللي شاركتهم والتصاور متاعك الكل — حتى النسخ القديمة اللي بدّلتها — يتمسحو من التخزين. اللي يبقى ما يعرّفش بيك: أثر البلايص المحجوزة (لتاريخ الأستاذ وسجل الإلغاءات)، التقييمات متاعك بلا إسمك، التبليغات، ورسالة بلّغ عليها حد، تتحفظ كدليل. [يثبّت المحامي: الاحتفاظ بالرسائل المبلّغ عليها بعد مسح الحساب، وبموافقة وليّ ما عادش يتعرف شكون مولاها.]`,
+          `مسح حسابك ← تنجّم تطلبو من « حسابي ». ما ينجّمش يصير ما دام عندك حصة جاية: ألغيها الأول. نخلّيولك ${DELETION_GRACE_DAYS} يوم باش تبدّل رايك، والأجهزة الأخرى تخرج من توّا. من بعد، حسابك يولّي مجهول: إسمك، الإيميل، التليفون، بصمة كلمة السرّ، شهر وعام ولادتك يتمسحو، تخرج من الأجهزة الكل، الرسائل اللي كتبتهم يتمسحو، وإسمك يتنحّى من إشعارات الناس الأخرى. كان إنت الوليّ المذكور في موافقة متاع طفل، إسمك، الإيميل والتليفون متاعك يتمسحو زادة من الموافقة هاذي: ما يبقى منها كان إلّي الموافقة تعطات، تاريخها، نصّها ونسختها. كان إنت أستاذ، صفحتك تتنحّى، عنوانها ما عادش ينجّم ياخذو حد آخر، ووثائق هويتك، الملفات اللي شاركتهم والتصاور متاعك الكل — حتى النسخ القديمة اللي بدّلتها — يتمسحو من التخزين. اللي يبقى ما يعرّفش بيك: أثر البلايص المحجوزة (لتاريخ الأستاذ وسجل الإلغاءات)، التقييمات متاعك بلا إسمك، التبليغات، ورسالة بلّغ عليها حد، تتحفظ كدليل. [يثبّت المحامي: الاحتفاظ بالرسائل المبلّغ عليها بعد مسح الحساب، وبموافقة وليّ ما عادش يتعرف شكون مولاها.]`,
           // LEGAL-REVIEW: lawful basis (product-team proposal). "وأغلبهم قاصرين" dropped: the pilot is adults only.
           "وثائق الهوية ← نتثبّتو إلّي الأستاذ هو فعلاً اللي يقول، قبل ما نعرّضوه للتلامذة (موافقة الأستاذ + مصلحة مشروعة في سلامة المجموعة). الأستاذ اللي يرفض ما ينجّمش يتوثّق، وبالتالي ما يظهرش للعموم.",
           "التصريح إنّك ما تقرّيش في العمومي ← نحترمو الأمر عدد 1619 لسنة 2015: تنجّم ما تعرضش أستاذ يخدم في مؤسسة تعليم عمومية. من غير التصريح هذا، ملف التوثيق ما يتبعثش وما يتقبلش، والإداري يقارنو بالمؤسسة المذكورة.",
@@ -355,7 +363,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           `التبليغات ← نحميو المستعملين، بالخصوص القاصرين. كل واحد ينجّم يبلّغ على صفحة أستاذ، حصة ولا وثيقة بزرّ « بلّغ »، حتى من غير ما يدخل لحسابو؛ الإيميل وقتها اختياري. أما الرسالة، تتبلّغ من المحادثة متاعها، من التلميذ ولا الأستاذ اللي فيها، وهو داخل لحسابو — حتى كي المحادثة تكون مسكّرة. كي تبلّغ وإنت داخل لحسابك، التبليغ يتربط بحسابك: الفريق يشوف دورك والإيميل متاع حسابك. التبليغ ما ينحّي حتى شي آليًا: واحد من الفريق يقراه ويقرّر. ينجّم يخبّي رسالة ولا تقييم: النصّ متاعو يتبدّل عند الناس الكل، حتى عند اللي كتبو، بـ« المحتوى هذا تنحّى من طرف المراقبة »، ويتحفظ كدليل، وما يقراه كان الإداريين. صاحب الحقوق ينجّم يطلب نحّي وثيقة بنفس الزرّ.`,
           "الوثائق والفيديوهات اللي ينشرهم الأستاذ ← باش تلامذتو يوصلولهم. الملفات تتخزّن برّة الويب العمومي وما تتقدّمش كان بعد ما نتثبّتو من حقّك (عمومي، تلميذ مسجّل عند الأستاذ — ولا في الحصة هاذيكا، كان الوثيقة مربوطة بيها —، ولا الأستاذ روحو) — عمرها ما تكون بعنوان يتحزّر. الفيديو ما هوش مستضاف عندنا: نسجّلو برك المعرّف متاعو في يوتيوب ونعرضوه بلا كوكي تتبّع.",
           `تصويرة الأستاذ ← باش يكون فمّا وجه في صفحتو. تتشاف من طرف إنسان قبل ما تظهر. ما نحتفظوش بالملف الأصلي: التصويرة تتعاود ترمّز في ثلاث أحجام وتتمسح المعطيات المخبّية الكل، ومنها موقع الـGPS اللي يكتبو تليفونك. كي تبدّل تصويرتك ولا تنحّيها، القديمة تتمسح من التخزين، بأحجامها الثلاثة. اللي عمرو أقلّ من ${MINOR_AGE_YEARS} سنة عمرو ما تكون عندو تصويرة، برك الحروف الأولى.`,
-          "السجلاّت، الكودات المشفّرة وحدود التكرار ← الأمان ومقاومة الغشّ والتجاوزات. الحدّ المربوط بإيميل ما يحتفظ كان ببصمة منّو.",
+          "السجلاّت، الكودات المشفّرة وحدود التكرار ← الأمان ومقاومة الغشّ والتجاوزات. الحدّ المربوط بإيميل ما يحتفظ كان ببصمة منّو. بعد 5 كلمات سرّ غالطين، الدخول بكلمة السرّ يتوقّف 15 دقيقة للإيميل هذا وللعنوان IP اللي جاو منّو المحاولات؛ الدخول بالكود يبقى ممكن.",
         ],
         after: [
           "ما نستعملوش معطياتك في الإشهار. ما نبيعوهمش، ما نكروهمش وما نبدّلوهمش.",
@@ -395,6 +403,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           "موافقة الوليّ: تتحفظ ما دام حساب الطفل موجود، حتى بعد ما تتسحب (مع تاريخ السحب)، وتتمسح مع حساب الطفل؛ وكان حساب الوليّ يتمسح، إسمو، الإيميل والتليفون متاعو يتمسحو منها. [المدّة يحدّدها المحامي.]",
           "التبليغات وسجل أعمال الإداريين: يتحفظو. [المدّة يحدّدها المحامي.]",
           "كودات الدخول: مشفّرة، ما عادش تخدم بعد دقائق، ومن بعد تتحذف.",
+          "كلمة السرّ: نحتفظو كان ببصمتها argon2id، ما دام الحساب موجود؛ وتتمسح مع الحساب.",
           `جلسة الدخول: تتسكّر ${SESSION_DAYS} يوم بعد الدخول، ولا بعد ${SESSION_IDLE_DAYS} يوم بلا استعمال، ولا كي تخرج — ومنها « اخرج من حسابك في الأجهزة الكل ».`,
         ],
         after: [
@@ -405,7 +414,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
       {
         h: "6. الأمان",
         p: [
-          "وثائق الهوية مشفّرة وما يوصلّها كان إداريين معيّنين، برابط شخصي ومؤقت؛ وكل اطّلاع يتسجّل. كودات الدخول ورموز الجلسة يتحفظو كبصمة. الاتّصال بالموقع مشفّر (HTTPS). النفاذ الإداري محدود بقائمة إيميلات معرّفة في السيرفر.",
+          "وثائق الهوية مشفّرة وما يوصلّها كان إداريين معيّنين، برابط شخصي ومؤقت؛ وكل اطّلاع يتسجّل. كلمات السرّ (argon2id)، كودات الدخول ورموز الجلسة يتحفظو كبصمة برك: كلمة السرّ متاعك ما تنجّمش تتقرا من اللي نحتفظو بيه. الاتّصال بالموقع مشفّر (HTTPS). النفاذ الإداري محدود بقائمة إيميلات معرّفة في السيرفر.",
           "ما فمّا نظام كامل. إذا صار حادث أمني يمسّ معطياتك، باش نعلموك ونعلمو الـINPDP كيما يستوجبو القانون.",
         ],
       },
@@ -440,7 +449,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
       {
         h: "9. الكوكيز",
         p: [
-          "نستعملو ثلاثة كوكيز، وحتى واحد ما يتبّعك: كوكي الجلسة، ضروري، يخلّيك داخل بعد ما تعمّر كود الدخول؛ كوكي يتفكّر دورك باش يبان المنيو الصحيح (ما يعطي نفاذ لحتى شي)؛ وكوكي يتفكّر اللغة اللي اخترتها.",
+          "نستعملو ثلاثة كوكيز، وحتى واحد ما يتبّعك: كوكي الجلسة، ضروري، يخلّيك داخل بعد ما تعمّر كود الدخول ولا كلمة السرّ؛ كوكي يتفكّر دورك باش يبان المنيو الصحيح (ما يعطي نفاذ لحتى شي)؛ وكوكي يتفكّر اللغة اللي اخترتها.",
           "ما فمّا كوكي إشهاري، ما فمّا بيكسل شبكات اجتماعية، ما فمّاش قياس جمهور خارجي. فيديو يوتيوب ما يتحمّلش كان كي تشغّلو، من دومين يوتيوب اللي بلا كوكيز.",
         ],
       },

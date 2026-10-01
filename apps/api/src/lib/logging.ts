@@ -27,6 +27,14 @@ export const REDACT_PATHS = [
   "*.devCode",
   "*.token",
   "*.sessionToken",
+  // espace prof v2 · auth (phase 2): passwords, their hash, and the set-password grant
+  "*.password",
+  "*.currentPassword",
+  "*.newPassword",
+  "*.passwordHash",
+  "*.password_hash",
+  "*.passwordGrant",
+  "*.grant",
   // Document locations
   "*.storagePath",
   "*.storage_path",

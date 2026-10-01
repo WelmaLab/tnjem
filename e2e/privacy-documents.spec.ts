@@ -18,8 +18,8 @@ const text = async (page: import("@playwright/test").Page, path: string) => {
 test.describe("privacy: the published documents match the code", () => {
   test("/fr/privacy quotes the enforced periods and describes deletion, access and cookies as built", async ({ page }) => {
     const t = await text(page, "/fr/privacy");
-    // phase-a lane L6 (A19): PRIVACY_POLICY_VERSION moved to 2026-09-24 with the Phase A rewrite.
-    expect(t).toContain("Version du 24 septembre 2026");
+    // espace prof v2 · auth: PRIVACY_POLICY_VERSION moved to 2026-10-01 with passwords (was 2026-09-24, Phase A).
+    expect(t).toContain("Version du 01 octobre 2026");
     expect(t).toContain(`${ID_DOCUMENT_RETENTION_DAYS} jours après la décision`);
     expect(t).toContain(`Nous te laissons ${DELETION_GRACE_DAYS} jours pour changer d'avis`);
     expect(t).toContain("ton compte est anonymisé");

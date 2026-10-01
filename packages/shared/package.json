@@ -17,7 +17,8 @@
     "./live": "./src/live.ts",
     "./legal": "./src/legal.ts",
     "./observability": "./src/observability.ts",
-    "./class-input": "./src/class-input.ts"
+    "./class-input": "./src/class-input.ts",
+    "./password-check": "./src/password-check.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

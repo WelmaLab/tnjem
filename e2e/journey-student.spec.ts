@@ -4,6 +4,7 @@ import { sql } from "./support/db";
 import { email, seedProfile, seedTutor, seedClass, seedBooking } from "./support/seed";
 import { recoverOtp, resetRateLimits } from "./support/otp";
 import { fillOtp } from "./support/otp-ui";
+import { completePasswordStep } from "./support/password-ui"; // espace prof v2 · auth
 import { mintSession } from "./support/session";
 import { api, browserSession } from "./support/journey";
 
@@ -54,6 +55,7 @@ test("student journey: minor signup → consent → explore → book → live ga
     await expect(page.locator('[data-e2e="auth-step-code"]')).toBeVisible({ timeout: 20_000 });
     await fillOtp(page, code);
     await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
+    await completePasswordStep(page); // espace prof v2 · auth: « Crée ton mot de passe » (support/password-ui.ts)
     await page.waitForURL(/\/fr\/auth\/consent/, { timeout: 20_000 });
     studentId = (await sql<{ id: string }[]>`select id from profiles where email = ${address}`)[0].id;
   });

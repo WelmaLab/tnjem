@@ -18,6 +18,7 @@
     "@sentry/node": "^10.74.0",
     "@tnajem/db": "*",
     "@tnajem/shared": "*",
+    "argon2": "^0.45.1",
     "dotenv": "^16.4.5",
     "fastify": "^5.12.4",
     "nodemailer": "^10.0.13",

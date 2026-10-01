@@ -32,11 +32,11 @@ export const dynamic = "force-dynamic";
 const meta = bilingual({
   fr: {
     title: "Se connecter",
-    description: "Connecte-toi à Tnajem avec un code à usage unique — sans mot de passe.",
+    description: "Connecte-toi à Tnajem avec ton mot de passe ou un code à usage unique.",
   },
   ar: {
     title: "تسجيل الدخول",
-    description: "ادخل لـ Tnajem بكود يتستعمل مرّة وحدة — بلا كلمة سر.",
+    description: "ادخل لـ Tnajem بكلمة السرّ متاعك ولا بكود يتستعمل مرّة وحدة.",
   },
 });
 
@@ -46,9 +46,13 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   return pageMetadata({ locale, path: "/auth", ...meta[locale] });
 }
 
-export default async function AuthPage(props: { searchParams: Promise<{ next?: string | string[] }> }) {
+export default async function AuthPage(props: { searchParams: Promise<{ next?: string | string[]; existing?: string | string[] }> }) {
   const searchParams = await props.searchParams;
   const raw = Array.isArray(searchParams.next) ? searchParams.next[0] : searchParams.next;
   // phase-a lane L2 (A24): ALLOW_MINORS, per request, on the server (never a build-time value).
-  return <AuthInner next={safeNext(raw ?? null)} channel={otpChannel()} minorsAllowed={minorsAllowed()} />;
+  /* espace prof v2 · auth: ?existing=1 — a signup page found an account for the address
+     (« Tu as déjà un compte — connecte-toi. »). A flag only: the address itself is
+     handed over in sessionStorage (lib/auth-prefill.ts), never in the URL. */
+  const existing = (Array.isArray(searchParams.existing) ? searchParams.existing[0] : searchParams.existing) === "1";
+  return <AuthInner next={safeNext(raw ?? null)} channel={otpChannel()} minorsAllowed={minorsAllowed()} existingAccount={existing} />;
 }

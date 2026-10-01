@@ -991,3 +991,47 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .nc-form{min-width:0}
 }
 @keyframes aps-pulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* ── espace prof v2 · auth ── (phase 2: passwords — components/auth/PasswordField.tsx,
+   components/settings/SecurityPanel.tsx). In the components layer, like the rest of
+   the design system, so a Tailwind utility on the same element still wins. */
+@layer components {
+  /* The eye toggle sits at the inline END of the .inp: a full 44px target that never submits. */
+  .pw-inp{padding-inline-end:2px}
+  .pw-toggle{flex:none;display:grid;place-items:center;width:44px;height:44px;border:0;background:none;border-radius:10px;color:var(--muted);cursor:pointer}
+  .pw-toggle:hover{color:var(--ink2)}
+  .pw-toggle:focus-visible{outline:3px solid var(--blue);outline-offset:-3px}
+  .pw-toggle .ic{width:20px;height:20px}
+  /* The strength meter: four segments AND a word — colour is never the only signal. */
+  .pw-meter{display:flex;align-items:center;gap:10px;margin-block-start:8px;min-height:18px}
+  .pw-meter-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex:0 0 120px}
+  .pw-meter-bars span{height:5px;border-radius:999px;background:var(--line)}
+  .pw-meter-bars span.on{background:var(--rose)}
+  .pw-meter-bars[data-score="2"] span.on{background:var(--ochre-ink)}
+  .pw-meter-bars[data-score="3"] span.on,.pw-meter-bars[data-score="4"] span.on{background:var(--blue)}
+  .pw-meter-label{font-size:13px;color:var(--ink2);min-width:0}
+  /* The way round the main action, under it: « Recevoir un code à la place », « Plus tard ». */
+  .auth-alt{display:flex;justify-content:center;margin-block-start:12px;padding-block-start:8px;border-block-start:1px solid var(--line)}
+
+  /* Réglages › Sécurité. Cards on the page background; one icon tile per card. */
+  .sec-panel{display:flex;flex-direction:column;gap:14px;margin-block-start:clamp(14px,2vw,22px)}
+  .sec-heading{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--ink)}
+  .sec-row{display:flex;align-items:center;gap:12px 14px;flex-wrap:wrap}
+  .sec-icon{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:var(--blue50);color:var(--blue)}
+  .sec-icon .ic{width:18px;height:18px}
+  .sec-body{flex:1 1 200px;min-width:0}
+  .sec-title{font-size:15px;font-weight:700;color:var(--ink)}
+  .sec-text{font-size:13.5px;line-height:1.5;color:var(--muted);margin-block-start:2px}
+  .sec-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .sec-form{margin-block-start:16px;padding-block-start:16px;border-block-start:1px solid var(--line)}
+  .sec-form-actions{display:flex;gap:8px;flex-wrap:wrap;margin-block-start:4px}
+  .sec-sessions{list-style:none;margin-block-start:14px;border-block-start:1px solid var(--line)}
+  .sec-session{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding-block:10px;border-block-end:1px solid var(--line)}
+  .sec-pill{font-size:13px;font-weight:700;line-height:1.4;padding-block:3px;padding-inline:10px;border-radius:999px;color:var(--ink2);border:1px solid var(--line)}
+  .sec-pill-current{background:var(--blue50);color:var(--blue);border-color:var(--blue50)}
+  .sec-meta{font-size:13px;color:var(--muted);min-width:0}
+  .sec-hint{font-size:13px;line-height:1.5;color:var(--muted);margin-block-start:12px}
+  .sec-skel{display:flex;flex-direction:column;gap:14px}
+  .sec-skel-card{height:84px;border-radius:var(--r-l);background:var(--band);animation:sec-pulse 1.4s ease-in-out infinite}
+  @keyframes sec-pulse{50%{opacity:.55}}
+}

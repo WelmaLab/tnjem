@@ -58,13 +58,16 @@ export const CONSENT_TEXT = "Consentement du parent/tuteur pour un compte de moi
     banner on each page says so. A new version is recorded on the next consent.
     phase-a lane L6 (A19): 2026-09-15 → 2026-09-24, the Phase A rewrite (adult-only
     pilot, conversations that close, moderation, first name + initial, …), so a
-    consent recorded from now on points at the text it was actually given under. */
-export const PRIVACY_POLICY_VERSION = "2026-09-24";
+    consent recorded from now on points at the text it was actually given under.
+    espace prof v2 · auth (phase 2): 2026-09-24 → 2026-10-01 — passwords (an argon2id
+    hash is stored; the lockout; the hash is erased with the account). */
+export const PRIVACY_POLICY_VERSION = "2026-10-01";
 
 /** LEGAL-REVIEW: version of /terms, recorded against every account created under it
     (profiles.terms_version). Re-acceptance of a new version is not built.
-    phase-a lane L6 (A19): 2026-09-15 → 2026-09-24, same reason as above. */
-export const TERMS_VERSION = "2026-09-24";
+    phase-a lane L6 (A19): 2026-09-15 → 2026-09-24, same reason as above.
+    espace prof v2 · auth (phase 2): 2026-09-24 → 2026-10-01 — §3 signs in with a password or a code. */
+export const TERMS_VERSION = "2026-10-01";
 
 /** Consents are recorded against the privacy policy they were given under. */
 export const CONSENT_POLICY_VERSION = PRIVACY_POLICY_VERSION;
