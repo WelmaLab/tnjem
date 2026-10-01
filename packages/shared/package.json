@@ -18,7 +18,8 @@
     "./legal": "./src/legal.ts",
     "./observability": "./src/observability.ts",
     "./class-input": "./src/class-input.ts",
-    "./password-check": "./src/password-check.ts"
+    "./password-check": "./src/password-check.ts",
+    "./unsubscribe": "./src/unsubscribe.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

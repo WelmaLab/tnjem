@@ -26,6 +26,9 @@ export { eraseAccount, isSlugRetired, slugHash, inactiveAccountsDue, ERASED_NAME
 export type { ErasureResult, ErasureReason, ErasureDb } from "./erasure";
 export type { NotifyInput, NotifyDb, ReminderStep, ReminderPayload } from "./notify";
 
+// espace prof v2 · growth (P4, contract C5): e-mail preferences.
+export { getNotificationPrefs, setNotificationPrefs, wantsEmail } from "./notification-prefs";
+
 export {
   purgeExpiredVerificationDocs,
   purgeExpiredAuthRows,

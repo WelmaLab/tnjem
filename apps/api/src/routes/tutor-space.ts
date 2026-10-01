@@ -23,6 +23,7 @@ import { getSession } from "../lib/session";
 import { checkRateLimit } from "../lib/rate-limit";
 import { planStateForTutor } from "../lib/entitlements";
 import { getOwnerPreviewData, tutorVisibility } from "../lib/storefront";
+import { growthRelations } from "../lib/students-growth"; // espace prof v2 · growth (P4/P5)
 
 /* espace prof v2 · shell — the tutor's own space (phase 1).
 
@@ -161,19 +162,35 @@ export async function tutorSpaceRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const now = Date.now();
+    // espace prof v2 · growth (P4/P5): followers and subscribers, merged onto the same rows.
+    const growth = await growthRelations(mine.id);
     const out: TutorStudent[] = [...byStudent.entries()].map(([studentId, e]) => {
       const booked = e.bookings.map((b) => Date.parse(b.bookedAt));
+      const g = growth.get(studentId);
       return {
         key: studentKey(mine.id, studentId),
         name: publicDisplayName(e.name),
         initials: publicInitials(e.name),
-        relations: ["booked"],
+        relations: ["booked", ...(g?.relations ?? [])],
         status: studentStatusOf(e.bookings, now),
-        since: new Date(Math.min(...booked)).toISOString(),
+        since: new Date(Math.min(...booked, ...(g ? [Date.parse(g.since)] : []))).toISOString(),
         lastActivityAt: new Date(Math.max(...booked)).toISOString(),
         bookings: e.bookings,
       };
     });
+    for (const [studentId, g] of growth) {
+      if (byStudent.has(studentId)) continue;
+      out.push({
+        key: studentKey(mine.id, studentId),
+        name: publicDisplayName(g.name),
+        initials: publicInitials(g.name),
+        relations: g.relations,
+        status: "none",
+        since: g.since,
+        lastActivityAt: g.since,
+        bookings: [],
+      });
+    }
 
     /* Students with a class coming up first — they are the ones the tutor is about
        to see — then the most recently active. */

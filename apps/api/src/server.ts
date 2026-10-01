@@ -159,6 +159,8 @@ export async function buildServer(opts: { logStream?: { write(line: string): voi
   await app.register(tutorSpaceRoutes); // espace prof v2 · shell
   await app.register((await import("./routes/passwords")).passwordRoutes); // espace prof v2 · auth (phase 2)
   await app.register((await import("./routes/vitrine")).vitrineRoutes); // espace prof v2 · growth (P3)
+  await app.register((await import("./routes/follows")).followRoutes); // espace prof v2 · growth (P4)
+  await app.register((await import("./routes/notification-prefs")).notificationPrefRoutes); // espace prof v2 · growth (P4, C5)
 
   app.get("/health", async (req) => {
     let dbOk = false;

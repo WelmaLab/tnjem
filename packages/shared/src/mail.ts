@@ -87,9 +87,20 @@ function fromHeader(): string {
   return name ? `${name} <${address}>` : address;
 }
 
+/* espace prof v2 (contract C5): the optional 4th parameter, the same shape the pro
+   team wrote. Every existing three-argument call is unchanged. `headers` carries
+   List-Unsubscribe (packages/shared/src/unsubscribe.ts); `attachments` the booking
+   .ics (pro P7); `html` an optional alternative part — the text part is always sent. */
+export type MailExtras = {
+  headers?: Record<string, string>;
+  attachments?: { filename: string; content: string | Buffer; contentType: string }[];
+  html?: string;
+};
+
 /** Send one transactional email. Returns false on any failure; never throws — the
     caller turns that into a retryable error, exactly as with sendSms(). */
-export async function sendMail(to: string, subject: string, text: string): Promise<boolean> {
+export async function sendMail(to: string, subject: string, text: string, extras?: MailExtras): Promise<boolean> {
+  const opts = extras ?? {};
   const t = transport();
   if (!t) return false;
   try {
@@ -102,6 +113,11 @@ export async function sendMail(to: string, subject: string, text: string): Promi
          which for a login code is the whole product. nodemailer handles the RFC
          2047 encoding of the Arabic subject and the base64 of the UTF-8 body. */
       text,
+      ...(opts.html ? { html: opts.html } : {}),
+      ...(opts.headers ? { headers: opts.headers } : {}),
+      ...(opts.attachments?.length
+        ? { attachments: opts.attachments.map((a) => ({ filename: a.filename, content: a.content, contentType: a.contentType })) }
+        : {}),
       ...(process.env.MAIL_REPLY_TO ? { replyTo: process.env.MAIL_REPLY_TO } : {}),
     });
     return true;

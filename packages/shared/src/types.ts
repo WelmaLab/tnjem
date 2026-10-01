@@ -449,7 +449,10 @@ export type NotificationKind =
   | "verification_rejected"
   | "new_booking"
   | "booking_cancelled"   // student pulled out — the tutor needs to know a seat freed up
-  | "message";            // Step 8b: someone wrote in a booking thread
+  | "message"             // Step 8b: someone wrote in a booking thread
+  // espace prof v2 · growth (P4): follows
+  | "new_follower"        // the tutor: a student now follows them (first name only)
+  | "follow_digest";      // a follower: the daily digest of new classes and fiches
 
 export type NotificationItem = {
   id: string;

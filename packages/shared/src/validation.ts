@@ -122,6 +122,8 @@ export const RESERVED_SLUGS: readonly string[] = [
      is not a tutor, an unreserved route would 404 outright. e2e/not-found.spec.ts
      fails if any folder under app/[locale]/ is missing from this list. */
   "pour-les-profs", "tarifs", "guardian",
+  // espace prof v2 · growth (P4): /email/unsubscribe, the one-click unsubscribe page.
+  "email",
   /* Brand names, not routes. "tnajem" would let a tutor impersonate the
      platform at tnajem.com/tnajem; "9arini" is the name we renamed away from and
      is reserved so nobody squats it. */

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   startApp, stopApp, seedProfile, seedTutor, seedClass, login, call, sql, fxClientIp, type App,
 } from "./support/fx";
-import { runGrowthJobs } from "../src/lib/growth-cron";
+import { pruneVitrineStats } from "../src/lib/growth-cron";
 import { db } from "../src/db";
 
 /* Espace prof v2 · Phase 3 — vitrine statistics.
@@ -170,8 +170,8 @@ describe("P3 · nightly housekeeping", () => {
     await sql`insert into vitrine_stats_daily (tutor_id, day, source, views, clicks) values
       (${tutor.id}, (now() at time zone 'Africa/Tunis')::date - 500, 'direct', 1, 0),
       (${tutor.id}, (now() at time zone 'Africa/Tunis')::date - 2, 'direct', 1, 0)`;
-    const run = await runGrowthJobs(db);
-    assert.deepEqual(run.failedJobs, []);
+    // The prune job alone: the full nightly run would also digest other files' follows.
+    await pruneVitrineStats(db);
     const left = await sql<{ n: number }[]>`select count(*)::int n from vitrine_stats_daily where tutor_id = ${tutor.id}`;
     assert.equal(left[0].n, 1);
   });

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { and, eq, gte, isNull, sql as raw, classes, tutors, vitrineStatsDaily } from "@tnajem/db";
+import { and, eq, gte, isNull, sql as raw, classes, tutorFollows, tutors, vitrineStatsDaily } from "@tnajem/db";
 import { isUuid, normalizeUtmSource, tunisWallTime, vSlug } from "@tnajem/shared";
 import { db } from "../db";
 import { getSession } from "../lib/session";
@@ -118,7 +118,7 @@ export async function vitrineRoutes(app: FastifyInstance): Promise<void> {
 
   /* ── GET /vitrine/stats?days=30 — the owner's numbers ──────────────────────
      Zero is a real answer and comes back as 0, never padded (the truth rule).
-     `followers` is null until Phase 4 gives it a table. */
+     `followers` (Phase 4) is the live count of tutor_follows — "Abonnés". */
   app.get<{ Querystring: { days?: string } }>("/vitrine/stats", async (req) => {
     const session = await getSession(req);
     if (!session) return { ok: false, error: "not-authenticated" };
@@ -157,6 +157,10 @@ export async function vitrineRoutes(app: FastifyInstance): Promise<void> {
       d.clicks += r.clicks;
       byDay.set(r.day, d);
     }
+    const [{ n: followers }] = await db
+      .select({ n: raw<number>`count(*)::int` })
+      .from(tutorFollows)
+      .where(eq(tutorFollows.tutorId, mine.id));
 
     return {
       ok: true,
@@ -165,7 +169,7 @@ export async function vitrineRoutes(app: FastifyInstance): Promise<void> {
       totals: { views, clicks },
       bySource: [...bySource].map(([source, v]) => ({ source, ...v })).sort((a, b) => b.views + b.clicks - (a.views + a.clicks)),
       daily: [...byDay].map(([day, v]) => ({ day, ...v })).sort((a, b) => a.day.localeCompare(b.day)),
-      followers: null as number | null,
+      followers,
     };
   });
 }

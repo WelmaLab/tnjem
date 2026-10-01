@@ -67,3 +67,5 @@ export * from "./tutor-space";
 export * from "./password-policy";
 // espace prof v2 · growth (P3) — share links, utm_source vocabulary, pre-written messages. Pure.
 export * from "./share-links";
+// espace prof v2 · growth (P4, contract C5) — the e-mail preference kinds. Pure.
+export * from "./email-prefs";

@@ -10,7 +10,8 @@
     "./storage": "./src/storage.ts",
     "./doc-crypto": "./src/doc-crypto.ts",
     "./retention": "./src/retention.ts",
-    "./notify": "./src/notify.ts"
+    "./notify": "./src/notify.ts",
+    "./notification-prefs": "./src/notification-prefs.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

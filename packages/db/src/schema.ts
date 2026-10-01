@@ -982,3 +982,37 @@ export const vitrineStatsDaily = pgTable("vitrine_stats_daily", {
      (tutor_id = ? and day >= ?) — one btree serves both. */
   pk: primaryKey({ name: "vitrine_stats_daily_pk", columns: [t.tutorId, t.day, t.source] }),
 }));
+
+/* FOLLOWS (Phase 4, 0033). "Suivre / Abonné ✓". The primary key is the spec's
+   unique(student, tutor). Unfollowing deletes the row — who follows whom is
+   personal data. `notified_through` is the followers-digest cursor: a new follow
+   starts at now(), so following never mails out a tutor's back catalogue. */
+export const tutorFollows = pgTable("tutor_follows", {
+  studentProfileId: uuid("student_profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+  tutorId: uuid("tutor_id").notNull().references(() => tutors.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  notifiedThrough: timestamp("notified_through", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ name: "tutor_follows_student_tutor_pk", columns: [t.studentProfileId, t.tutorId] }),
+  // "my followers, newest first" and the count. The PK serves the student side.
+  tutorCreatedIdx: index("tutor_follows_tutor_id_created_at_idx").on(t.tutorId, t.createdAt),
+}));
+
+/* E-MAIL PREFERENCES (Phase 4, 0033 — contract C5). NO ROW = EVERYTHING ON, the
+   default every account had before this table; a missing row must never read as
+   "unsubscribed". The one reader is notification-prefs.ts::wantsEmail(). In-app
+   notifications are not governed by this table: the bell is always on. */
+export const notificationPrefs = pgTable("notification_prefs", {
+  profileId: uuid("profile_id").primaryKey().references(() => profiles.id, { onDelete: "cascade" }),
+  followers: boolean("followers").notNull().default(true),
+  bookings: boolean("bookings").notNull().default(true),
+  messages: boolean("messages").notNull().default(true),
+  reminders: boolean("reminders").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** When a profile last got the followers digest — at most one a day (Phase 4, 0033). */
+export const followDigests = pgTable("follow_digests", {
+  profileId: uuid("profile_id").primaryKey().references(() => profiles.id, { onDelete: "cascade" }),
+  lastSentAt: timestamp("last_sent_at", { withTimezone: true }).notNull(),
+});

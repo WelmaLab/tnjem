@@ -188,3 +188,15 @@ export async function seedPassword(profileId: string, password: string): Promise
   const hash = await argon2.hash(password.normalize("NFKC"), { type: argon2.argon2id, memoryCost: 19_456, timeCost: 2, parallelism: 1 });
   await sql`update profiles set password_hash = ${hash}, password_set_at = now() where id = ${profileId}`;
 }
+
+// espace prof v2 · growth (phases 3–5) ─────────────────────────────────────────
+/* Rows for the growth specs (share, follow, subscriptions, promotions) and the
+   payment-story crawler. Every one hangs off a run-tagged tutor or profile with ON
+   DELETE CASCADE (migrations 0033–0037), so purgeRun's tutor/profile delete takes
+   them along. */
+
+/** A student following a tutor (tutor_follows). */
+export async function seedFollow(studentId: string, tutorId: string): Promise<void> {
+  await sql`insert into tutor_follows (student_profile_id, tutor_id) values (${studentId}, ${tutorId})
+            on conflict do nothing`;
+}

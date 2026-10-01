@@ -1,5 +1,6 @@
 import { lt, sql as raw, vitrineStatsDaily } from "@tnajem/db";
 import { db as appDb } from "../db";
+import { runFollowDigest, type MailSender } from "./follow-digest";
 
 /* THE GROWTH NIGHTLY JOBS (Espace prof v2 · Phases 3–5), run inside the existing
    /cron/purge call (routes/cron.ts) right after the retention run.
@@ -11,7 +12,8 @@ import { db as appDb } from "../db";
    the wire; per-row detail goes to the log callback, ids only. */
 
 type Db = typeof appDb;
-export type GrowthJobOptions = { dryRun?: boolean; log?: (line: string) => void; now?: Date };
+/** `send` is a test seam: the jobs that e-mail take it instead of the real sendMail. */
+export type GrowthJobOptions = { dryRun?: boolean; log?: (line: string) => void; now?: Date; send?: MailSender };
 export type GrowthRun = {
   results: Record<string, unknown>;
   failedJobs: { job: string; error: string }[];
@@ -53,5 +55,6 @@ export async function runGrowthJobs(db: Db, opts: GrowthJobOptions = {}): Promis
     }
   }
   await job("vitrineStats", () => pruneVitrineStats(db, opts));
+  await job("followDigest", () => runFollowDigest(db, opts));
   return { results, failedJobs };
 }

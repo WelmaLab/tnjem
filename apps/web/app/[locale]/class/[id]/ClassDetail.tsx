@@ -11,6 +11,7 @@ import { getClass } from "@/app/actions";
 import { isOpenForBooking, monthLabel, LEVEL_LABELS, type ClassItem } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 import { VitrineBeacon } from "@/components/share/VitrineBeacon"; // espace prof v2 · growth (P3)
+import { FollowButton } from "@/components/follow/FollowButton"; // espace prof v2 · growth (P4)
 
 
 /* Page-local copy (lib/i18n.ts is shared). One shared key is deliberately unused:
@@ -113,6 +114,8 @@ const PAGE_CSS = `
     font-family:var(--fd);font-size:20px;color:var(--ink);font-weight:700}
   .cd-tutor-name{font-weight:700;font-size:14.5px;overflow-wrap:anywhere}
   .cd-tutor-meta{font-size:13px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+  .cd-tutor{flex-wrap:wrap}
+  .cd-follow{margin-inline-start:auto}
 
   /* ── booking panel ── */
   .cd-panel{position:sticky;top:84px}
@@ -353,6 +356,8 @@ export function ClassDetail({ id }: { id: string }) {
                   </div>
                   {tutorMeta && <UserText as="div" className="cd-tutor-meta">{tutorMeta}</UserText>}
                 </div>
+                {/* espace prof v2 · growth (P4): only for a public tutor (a slug is shipped only then). */}
+                {tutorSlug && <FollowButton slug={tutorSlug} tutorName={tutorName} className="cd-follow" />}
               </div>
 
               {/* Sold out, mobile: the booking panel that carries this message is

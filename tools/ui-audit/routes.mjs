@@ -206,6 +206,8 @@ export const ROUTES = [
   { path: "/terms", name: "terms", nojs: true, h1: "main h1", sub: "main p.web-lead", cta: null },
   { path: "/privacy", name: "privacy", nojs: true, h1: "main h1", sub: "main p.web-lead", cta: null },
   { path: "/nonexistent-404", name: "404", nojs: true, h1: "main h1", sub: "main p.web-lead", cta: "main a.btn-primary" },
+  // espace prof v2 · growth (P4): the unsubscribe confirm page (no token → the "link does not work" state).
+  { path: "/email/unsubscribe", name: "email-unsubscribe", nojs: true, h1: "main h1", sub: "main .eu-lead", cta: null },
   { path: "/auth", name: "auth", nojs: true, h1: "main h1", sub: "main h1 + p", cta: "main button" },
   /* The split signup funnel. These are PUBLIC and they are the top of both
      journeys, so they get the full no-JS contract: on Tunisian 3G the form has to

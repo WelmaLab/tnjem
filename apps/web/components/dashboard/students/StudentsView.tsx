@@ -23,7 +23,7 @@ import { bilingual } from "@/lib/i18n";
 const copy = bilingual({
   fr: {
     title: "Mes élèves",
-    sub: "Tous ceux qui ont réservé une séance avec toi.",
+    sub: "Ceux qui ont réservé une séance avec toi ou suivent ta page.", // espace prof v2 · growth (P4): followers too
     note: "Tu vois le prénom de tes élèves, jamais leurs coordonnées : vous échangez par la messagerie de chaque séance.",
     count: (n: number) => (n === 1 ? "1 élève" : `${n} élèves`),
     emptyTitle: "Personne n'a encore réservé",
@@ -40,7 +40,7 @@ const copy = bilingual({
   },
   ar: {
     title: "تلامذتي",
-    sub: "الناس الكل اللي حجزو حصة معاك.",
+    sub: "اللي حجزو حصة معاك ولا يتبّعو صفحتك.",
     note: "تشوف الاسم الأول متاع تلامذتك، عمرك ما تشوف معلومات الاتصال: تتراسلو عبر رسائل كل حصة.",
     count: (n: number) => `${n} تلميذ`,
     emptyTitle: "ما زال حتّى حد ما حجز",

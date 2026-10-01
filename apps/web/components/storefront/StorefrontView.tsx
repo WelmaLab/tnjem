@@ -15,6 +15,7 @@ import { Link } from "@/components/Link";
 import { ShareButton } from "./ShareButton";
 import { MaterialsPanel } from "./MaterialsPanel";
 import { VitrineBeacon } from "@/components/share/VitrineBeacon"; // espace prof v2 · growth (P3)
+import { FollowButton } from "@/components/follow/FollowButton"; // espace prof v2 · growth (P4)
 import { ReportButton } from "@/components/ReportButton";
 import { dict, bilingual } from "@/lib/i18n";
 import type { AppLocale } from "@/lib/locale";
@@ -312,8 +313,12 @@ export function StorefrontView({
               </div>
             </div>
 
-            {/* The page's one interactive element — see ShareButton. */}
-            <ShareButton title={tutor.full_name} label={t.common.share} />
+            {/* Client islands: Suivre (espace prof v2 · P4, the viewer's own state — never
+                in the cached HTML) and the native share sheet (see ShareButton). */}
+            <div className="sf-hero-actions">
+              <FollowButton slug={tutor.slug} tutorName={tutor.full_name} variant="hero" />
+              <ShareButton title={tutor.full_name} label={t.common.share} />
+            </div>
             {/* espace prof v2 · growth (P3): counts this view for Ma vitrine; renders nothing. */}
             <VitrineBeacon slug={tutor.slug} />
           </div>
@@ -669,6 +674,7 @@ export function StorefrontView({
         }
         .sf-hero-id{display:flex;gap:clamp(14px,3vw,20px);align-items:center;flex:1 1 240px;min-width:0}
         .sf-share{flex:none}
+        .sf-hero-actions{display:flex;align-items:flex-start;gap:10px;flex:none;flex-wrap:wrap}
         /* No inline letterSpacing here (the old markup had one): an inline style
            beats the stylesheet, so it would have survived the RTL reset in
            globals.css and kept severing Arabic joins in the tutor's own name. */

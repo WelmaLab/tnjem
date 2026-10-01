@@ -1041,4 +1041,7 @@ html[dir="rtl"] * { letter-spacing: normal !important }
    styles are component-scoped; only what sits inside the shell's own cards lives here. */
 @layer components {
   .hp-share{margin-block-start:10px}
+  /* « Ce prof arrive bientôt » (P4): Suivre, above the ways onward. */
+  .cs-follow{display:grid;justify-items:center;gap:10px;margin-block-end:22px;padding:16px;border-radius:var(--r);background:var(--blue50)}
+  .cs-follow-t{font-size:14px;color:var(--ink2);line-height:1.55;margin:0;max-width:420px}
 }

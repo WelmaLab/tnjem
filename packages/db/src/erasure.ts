@@ -46,6 +46,7 @@ import {
   adminActions, bookings, classes, consents, guardianLinks, materials, messageReports, messages,
   messageThreads, notifications, otpCodes, profiles, reports, retiredSlugs, sessions, tutors,
   verificationDocs, verificationTraces,
+  tutorFollows, notificationPrefs, followDigests, // espace prof v2 · growth (P4)
 } from "./schema";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -248,6 +249,12 @@ export async function eraseAccount(
     await tx.delete(guardianLinks).where(or(eq(guardianLinks.guardianProfileId, profileId), eq(guardianLinks.minorProfileId, profileId)));
     await tx.delete(consents).where(eq(consents.minorId, profileId));
     await tx.delete(sessions).where(eq(sessions.profileId, profileId));
+    /* espace prof v2 · growth (P4): whom this account followed, who followed its
+       page, and its e-mail switches — personal data with nothing to keep. */
+    await tx.delete(tutorFollows).where(eq(tutorFollows.studentProfileId, profileId));
+    if (tutor) await tx.delete(tutorFollows).where(eq(tutorFollows.tutorId, tutor.id));
+    await tx.delete(notificationPrefs).where(eq(notificationPrefs.profileId, profileId));
+    await tx.delete(followDigests).where(eq(followDigests.profileId, profileId));
     const identifiers = [p.email, p.phone].filter((x): x is string => Boolean(x));
     if (identifiers.length) await tx.delete(otpCodes).where(inArray(otpCodes.identifier, identifiers));
     if (p.email) await tx.update(reports).set({ reporterEmail: null }).where(eq(reports.reporterEmail, p.email));

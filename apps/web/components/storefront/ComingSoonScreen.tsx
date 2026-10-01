@@ -15,6 +15,7 @@ import type { AppLocale } from "@/lib/locale";
 import { SiteShell } from "@/components/SiteShell";
 import { Search, Home, Clock } from "@/components/icons";
 import { OwnerCheck } from "./OwnerCheck";
+import { FollowButton } from "@/components/follow/FollowButton"; // espace prof v2 · growth (P4, C4)
 
 const copy = bilingual({
   fr: {
@@ -22,12 +23,14 @@ const copy = bilingual({
     body: "Sa page n'est pas encore en ligne : chaque prof est vérifié par l'équipe Tnajem avant de pouvoir donner cours. Repasse dans quelques jours.",
     explore: "Voir les profs déjà en ligne",
     home: "Accueil",
+    follow: "Suis ce prof : tu seras prévenu dès qu'il publie ses premières séances.",
   },
   ar: {
     title: "الأستاذ هذا جاي قريب",
     body: "صفحتو موش على الخط لتوّا: كل أستاذ يتثبّت منّو فريق Tnajem قبل ما يقرّي. ارجع بعد كم نهار.",
     explore: "شوف الأساتذة اللي على الخط",
     home: "الرئيسية",
+    follow: "تابع هالأستاذ : يوصلك خبر أوّل ما ينشر حصصو الأولى.",
   },
 });
 
@@ -44,7 +47,11 @@ export function ComingSoonScreen({ locale, slug }: { locale: AppLocale; slug: st
             </div>
             <h1 className="web-h2 mb-3">{c.title}</h1>
             <p className="web-lead mb-6">{c.body}</p>
-            {/* ep2:follow-slot — growth (phase 4) puts <FollowButton slug={slug} /> here (« Suivre »). */}
+            {/* ep2:follow-slot — growth (phase 4): « Suivre », to be told when this prof opens. */}
+            <div className="cs-follow">
+              <p className="cs-follow-t">{c.follow}</p>
+              <FollowButton slug={slug} />
+            </div>
             <div className="cluster justify-center">
               <a href={`/${locale}/explore`} className="btn btn-primary btn-sm">
                 <Search className="ic" />
