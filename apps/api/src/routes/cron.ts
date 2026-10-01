@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { runRetention } from "@tnajem/db";
 import { bearerAuthorised } from "../lib/bearer";
+import { runGrowthJobs } from "../lib/growth-cron";
 import { db } from "../db";
 
 /* The retention purge, moved from apps/web/app/api/cron/purge.
@@ -36,10 +37,15 @@ export async function cronRoutes(app: FastifyInstance): Promise<void> {
        server log; they used to be promised there and never written. */
     const run = await runRetention(db, { dryRun, log: (line) => req.log.info({ job: "retention" }, line) });
     const docs = run.documents;
+    /* Espace prof v2 · growth: the followers digest, subscription expiry/reminders
+       and stats housekeeping — extra INDEPENDENT jobs in the same nightly run
+       (lib/growth-cron.ts). A failure there never stops retention, nor the reverse. */
+    const growth = await runGrowthJobs(db, { dryRun, log: (line) => req.log.info({ job: "growth" }, line) });
+    const failedJobs = [...run.failedJobs, ...growth.failedJobs];
 
     /* COUNTS ONLY in the response body. The removed-document list carries tutor and
        document ids; that stays in the server log and never crosses the wire. */
-    const failed = run.failedJobs.length > 0 || (docs?.errors.length ?? 0) > 0;
+    const failed = failedJobs.length > 0 || (docs?.errors.length ?? 0) > 0;
     const body = {
       ok: !failed,
       dryRun,
@@ -55,9 +61,10 @@ export async function cronRoutes(app: FastifyInstance): Promise<void> {
       auth: run.auth,
       accounts: run.accounts,
       subscriptions: run.subscriptions,
-      failedJobs: run.failedJobs.map((f) => f.job),
+      growth: growth.results,
+      failedJobs: failedJobs.map((f) => f.job),
     };
-    if (failed) req.log.error({ failedJobs: run.failedJobs.map((f) => f.job), documentErrors: docs?.errors.length ?? 0 }, "retention purge had failures");
+    if (failed) req.log.error({ failedJobs: failedJobs.map((f) => f.job), documentErrors: docs?.errors.length ?? 0 }, "retention purge had failures");
     return reply.code(failed ? 500 : 200).send(body);
   };
 

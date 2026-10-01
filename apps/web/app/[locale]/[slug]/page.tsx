@@ -132,12 +132,19 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
      conditional here, unlike the site-wide description, precisely because we know
      WHICH tutor this is. */
   // phase-a lane L3 (A5): the toggle AND a bookable free-first class, never the toggle alone.
+  /* espace prof v2 · growth (P3): the card speaks the page's language — an Arabic
+     link preview used to be French. */
+  const ar = locale === "ar";
   const pitch = advertisesFreeFirst(tutor.offers_free_first_session, data.classes)
-    ? "Réserve un cours en direct — 1ère séance offerte, sans engagement."
-    : "Réserve un cours en direct — tarif affiché, sans engagement.";
+    ? (ar ? "احجز درس دايركت — أول حصة فابور، بلا التزام." : "Réserve un cours en direct — 1ère séance offerte, sans engagement.")
+    : (ar ? "احجز درس دايركت — السوم معروف، بلا التزام." : "Réserve un cours en direct — tarif affiché, sans engagement.");
   const description = tutor.bio ? `${clamp(tutor.bio, 120)} · ${pitch}` : `${tutor.subject}. ${pitch}`;
   const ogTitle = `${title} · Tnajem`;
-  const alt = `${shownName} sur Tnajem — ${tutor.subject}`;
+  const alt = ar ? `${shownName} على Tnajem — ${tutor.subject}` : `${shownName} sur Tnajem — ${tutor.subject}`;
+  /* espace prof v2 · growth (P3): the tutor's own social card (opengraph-image.tsx in
+     this folder — name, subject, Vérifié, the approved photo, the « à partir de »
+     price), in this page's language, for og: AND twitter:. It replaces /og.png. */
+  const card = `${canonical}/opengraph-image`;
   const firstName = publicDisplayName(tutor.full_name) ?? undefined; // phase-a lane L2 (A23): no og:last_name
 
   return {
@@ -164,13 +171,13 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       alternateLocale: locale === "ar" ? ["fr_TN"] : ["ar_TN"],
       title: ogTitle,
       description,
-      images: [{ url: "/og.png", width: 1200, height: 630, alt }],
+      images: [{ url: card, width: 1200, height: 630, alt }],
     },
     twitter: {
       card: "summary_large_image",
       title: ogTitle,
       description,
-      images: ["/og.png"],
+      images: [{ url: card, width: 1200, height: 630, alt }],
     },
   };
 }

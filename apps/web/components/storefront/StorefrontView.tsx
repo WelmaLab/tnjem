@@ -14,6 +14,7 @@
 import { Link } from "@/components/Link";
 import { ShareButton } from "./ShareButton";
 import { MaterialsPanel } from "./MaterialsPanel";
+import { VitrineBeacon } from "@/components/share/VitrineBeacon"; // espace prof v2 · growth (P3)
 import { ReportButton } from "@/components/ReportButton";
 import { dict, bilingual } from "@/lib/i18n";
 import type { AppLocale } from "@/lib/locale";
@@ -313,6 +314,8 @@ export function StorefrontView({
 
             {/* The page's one interactive element — see ShareButton. */}
             <ShareButton title={tutor.full_name} label={t.common.share} />
+            {/* espace prof v2 · growth (P3): counts this view for Ma vitrine; renders nothing. */}
+            <VitrineBeacon slug={tutor.slug} />
           </div>
 
           {/* The three facts that decide whether a visitor tries this prof. Each pill

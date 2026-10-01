@@ -6,8 +6,7 @@ import { UserText } from "@/components/UserText";
 import { Copy as CopyIcon } from "@/components/icons";
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 import { DateTimeField } from "@/components/app/DatePicker";
-import { CopyLinkButton } from "@/components/app/CopyLinkButton";
-import { classUrl } from "@/components/app/links";
+import { ShareButton } from "@/components/share/ShareButton"; // espace prof v2 · growth (P3, C3)
 import { cancelClass, rescheduleClass } from "@/app/actions";
 import { monthLabel, toWallInput, type DashboardClass } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
@@ -19,7 +18,7 @@ import { bilingual } from "@/lib/i18n";
                         everyone is told, and those who booked may cancel free
      Annuler          → POST /classes/:id/cancel, behind a confirmation dialog:
                         every seat is released and nothing is retained
-     Copier le lien   → the class page ({/* ep2:share-slot *\/})
+     Partager         → the share sheet for the class page (growth, contract C3)
 
    The two confirmations say different things because the consequences differ —
    cancelling ends the class for everyone and cannot be undone, moving keeps every
@@ -49,7 +48,6 @@ const copy = bilingual({
     errDate: "Choisis une date à venir.",
     errGeneric: "Ça n'a pas marché. Réessaie.",
     seats: (taken: number, total: number) => `${taken}/${total} inscrits`,
-    copyLabel: (t: string) => `Copier le lien de « ${t} »`,
     phaseUpcoming: "À venir",
     phaseLive: "En direct",
     phaseDone: "Terminée",
@@ -78,7 +76,6 @@ const copy = bilingual({
     errDate: "اختار تاريخ جاي.",
     errGeneric: "ما مشاتش. عاود حاول.",
     seats: (taken: number, total: number) => `${taken}/${total} محجوز`,
-    copyLabel: (t: string) => `انسخ لينك « ${t} »`,
     phaseUpcoming: "جاية",
     phaseLive: "دايركت",
     phaseDone: "وفات",
@@ -195,8 +192,8 @@ export function ClassRow({ k, onChanged, notify }: { k: DashboardClass; onChange
           </>
         )}
         {shareable && (
-          /* ep2:share-slot — growth (phase 3) replaces this with <ShareButton kind="class" slug={…} classId={k.id} />. */
-          <CopyLinkButton url={classUrl(k.id)} label={c.copyLabel(k.title)} compact />
+          /* ep2:share-slot — growth (phase 3): the share sheet for this class (copy, QR, networks). */
+          <ShareButton kind="class" classId={k.id} classTitle={k.title} startsAt={k.starts_at} />
         )}
       </div>
 

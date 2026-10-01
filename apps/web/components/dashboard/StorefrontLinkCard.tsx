@@ -3,6 +3,7 @@ import { Link } from "@/components/Link";
 import { useLocale } from "@/components/LocaleProvider";
 import { Share, Eye } from "@/components/icons";
 import { CopyLinkButton } from "@/components/app/CopyLinkButton";
+import { ShareButton } from "@/components/share/ShareButton"; // espace prof v2 · growth (P3, C3)
 import { pageUrl, shownUrl } from "@/components/app/links";
 import type { TutorVerifStatus } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
@@ -23,6 +24,7 @@ const copy = bilingual({
     preview: "Aperçu privé",
     noPage: "Ta page n'existe pas encore : crée-la pour obtenir ton lien.",
     copyLabel: "Copier le lien de ma page",
+    share: "Partager ma page",
   },
   ar: {
     title: "واجهتي",
@@ -31,6 +33,7 @@ const copy = bilingual({
     preview: "معاينة خاصة",
     noPage: "صفحتك ما زالت ما تعملتش: اعملها باش يكون عندك لينك.",
     copyLabel: "انسخ لينك صفحتي",
+    share: "شارك صفحتي",
   },
 });
 
@@ -62,8 +65,11 @@ export function StorefrontLinkCard({
           <div className="hp-linkbox">
             <Share className="hp-linkbox-ic" />
             <span className="hp-linkbox-url" dir="ltr" data-e2e="storefront-url">{shownUrl(url)}</span>
-            {/* ep2:share-slot — growth (phase 3) replaces this control with <ShareButton kind="profile" slug={slug} />. */}
+            {/* ep2:share-slot — one-tap copy stays; growth (phase 3) adds the share sheet beside it. */}
             <CopyLinkButton url={url} label={c.copyLabel} />
+          </div>
+          <div className="hp-share">
+            <ShareButton kind="profile" slug={slug} label={c.share} variant="outline" />
           </div>
           <p className="hp-status">
             <span className={online ? "tag tag-success" : "tag tag-soon"} data-e2e="storefront-status">

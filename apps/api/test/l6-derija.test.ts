@@ -18,7 +18,8 @@ import { fileURLToPath } from "node:url";
 const WEB = resolve(dirname(fileURLToPath(import.meta.url)), "../../web");
 
 const SWEEP: [file: string, pairs: [msa: string, derija: string][]][] = [
-  ["app/[locale]/class/[id]/page.tsx", [
+  // espace prof v2 · growth (P3): the class page's client body moved to ClassDetail.tsx (page.tsx is now the server route + share card).
+  ["app/[locale]/class/[id]/ClassDetail.tsx", [
     ["هذه الحصة كاملة", "الحصة هاذي كاملة"],
     ["هذه الحصة ما عادش مفتوحة للحجز", "الحصة هاذي ما عادش تتحجز"],
     ['free: "مجانية"', 'free: "فابور"'],

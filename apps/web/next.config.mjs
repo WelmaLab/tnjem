@@ -193,6 +193,12 @@ const nextConfig = {
   outputFileTracingExcludes: {
     "/**": ["tools/ui-audit/**", "e2e/**", "**/*.png", ".storage/**", ".e2e-storage/**", "backups/**"],
   },
+  /* espace prof v2 · growth (P3): the social-card fonts (lib/og-card.tsx) are read
+     from disk at request time, which the tracer cannot see — without this the
+     standalone server renders every card with no font at all. ~420 KB, once. */
+  outputFileTracingIncludes: {
+    "/**": ["./assets/og/**"],
+  },
 
 
   /* NOT set: `experimental.optimizePackageImports`. It only rewrites imports from

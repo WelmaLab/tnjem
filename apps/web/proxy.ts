@@ -117,6 +117,18 @@ export async function proxy(req: NextRequest) {
   // 3. Real pages pass. Everything below this line is a tutor slug or a 404.
   if (matchRoute(bare) !== null) return NextResponse.next();
 
+  /* espace prof v2 · growth (P3): the generated social cards are routes UNDER a
+     page — /<slug>/opengraph-image and /class/<id>/opengraph-image (Next appends a
+     ?<hash>). They pass when their page could exist; the card itself renders the
+     plain brand card for a slug or class that is not public, so no lookup here. */
+  const card = /^(.+)\/(?:opengraph-image|twitter-image)$/.exec(bare);
+  if (card) {
+    const parent = card[1];
+    const one = parent.slice(1);
+    if (matchRoute(parent) === "class/[id]" || (!one.includes("/") && isValidSlug(one))) return NextResponse.next();
+    return notFound(req, locale, bare);
+  }
+
   const segments = bare.slice(1).split("/").filter(Boolean);
   if (segments.length !== 1 || RESERVED_SLUGS.includes(segments[0])) return notFound(req, locale, bare);
 

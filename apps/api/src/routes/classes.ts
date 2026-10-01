@@ -157,7 +157,8 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
 
     // meetUrl stays nullable: lib/live.ts derives a room from the class id when it
     // is empty, so the student's Join button is never dead.
-    await db.insert(classes).values({
+    // espace prof v2 · growth (P3): the id comes back, so the tutor can share the class right away.
+    const [created] = await db.insert(classes).values({
       tutorId: mine.id,
       title: title.value,
       description: description.value,
@@ -170,10 +171,10 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
       whiteboardUrl: whiteboardUrl.value,
       quizUrl: quizUrl.value,
       level: level.value, // phase-a lane L5 (A18.7)
-    });
+    }).returning({ id: classes.id });
 
     // The storefront lists this tutor's classes — the web drops its 60s ISR entry.
-    return { ok: true, revalidate: { tutors: [mine.slug] } };
+    return { ok: true, id: created?.id, revalidate: { tutors: [mine.slug] } };
   });
 
   /* ── POST /packs ─────────────────────────────────────────────────────────── */

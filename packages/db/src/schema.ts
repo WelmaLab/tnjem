@@ -957,3 +957,28 @@ export const otpCodes = pgTable("otp_codes", {
   /* Retention sweep: `delete from otp_codes where expires_at < now()`. */
   expiresAtIdx: index("otp_codes_expires_at_idx").on(t.expiresAt),
 }));
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ESPACE PROF V2 · growth (Phases 3–5). Appended as one block so the four teams'
+   schema edits merge cleanly; the extra pg-core helpers are imported here for the
+   same reason (the import line at the top is everyone's).
+   ══════════════════════════════════════════════════════════════════════════════ */
+import { date, primaryKey } from "drizzle-orm/pg-core";
+
+/* VITRINE STATISTICS (Phase 3, 0037). An AGGREGATE: one row per (tutor, Tunis
+   day, source) with two counters. No visitor, IP, user agent or session can be
+   stored here — there is no column for one. `source` is a closed vocabulary
+   (utm_source of a shared link, or "direct"), CHECKed in the SQL. */
+export const vitrineStatsDaily = pgTable("vitrine_stats_daily", {
+  tutorId: uuid("tutor_id").notNull().references(() => tutors.id, { onDelete: "cascade" }),
+  day: date("day").notNull(),
+  source: text("source").notNull(),
+  /** Loads of the public profile /{slug}. */
+  views: integer("views").notNull().default(0),
+  /** Arrivals through a link the tutor shared (it carries utm_source), profile or class page. */
+  clicks: integer("clicks").notNull().default(0),
+}, (t) => ({
+  /* The upsert's conflict target AND the owner's "last 30 days" read
+     (tutor_id = ? and day >= ?) — one btree serves both. */
+  pk: primaryKey({ name: "vitrine_stats_daily_pk", columns: [t.tutorId, t.day, t.source] }),
+}));

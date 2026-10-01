@@ -6,6 +6,7 @@ import { Eye, Store } from "@/components/icons";
 import { getDashboard } from "@/app/actions";
 import { AppPage, Blocker, EmptyState, ErrorState, PageSkeleton } from "@/components/app/AppShell";
 import { StorefrontLinkCard } from "@/components/dashboard/StorefrontLinkCard";
+import { VitrineStats } from "@/components/dashboard/storefront/VitrineStats"; // espace prof v2 · growth (P3)
 import { WrongRoleNotice } from "@/components/WrongRoleNotice";
 import type { DashboardData, DashboardResult } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
@@ -100,6 +101,7 @@ export function MyStorefrontView() {
       <>
         <StorefrontLinkCard slug={d.slug} status={d.status} hasStorefront headingId="sv-link-t" />
         {/* ep2:stats-slot — growth (phase 3): « Vues · Clics · Abonnés » for the last 30 days. */}
+        <VitrineStats />
         <section className="u-card u-card-pad hp-card" aria-labelledby="sv-manage-t">
           <h2 id="sv-manage-t" className="hp-card-t">{c.manage}</h2>
           <p className="hp-muted mb-3">{online ? c.online : c.offline}</p>

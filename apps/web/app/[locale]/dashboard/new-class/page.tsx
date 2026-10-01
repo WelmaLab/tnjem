@@ -5,6 +5,7 @@ import { Button, Field } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
 import { Video, Board, Quiz } from "@/components/icons";
 import { createClass, getClass, getOnboardingState } from "@/app/actions";
+import { PublishedShare } from "@/components/share/PublishedShare"; // espace prof v2 · growth (P3)
 import { useToast } from "@/components/useToast";
 import { AppPage, Blocker, ActionBar, FormSection } from "@/components/app/AppShell";
 import { DateTimeField } from "@/components/app/DatePicker";
@@ -192,6 +193,8 @@ export default function NewClassPage() {
   const ffDisabled = ffOption !== true;
   const toggleFreeFirst = () => { if (!ffDisabled) setFreeFirst((v) => !v); };
   const [submitted, setSubmitted] = useState(false);
+  // espace prof v2 · growth (P3): the class just published, to share it right away.
+  const [published, setPublished] = useState<{ id: string | null } | null>(null);
   // Only ever true when the server action itself reports demo mode (no DB).
   const [demo, setDemo] = useState(false);
   /* Not a toast: this one has to persist and carry a link. */
@@ -261,6 +264,7 @@ export default function NewClassPage() {
     if (res.ok) {
       setDemo(Boolean(res.demo));
       setPlanLimit(null);
+      setPublished({ id: (res as { id?: string }).id ?? null }); // espace prof v2 · growth (P3)
       showToast(res.demo ? `${t.extra.classPublished} · ${t.common.demoMode}` : t.extra.classPublished);
     } else {
       // Server-side validation (past date, negative price, bad URL…) — let them fix it.
@@ -567,6 +571,7 @@ export default function NewClassPage() {
           </Button>
         </ActionBar>
       </form>
+      {published && <PublishedShare classId={published.id} title={title} wallTime={datetime} />}
       {toast}
     </AppPage>
   );

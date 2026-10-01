@@ -1035,3 +1035,10 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .sec-skel-card{height:84px;border-radius:var(--r-l);background:var(--band);animation:sec-pulse 1.4s ease-in-out infinite}
   @keyframes sec-pulse{50%{opacity:.55}}
 }
+
+/* ── espace prof v2 · growth ── ──────────────────────────────────────────────
+   Sharing, following, subscriptions and promotions (phases 3–5). Most growth
+   styles are component-scoped; only what sits inside the shell's own cards lives here. */
+@layer components {
+  .hp-share{margin-block-start:10px}
+}
