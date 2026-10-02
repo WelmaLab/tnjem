@@ -9,6 +9,7 @@ import { clientIp, identityColumn, postLoginState, proveCode, resolveIdentity, s
 import {
   clearPasswordFailures,
   currentPasswordSchema,
+  liftPasswordLockout,
   newPasswordSchema,
   passwordGrantValid,
   passwordLockout,
@@ -99,9 +100,10 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
   /* ── POST /auth/password/login ────────────────────────────────────────────
      One answer for every failure that could tell an address apart: unknown,
      password-less and wrong-password all get INVALID_CREDENTIALS after one argon2
-     verify (lib/password.ts's dummy hash for the first two). Locked — 5 failures in
-     a row for this ADDRESS, account or not, or from this IP — is "too-many-attempts":
-     a fact about the caller, given whether or not the address has an account. */
+     verify (lib/password.ts's dummy hash for the first two). Locked — 5 failures for
+     this address from this IP, 50 from this IP in 15 minutes, or 20 for this address
+     in an hour (lib/password.ts) — is "too-many-attempts": a fact about the caller,
+     given whether or not the address has an account. */
   app.post("/auth/password/login", async (req, reply) => {
     const parsed = loginBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "bad-request" });
@@ -110,9 +112,9 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     if (!ok) return INVALID_CREDENTIALS;
     const ip = clientIp(req);
 
-    // Every attempt from one host, success or not: bounds the hashing work a host can ask for.
-    const tries = await checkRateLimit(`pw:try:ip:${ip}`, 30, 15 * 60_000);
-    if (!tries.ok) return { ok: false, error: "too-many-attempts", retryAfter: tries.retryAfter };
+    /* The per-IP cap counts failures (50 / 15 min) and is checked before any hashing,
+       so it is also what bounds the argon2 work one host can ask for. A success costs a
+       hash too, but only a holder of the right password can ask for one. */
     const lock = await passwordLockout(id, ip);
     if (!lock.ok) return { ok: false, error: "too-many-attempts", retryAfter: lock.retryAfter };
 
@@ -122,7 +124,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
       await recordPasswordFailure(id, ip);
       return INVALID_CREDENTIALS;
     }
-    await clearPasswordFailures(id);
+    await clearPasswordFailures(id, ip);
 
     // After the password is proven, like the code path: this answer only reaches the owner.
     if (profile.blockedAt) return { ok: false, error: "account-blocked" };
@@ -213,7 +215,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
       await recordPasswordFailure(lockKey, ip);
       return { ok: false, error: "wrong-password" };
     }
-    await clearPasswordFailures(lockKey);
+    await clearPasswordFailures(lockKey, ip);
 
     const stored = await storePassword({ profileId: me.id, password: input.newPassword, event: "change", expect: p.hash, keepToken: session.token });
     if (!stored.ok) return { ok: false, error: "conflict" };
@@ -268,7 +270,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
 
     const stored = await storePassword({ profileId: profile.id, password: input.password, event: "reset", expect: profile.passwordHash ?? null });
     if (!stored.ok) return { ok: false, error: "conflict" };
-    await clearPasswordFailures(id);
+    await liftPasswordLockout(id);
     sendPasswordNotice(profile, "reset");
 
     const { token, expiresAt } = await createSession(profile.id);

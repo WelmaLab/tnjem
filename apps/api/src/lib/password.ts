@@ -1,7 +1,7 @@
 import argon2 from "argon2";
 import { createHmac, randomBytes } from "node:crypto";
 import { z } from "zod";
-import { and, eq, isNull, ne, profiles, rateLimits, sessions, sql as raw } from "@tnajem/db";
+import { and, eq, isNull, like, ne, or, profiles, rateLimits, sessions, sql as raw } from "@tnajem/db";
 import { authSecret, safeEq, sessionTokenHash } from "@tnajem/shared/auth-core";
 import { formatNumericDate, normalizePassword, tunisClock, PASSWORD_MAX_LENGTH, type PasswordProblem } from "@tnajem/shared";
 import { passwordProblem } from "@tnajem/shared/password-check";
@@ -110,61 +110,92 @@ export function passwordGrantValid(profileId: string, grant: string | undefined 
   return safeEq(m[2], grantMac(profileId, issuedAt));
 }
 
-/* ── Lockout: 5 failed passwords → 15 minutes, per account AND per IP ──────────
-   Two keys in rate_limits, both counting FAILURES only (a success is not an
-   attack). The address goes in as a keyed hash, like every identity key.
+/* ── Lockout: three budgets, all counting FAILURES only (a success is no attack) ──
+     pair     (address, IP)  5 failures → that pair waits 15 minutes
+     ip       one IP         50 failures in 15 minutes, across every address
+     account  one address    20 failures in an hour, across every IP
+   The PAIR is the lock a person meets. It used to be "5 per address" and "5 per IP"
+   separately, and on a Tunisian mobile network hundreds of people share one IP: a
+   single bad actor locked password login for all of them for 15 minutes. Now a
+   wrong-password streak only stops that address on that network. The two caps are
+   what stop the attacks the pair alone would let through: one host spraying many
+   addresses (ip), and many hosts guessing one address (account).
 
-   The window is extended on the 5th failure, so the lock lasts 15 minutes from the
-   failure that triggered it — a plain fixed window would lock for whatever was
-   left of a window opened by the FIRST failure, possibly seconds. While locked,
-   attempts are refused before any hashing and are not counted, so the lock cannot
-   be stretched forever by someone hammering it. */
-export const PASSWORD_MAX_FAILURES = 5;
-export const PASSWORD_LOCK_MS = 15 * 60_000;
+   The address goes in as a keyed hash, like every identity key, and is counted
+   whether or not it has an account, so being locked out is no oracle. A budget's
+   window is extended when it fills, so the wait runs from the failure that filled
+   it — a plain fixed window would lock for whatever was left of a window opened by
+   the FIRST failure, possibly seconds. While locked, attempts are refused before
+   any hashing and are not counted, so the lock cannot be stretched by hammering. */
+type FailureBudget = { max: number; windowMs: number };
+export const PASSWORD_PAIR_BUDGET: FailureBudget = { max: 5, windowMs: 15 * 60_000 };
+export const PASSWORD_IP_BUDGET: FailureBudget = { max: 50, windowMs: 15 * 60_000 };
+export const PASSWORD_ACCOUNT_BUDGET: FailureBudget = { max: 20, windowMs: 60 * 60_000 };
 
+/* The pair key ENDS in the IP (test cleanup and every per-IP key do), and starts
+   with the account's prefix, so a reset can lift every pair of one address. */
+const pairPrefix = (identifier: string) => `pw:fail:pair:${rlSubject(identifier)}:`;
 export const passwordFailKeys = (identifier: string, ip: string) => ({
-  id: `pw:fail:id:${rlSubject(identifier)}`,
+  pair: `${pairPrefix(identifier)}${ip}`,
   ip: `pw:fail:ip:${ip}`,
+  account: `pw:fail:id:${rlSubject(identifier)}`,
 });
 
 export async function passwordLockout(identifier: string, ip: string): Promise<RateLimitResult> {
   const keys = passwordFailKeys(identifier, ip);
-  const [a, b] = await Promise.all([peekRateLimit(keys.id, PASSWORD_MAX_FAILURES), peekRateLimit(keys.ip, PASSWORD_MAX_FAILURES)]);
-  if (a.ok && b.ok) return { ok: true, retryAfter: 0 };
-  return { ok: false, retryAfter: Math.max(a.retryAfter, b.retryAfter) };
+  const checks = await Promise.all([
+    peekRateLimit(keys.pair, PASSWORD_PAIR_BUDGET.max),
+    peekRateLimit(keys.ip, PASSWORD_IP_BUDGET.max),
+    peekRateLimit(keys.account, PASSWORD_ACCOUNT_BUDGET.max),
+  ]);
+  if (checks.every((c) => c.ok)) return { ok: true, retryAfter: 0 };
+  return { ok: false, retryAfter: Math.max(...checks.map((c) => c.retryAfter)) };
 }
 
-async function countFailure(key: string): Promise<void> {
+async function countFailure(key: string, { max, windowMs }: FailureBudget): Promise<void> {
   try {
     await db
       .insert(rateLimits)
-      .values({ key, count: 1, resetAt: raw`now() + ${PASSWORD_LOCK_MS} * interval '1 millisecond'` })
+      .values({ key, count: 1, resetAt: raw`now() + ${windowMs} * interval '1 millisecond'` })
       .onConflictDoUpdate({
         target: rateLimits.key,
         set: {
           count: raw`case when ${rateLimits.resetAt} <= now() then 1 else ${rateLimits.count} + 1 end`,
-          resetAt: raw`case when ${rateLimits.resetAt} <= now() or ${rateLimits.count} + 1 >= ${PASSWORD_MAX_FAILURES}
-                            then now() + ${PASSWORD_LOCK_MS} * interval '1 millisecond'
+          resetAt: raw`case when ${rateLimits.resetAt} <= now() or ${rateLimits.count} + 1 >= ${max}
+                            then now() + ${windowMs} * interval '1 millisecond'
                             else ${rateLimits.resetAt} end`,
         },
       });
   } catch (e) {
     // The code only (see rate-limit.ts): the key's parameters must not reach a log.
     console.error("[tnajem-api] password lockout write failed — in-process fallback:", (e as { code?: string }).code ?? (e as Error).name);
-    rateLimitInProcess(key, PASSWORD_MAX_FAILURES, PASSWORD_LOCK_MS);
+    rateLimitInProcess(key, max, windowMs);
   }
 }
 
 export async function recordPasswordFailure(identifier: string, ip: string): Promise<void> {
   const keys = passwordFailKeys(identifier, ip);
-  await Promise.all([countFailure(keys.id), countFailure(keys.ip)]);
+  await Promise.all([
+    countFailure(keys.pair, PASSWORD_PAIR_BUDGET),
+    countFailure(keys.ip, PASSWORD_IP_BUDGET),
+    countFailure(keys.account, PASSWORD_ACCOUNT_BUDGET),
+  ]);
 }
 
-/** After a success, or a reset that proved the mailbox: the ACCOUNT's counter only.
-    The IP's stays — clearing it on any success would let one host interleave its own
-    account's logins between guesses at someone else's. */
-export async function clearPasswordFailures(identifier: string): Promise<void> {
-  await db.delete(rateLimits).where(eq(rateLimits.key, passwordFailKeys(identifier, "").id));
+/** After a success: THIS pair's streak only. The IP cap stays (clearing it would let
+    one host interleave its own logins between guesses at other addresses), and so
+    does the account's hourly count (the owner signing in must not hand guessers
+    elsewhere a fresh budget). */
+export async function clearPasswordFailures(identifier: string, ip: string): Promise<void> {
+  await db.delete(rateLimits).where(eq(rateLimits.key, passwordFailKeys(identifier, ip).pair));
+}
+
+/** After a reset, which proved the mailbox: everything that was holding this ADDRESS
+    back — its hourly count and its pair with every IP. The per-IP caps stay. */
+export async function liftPasswordLockout(identifier: string): Promise<void> {
+  await db
+    .delete(rateLimits)
+    .where(or(eq(rateLimits.key, passwordFailKeys(identifier, "").account), like(rateLimits.key, `${pairPrefix(identifier)}%`)));
 }
 
 /* ── Writing a password ───────────────────────────────────────────────────────
