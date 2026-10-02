@@ -22,7 +22,7 @@ export default function Error({
     /* Surfaces the stack in the browser console, in dev and in production.
        NO REPORTER HERE, and that is a decision (16 Sept), not a gap: error
        reporting is server-side only. A browser SDK would need `connect-src` in
-       next.config.mjs widened from 'self' to an external ingest origin, and more
+       next.config.mjs widened to an external ingest origin, and more
        JavaScript on every page over 3G. The server side of the same failure IS
        reported — instrumentation.ts's onRequestError — so what is lost is only
        errors that happen purely in the browser after hydration.

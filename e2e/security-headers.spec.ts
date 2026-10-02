@@ -24,6 +24,48 @@ test.describe("security: response headers", () => {
     });
   }
 
+  /* live-fixes-1 · I — THE SERVED POLICY, PINNED. Cloudflare fronts the site and injects
+     its Web Analytics beacon; the CSP allows exactly its script origin and its report
+     endpoint, and nothing else moved. Every directive and every source is held here (as
+     served by this production build), so a new host fails this test and has to be added
+     on purpose — together with its line on /privacy (apps/api/test/lf1-csp.test.ts). */
+  const PROD_CSP: Record<string, string[]> = {
+    "default-src": ["'self'"],
+    "base-uri": ["'self'"],
+    "object-src": ["'none'"],
+    "frame-ancestors": ["'none'"],
+    "form-action": ["'self'"],
+    "img-src": ["'self'", "data:", "blob:"],
+    "font-src": ["'self'", "data:"],
+    "style-src": ["'self'", "'unsafe-inline'"],
+    "script-src": ["'self'", "'unsafe-inline'", "https://static.cloudflareinsights.com"],
+    "connect-src": ["'self'", "https://cloudflareinsights.com"],
+    "manifest-src": ["'self'"],
+    "upgrade-insecure-requests": [],
+  };
+  const parseCsp = (csp: string) =>
+    Object.fromEntries(
+      csp.split(";").map((d) => d.trim()).filter(Boolean).map((d) => {
+        const [name, ...sources] = d.split(/\s+/);
+        return [name, sources.sort()];
+      }),
+    );
+  const sorted = (p: Record<string, string[]>) => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, [...v].sort()]));
+
+  for (const path of ["/fr", "/ar/explore", "/fr/privacy", "/fr/unknown-slug-e2e-headers"]) {
+    test(`${path}: the CSP is exactly the pinned policy, and its only hosts are Cloudflare's beacon`, async ({ request }) => {
+      const csp = (await request.get(path, { maxRedirects: 0 })).headers()["content-security-policy"];
+      expect(csp, "one CSP header, not two merged").not.toContain(",");
+      const policy = parseCsp(csp);
+      expect(policy).toEqual(sorted(PROD_CSP));
+      const hosts = [...new Set(Object.values(policy).flat().filter((s) => !s.startsWith("'") && !/^[a-z][a-z0-9+.-]*:$/.test(s)))].sort();
+      expect(hosts).toEqual(["https://cloudflareinsights.com", "https://static.cloudflareinsights.com"]);
+      expect(policy["script-src"]).toContain("https://static.cloudflareinsights.com");
+      expect(policy["connect-src"]).toContain("https://cloudflareinsights.com");
+      expect(policy["script-src"], "prod never allows eval").not.toContain("'unsafe-eval'");
+    });
+  }
+
   test("the image optimizer is not reachable (GHSA-2xp9-vwfh-vxw4)", async ({ request }) => {
     const res = await request.get("/_next/image?url=%2Flogo.webp&w=128&q=75");
     expect(res.status()).toBe(404);

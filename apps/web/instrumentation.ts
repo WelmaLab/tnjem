@@ -12,7 +12,8 @@
  *     the build if a fixture string survives. A config wrapper that reorders or
  *     drops that plugin turns a hard gate into a silent one.
  *   - the wizard's setup also ships a BROWSER SDK, and the site's CSP is
- *     `connect-src 'self'` with no external origins (next.config.mjs). Reporting
+ *     `connect-src 'self'` plus Cloudflare's analytics endpoint, nothing else
+ *     (next.config.mjs). Reporting
  *     browser errors would mean widening that policy and shipping more JavaScript
  *     to every page on a 3G connection. Decided against, 16 Sept: server-side only.
  *

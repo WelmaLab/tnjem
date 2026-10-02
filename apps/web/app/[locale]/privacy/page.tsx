@@ -48,6 +48,11 @@
    set/change/reset e-mails the account and signs other devices out; erasure clears
    the hash (erasure.ts). Proof: apps/api/test/ep2-passwords.test.ts.
 
+   live-fixes-1 · I (2 Oct 2026): the CSP (next.config.mjs) now lets Cloudflare's
+   Web Analytics beacon run, so §2/§3/§4/§9 disclose it and §9 no longer says
+   « pas de mesure d'audience tierce ». Every third-party origin in that CSP must
+   be named here, FR and AR — apps/api/test/lf1-csp.test.ts fails otherwise.
+
    Design system: SiteShell + .panel + .container-narrow. RTL-safe (logical
    properties). Page CSS prefixed `lg-`, injected via dangerouslySetInnerHTML.
    ─────────────────────────────────────────────────────────────────────────── */
@@ -134,6 +139,8 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           "Réservations : quelles séances tu as réservées, chez quel prof, à quelle date, et leur statut.",
           "Messages et signalements : les messages échangés dans la conversation d'une séance, et les signalements que tu nous envoies (avec ton adresse e-mail seulement si tu choisis de la donner ; si tu es connecté, le signalement est rattaché à ton compte).",
           "Technique : ton mot de passe, si tu en as un — jamais en clair : nous n'en gardons qu'une empreinte argon2id, qui ne permet pas de le retrouver — et la date de sa dernière modification ; un cookie de session pour te garder connecté (le serveur n'en garde qu'une empreinte, jamais le jeton lui-même), les codes de connexion (stockés uniquement sous forme hachée) et des journaux techniques qui ne contiennent ni ton adresse e-mail, ni ton numéro, ni ton mot de passe.",
+          // live-fixes-1 · I: the Cloudflare Web Analytics beacon the CSP now allows (next.config.mjs); details in §9.
+          "Mesure d'audience : quand une page s'affiche, un script de Cloudflare Web Analytics mesure, sans cookie, la page vue, la page d'où tu viens, ton navigateur, ton système d'exploitation, ton type d'appareil, ton pays et le temps de chargement (section 9).",
         ],
         after: [
           "Nous ne collectons aucune donnée bancaire : les paiements ne sont pas actifs sur Tnajem. Nous ne collectons pas ta géolocalisation, ni tes contacts, ni de données de santé.",
@@ -183,6 +190,8 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           "Documents et vidéos partagés par un prof → permettre à ses élèves d'y accéder. Les fichiers sont stockés hors du web public et ne sont servis qu'après vérification de tes droits (public, élève inscrit chez ce prof — ou à cette séance, si le document y est rattaché —, ou le prof lui-même) — jamais par une adresse devinable. Une vidéo n'est pas hébergée ici : nous n'enregistrons que son identifiant YouTube et l'affichons sans cookie de suivi.",
           `Photo de profil d'un prof → mettre un visage sur sa page. Elle est vérifiée par une personne avant d'être visible. Nous ne conservons PAS le fichier d'origine : la photo est réencodée en trois tailles et toutes ses données cachées sont effacées, y compris la localisation GPS que ton téléphone y inscrit. Quand tu remplaces ou supprimes ta photo, l'ancienne est effacée du stockage, dans ses trois tailles. Les moins de ${MINOR_AGE_YEARS} ans n'ont jamais de photo, seulement leurs initiales.`,
           "Journaux, codes hachés et limites de fréquence → sécurité, lutte contre la fraude et les abus. Une limite liée à une adresse e-mail n'en garde qu'une empreinte. Après 5 mots de passe erronés pour une adresse e-mail depuis une même adresse IP, la connexion par mot de passe est suspendue 15 minutes pour cette adresse e-mail depuis cette adresse IP. Elle l'est aussi pour toute une adresse IP après 50 échecs en 15 minutes, et pour une adresse e-mail après 20 échecs en une heure. La connexion par code reste toujours possible.",
+          // LEGAL-REVIEW: lawful basis proposed for the cookieless audience measurement (live-fixes-1 · I), like the others.
+          "Mesure d'audience → savoir quelles pages sont consultées, d'où viennent les visites et si les pages se chargent assez vite, en particulier sur un téléphone en 3G (intérêt légitime). Nous n'en voyons que des totaux, jamais qui a visité quoi (section 9).",
         ],
         after: [
           "Nous n'utilisons pas tes données pour de la publicité. Nous ne les vendons pas, ne les louons pas et ne les échangeons pas.",
@@ -201,7 +210,8 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         ],
         after: [
           "Concrètement, les documents d'identité sont chiffrés avant d'être enregistrés, en dehors de tout ce qui est servi publiquement : un fichier copié depuis le disque ou une sauvegarde est illisible sans la clé. Aucune adresse web ne permet de les ouvrir. Un administrateur autorisé (liste restreinte d'adresses e-mail définie côté serveur) reçoit, pour chaque document, un lien valable quelques minutes et utilisable par lui seul. Le document est téléchargé, jamais mis en cache, et chaque consultation est enregistrée — qui, quand — avant l'envoi du fichier.",
-          "Sous-traitants : l'hébergeur du serveur et de la base de données, le service de stockage des fichiers s'il est externe, et le fournisseur d'e-mail qui envoie nos e-mails — ton code de connexion, les avis de mot de passe, les e-mails sur tes séances et tes abonnements (il reçoit ton adresse et le contenu de ces e-mails, rien d'autre). Ils agissent sur nos instructions et n'ont pas le droit d'utiliser tes données pour eux-mêmes. [À compléter par l'avocat : identité de ces prestataires, pays d'hébergement, et — si les serveurs sont hors de Tunisie — l'autorisation de transfert requise par la loi n° 2004-63.]",
+          // live-fixes-1 · I: Cloudflare fronts the site (DEPLOY.md) — it is what injects the analytics beacon.
+          "Sous-traitants : l'hébergeur du serveur et de la base de données, le service de stockage des fichiers s'il est externe, le fournisseur d'e-mail qui envoie nos e-mails — ton code de connexion, les avis de mot de passe, les e-mails sur tes séances et tes abonnements (il reçoit ton adresse et le contenu de ces e-mails, rien d'autre) —, et Cloudflare, par qui passent les échanges entre ton navigateur et le site, et qui en mesure l'audience (section 9). Ils agissent sur nos instructions et n'ont pas le droit d'utiliser tes données pour eux-mêmes. [À compléter par l'avocat : identité de ces prestataires, pays d'hébergement, et — si les serveurs sont hors de Tunisie — l'autorisation de transfert requise par la loi n° 2004-63.]",
           "Nous ne communiquons des données à une autorité que si la loi tunisienne nous y oblige.",
         ],
       },
@@ -276,10 +286,18 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         ],
       },
       {
-        h: "9. Cookies",
+        h: "9. Cookies et mesure d'audience",
         p: [
           "Nous utilisons trois cookies, et aucun ne sert à te suivre : un cookie de session, indispensable, qui te garde connecté une fois que tu t'es identifié (mot de passe ou code) ; un cookie qui retient ton rôle pour afficher le bon menu (il ne donne accès à rien) ; et un cookie qui retient la langue que tu as choisie.",
-          "Pas de cookie publicitaire, pas de pixel de réseau social, pas de mesure d'audience tierce. Une vidéo YouTube n'est chargée que si tu la lances, depuis le domaine sans cookie de YouTube.",
+          "Pas de cookie publicitaire, pas de pixel de réseau social. Une vidéo YouTube n'est chargée que si tu la lances, depuis le domaine sans cookie de YouTube.",
+          /* live-fixes-1 · I. « pas de mesure d'audience tierce » stopped being true when the CSP let
+             Cloudflare's beacon run (next.config.mjs). What it measures is Cloudflare's documented list
+             (developers.cloudflare.com/web-analytics: dimensions; "data origin and collection"): "We don't
+             use any client-side state, like cookies or localStorage, for the purposes of tracking users";
+             "Cloudflare does not track individual end users across our customers' Internet properties".
+             LEGAL-REVIEW: retention at Cloudflare (its FAQ: unsampled 7 days, then ~10% sampled; six
+             months viewable) and the transfer outside Tunisia. */
+          "Mesure d'audience : Cloudflare, par qui passe le site, ajoute à chaque page un petit script, Cloudflare Web Analytics. Il mesure la page vue, la page d'où tu viens, ton navigateur, ton système d'exploitation, ton type d'appareil, ton pays (déduit de ton adresse IP) et le temps de chargement de la page. Il n'utilise ni cookie, ni rien d'autre enregistré dans ton navigateur, pour suivre les visiteurs, et Cloudflare ne te suit pas d'un site à l'autre. Nous n'en voyons que des totaux — visites, pages vues, pays, navigateurs, temps de chargement —, jamais qui a visité quoi. [À compléter par l'avocat : durée de conservation de ces mesures chez Cloudflare, et transfert de ces données hors de Tunisie.]",
         ],
       },
       {
@@ -329,6 +347,8 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           "الحجوزات: أنهي حصص حجزت، مع أنهي أستاذ، في أنهي تاريخ، وشنوّة وضعيتها.",
           "الرسائل والتبليغات: الرسائل في محادثة الحصة، والتبليغات اللي تبعثهملنا (مع الإيميل متاعك كان تحب تعطيه برك؛ وكان إنت داخل لحسابك، التبليغ يتربط بحسابك).",
           "تقني: كلمة السرّ متاعك كان عندك وحدة — عمرها ما تتحفظ كيما هي: نحتفظو كان ببصمة argon2id ما تخلّيناش نرجعولها — وتاريخ آخر تبديل ليها؛ كوكي للجلسة باش تبقى داخل (السيرفر ما يحتفظ كان ببصمة منّو، عمرو ما يحتفظ بالرمز روحو)، كودات الدخول (محفوظين مشفّرين بـhash برك)، وسجلاّت تقنية ما فيهاش لا الإيميل متاعك، لا نمرتك، لا كلمة السرّ.",
+          // live-fixes-1 · I: the Cloudflare Web Analytics beacon (next.config.mjs); details in §9.
+          "قياس الزيارات: كي تتحلّ صفحة، سكريبت متاع Cloudflare Web Analytics يقيس، بلا كوكي، الصفحة اللي شفتها، الصفحة اللي جيت منها، المتصفّح متاعك، نظام التشغيل، نوع الجهاز، البلاد متاعك ووقت التحميل (الفصل 9).",
         ],
         after: [
           "ما نجمعو حتى معطيات بنكية: الخلاص موش مفعّل في تنجّم. ما نجمعوش موقعك الجغرافي، لا جهات الاتصال متاعك، لا معطيات صحّية.",
@@ -365,6 +385,8 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           "الوثائق والفيديوهات اللي ينشرهم الأستاذ ← باش تلامذتو يوصلولهم. الملفات تتخزّن برّة الويب العمومي وما تتقدّمش كان بعد ما نتثبّتو من حقّك (عمومي، تلميذ مسجّل عند الأستاذ — ولا في الحصة هاذيكا، كان الوثيقة مربوطة بيها —، ولا الأستاذ روحو) — عمرها ما تكون بعنوان يتحزّر. الفيديو ما هوش مستضاف عندنا: نسجّلو برك المعرّف متاعو في يوتيوب ونعرضوه بلا كوكي تتبّع.",
           `تصويرة الأستاذ ← باش يكون فمّا وجه في صفحتو. تتشاف من طرف إنسان قبل ما تظهر. ما نحتفظوش بالملف الأصلي: التصويرة تتعاود ترمّز في ثلاث أحجام وتتمسح المعطيات المخبّية الكل، ومنها موقع الـGPS اللي يكتبو تليفونك. كي تبدّل تصويرتك ولا تنحّيها، القديمة تتمسح من التخزين، بأحجامها الثلاثة. اللي عمرو أقلّ من ${MINOR_AGE_YEARS} سنة عمرو ما تكون عندو تصويرة، برك الحروف الأولى.`,
           "السجلاّت، الكودات المشفّرة وحدود التكرار ← الأمان ومقاومة الغشّ والتجاوزات. الحدّ المربوط بإيميل ما يحتفظ كان ببصمة منّو. بعد 5 كلمات سرّ غالطين لإيميل واحد من نفس العنوان IP، الدخول بكلمة السرّ يتوقّف 15 دقيقة للإيميل هذا من العنوان IP هذا. ويتوقّف زادة لعنوان IP كامل بعد 50 غلطة في 15 دقيقة، ولإيميل بعد 20 غلطة في ساعة. الدخول بالكود يبقى ديما ممكن.",
+          // LEGAL-REVIEW: lawful basis proposed for the cookieless audience measurement (live-fixes-1 · I).
+          "قياس الزيارات ← باش نعرفو أنهي صفحات تتشاف، منين جاية الزيارات، وإذا الصفحات تتحلّ بالزربة الكافية، بالخصوص على تليفون بالـ3G (مصلحة مشروعة). ما نشوفو منها كان مجاميع، عمرنا ما نشوفو شكون زار شنوّة (الفصل 9).",
         ],
         after: [
           "ما نستعملوش معطياتك في الإشهار. ما نبيعوهمش، ما نكروهمش وما نبدّلوهمش.",
@@ -383,7 +405,8 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         ],
         after: [
           "بصفة ملموسة، وثائق الهوية تتشفّر قبل ما تتسجّل، برّة كل شيء يتقدّم للعموم: ملف يتنسخ من القرص ولا من نسخة احتياطية ما يتقراش من غير المفتاح. ما فمّا حتى رابط عمومي يفتحهم. الإداري المرخّص (قائمة محدودة من الإيميلات معرّفة في السيرفر) ياخذ، لكل وثيقة، رابط يخدم دقائق قليلة وما يستعملو كان هو. الوثيقة تتنزّل، عمرها ما تتخزّن في الكاش، وكل اطّلاع يتسجّل — شكون ووقتاش — قبل ما يتبعث الملفّ.",
-          "المناولين: مستضيف السيرفر وقاعدة البيانات، خدمة تخزين الملفات إذا كانت خارجية، ومزوّد الإيميل اللي يبعث الإيمايلات متاعنا — كود الدخول، تنبيهات كلمة السرّ، والإيمايلات على حصصك واشتراكاتك (ياخذ الإيميل متاعك ومحتوى الإيمايلات هاذي، وخلاص). يخدمو بتعليماتنا وما عندهمش الحقّ يستعملو معطياتك لروحهم. [يكمّلو المحامي: هوية المناولين هاذم، بلاد الاستضافة، وإذا كانت السيرفرات برّة تونس، الترخيص بالإحالة اللي يستوجبو القانون عدد 63 لسنة 2004.]",
+          // live-fixes-1 · I: Cloudflare fronts the site (DEPLOY.md) — it is what injects the analytics beacon.
+          "المناولين: مستضيف السيرفر وقاعدة البيانات، خدمة تخزين الملفات إذا كانت خارجية، مزوّد الإيميل اللي يبعث الإيمايلات متاعنا — كود الدخول، تنبيهات كلمة السرّ، والإيمايلات على حصصك واشتراكاتك (ياخذ الإيميل متاعك ومحتوى الإيمايلات هاذي، وخلاص) —، و Cloudflare، اللي يتعدّى منها كل شيء بين المتصفّح متاعك والموقع، واللي تقيس زادة الزيارات (الفصل 9). يخدمو بتعليماتنا وما عندهمش الحقّ يستعملو معطياتك لروحهم. [يكمّلو المحامي: هوية المناولين هاذم، بلاد الاستضافة، وإذا كانت السيرفرات برّة تونس، الترخيص بالإحالة اللي يستوجبو القانون عدد 63 لسنة 2004.]",
           "ما نعطيوش معطيات لسلطة كان إذا القانون التونسي يلزمنا.",
         ],
       },
@@ -448,10 +471,12 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         ],
       },
       {
-        h: "9. الكوكيز",
+        h: "9. الكوكيز وقياس الزيارات",
         p: [
           "نستعملو ثلاثة كوكيز، وحتى واحد ما يتبّعك: كوكي الجلسة، ضروري، يخلّيك داخل بعد ما تعمّر كود الدخول ولا كلمة السرّ؛ كوكي يتفكّر دورك باش يبان المنيو الصحيح (ما يعطي نفاذ لحتى شي)؛ وكوكي يتفكّر اللغة اللي اخترتها.",
-          "ما فمّا كوكي إشهاري، ما فمّا بيكسل شبكات اجتماعية، ما فمّاش قياس جمهور خارجي. فيديو يوتيوب ما يتحمّلش كان كي تشغّلو، من دومين يوتيوب اللي بلا كوكيز.",
+          "ما فمّا كوكي إشهاري، ما فمّا بيكسل شبكات اجتماعية. فيديو يوتيوب ما يتحمّلش كان كي تشغّلو، من دومين يوتيوب اللي بلا كوكيز.",
+          // live-fixes-1 · I — same sources and LEGAL-REVIEW as the French paragraph.
+          "قياس الزيارات: Cloudflare، اللي يتعدّى منها الموقع، تزيد في كل صفحة سكريبت صغير، Cloudflare Web Analytics. يقيس الصفحة اللي شفتها، الصفحة اللي جيت منها، المتصفّح متاعك، نظام التشغيل، نوع الجهاز، البلاد متاعك (تتعرف من عنوان الـIP متاعك) ووقت تحميل الصفحة. ما يستعمل لا كوكي، لا حتى شي آخر مسجّل في المتصفّح متاعك، باش يتبّع الزوّار، و Cloudflare ما تتبّعكش من موقع لموقع. إحنا ما نشوفو منها كان مجاميع — زيارات، صفحات متشافة، بلدان، متصفّحات، أوقات تحميل —، عمرنا ما نشوفو شكون زار شنوّة. [يكمّلو المحامي: مدّة الاحتفاظ بالقياسات هاذي عند Cloudflare، وإحالة المعطيات هاذي برّة تونس.]",
         ],
       },
       {

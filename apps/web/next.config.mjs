@@ -39,7 +39,21 @@ const demoActive = !isProd && process.env.TNAJEM_DEMO === "1" && !process.env.AP
    Live video runs on meet.jit.si in a NEW TAB (window.open in app/live), not an
    iframe, so no frame-src/camera/microphone grant is needed on our origin. That
    keeps the policy tight: nothing may frame us, we frame nothing, no plugins,
-   no base-tag or form-action hijack, and connect/img/font are self-only. */
+   no base-tag or form-action hijack, and img/font are self-only.
+
+   ONE THIRD PARTY, by exact origin (live-fixes-1 · I): Cloudflare, which fronts
+   the site, injects its Web Analytics beacon into every HTML page; blocked, it
+   was a console error on every page. The script comes from CF_BEACON_SCRIPT. It
+   reports to this origin's /cdn-cgi/rum while Cloudflare proxies the site
+   ('self' covers it) and to CF_BEACON_REPORT when it does not (Cloudflare's
+   docs), so both are allowed. /privacy (§2, §3, §4, §9) discloses it — turn
+   the analytics off in Cloudflare and both lines go, together with that copy.
+   e2e/security-headers.spec.ts pins every directive's exact source list and
+   apps/api/test/lf1-csp.test.ts pins dev and prod: a new origin is a decision
+   made in those tests, never a side effect. */
+const CF_BEACON_SCRIPT = "https://static.cloudflareinsights.com";
+const CF_BEACON_REPORT = "https://cloudflareinsights.com";
+
 function contentSecurityPolicy() {
   const directives = [
     "default-src 'self'",
@@ -50,10 +64,11 @@ function contentSecurityPolicy() {
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
-    // Dev (HMR) additionally needs eval; prod is inline-only.
-    `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}`,
-    // Dev needs the HMR websocket; prod talks only to its own origin (server actions).
-    `connect-src 'self'${isProd ? "" : " ws: wss:"}`,
+    // Dev (HMR) additionally needs eval; prod is inline-only (+ the Cloudflare beacon).
+    `script-src 'self' 'unsafe-inline' ${CF_BEACON_SCRIPT}${isProd ? "" : " 'unsafe-eval'"}`,
+    // Dev needs the HMR websocket; prod talks to its own origin (server actions) and
+    // the beacon's report endpoint.
+    `connect-src 'self' ${CF_BEACON_REPORT}${isProd ? "" : " ws: wss:"}`,
     "manifest-src 'self'",
   ];
   if (isProd) directives.push("upgrade-insecure-requests");

@@ -22,7 +22,8 @@ sent, nothing is buffered, and both servers behave exactly as they did before.
 (`"sentry":true`).
 
 **Server-side only, deliberately.** Browser errors are not reported. The site's CSP
-is `connect-src 'self'` ([apps/web/next.config.mjs](apps/web/next.config.mjs)), so a
+lets a page connect only to its own origin and Cloudflare's analytics endpoint
+(`connect-src`, [apps/web/next.config.mjs](apps/web/next.config.mjs)), so a
 browser SDK would mean widening that policy to an external ingest origin and
 shipping more JavaScript to every page over 3G. What is lost: errors that happen
 purely in the browser after hydration. What is kept: every server render, route

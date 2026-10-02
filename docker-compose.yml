@@ -181,7 +181,7 @@ services:
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
       # Error tracking, server-side only — instrumentation.ts reads these in the
       # Next server process. Not NEXT_PUBLIC_*: no browser SDK, so no DSN in the
-      # client bundle and no change to `connect-src 'self'` (OBSERVABILITY.md).
+      # client bundle and no change to the CSP's `connect-src` (OBSERVABILITY.md).
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-}
       SENTRY_RELEASE: ${SENTRY_RELEASE:-}

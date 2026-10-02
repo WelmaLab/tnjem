@@ -63,7 +63,12 @@ export const CONSENT_TEXT = "Consentement du parent/tuteur pour un compte de moi
     hash is stored; the lockout; the hash is erased with the account).
     espace prof v2 · pro (phase 7): 2026-10-01 → 2026-10-02 — §3 the e-mail address is
     also used for booking, reminder and review e-mails (and growth's followers digest
-    and subscription reminder); §6 the e-mail provider receives those e-mails' content. */
+    and subscription reminder); §6 the e-mail provider receives those e-mails' content.
+    live-fixes-1 · I, same day — the date stays 2026-10-02: §2/§3/§4/§9 disclose Cloudflare
+    Web Analytics, which the CSP now lets run. The version is a date the page prints, so a
+    second change on the same day cannot get a new one without printing a future date; and
+    a version is only ever recorded with a guardian consent, and none is given while
+    ALLOW_MINORS stays off (the adult-only pilot's default, A24). */
 export const PRIVACY_POLICY_VERSION = "2026-10-02";
 
 /** LEGAL-REVIEW: version of /terms, recorded against every account created under it
