@@ -118,13 +118,17 @@ test.describe("A18.9 — materials can be attached to a class, and say who sees 
     const ctx = await contextAs(browser, me.id);
     const page = await ctx.newPage();
     await page.goto("/fr/dashboard/materials", { waitUntil: "networkidle" });
+    // live-fixes-1 · B: the library form is folded, its selects are the shell's own controls.
+    await page.locator("[data-e2e=library-toggle]").click();
 
-    const vis = page.locator("[data-e2e=material-visibility] option[value=students]");
+    const vis = page.locator("[data-e2e=material-visibility] [data-value=students]");
     await expect(vis).toHaveText("Tous mes élèves");
-    await page.locator("[data-e2e=material-class]").selectOption(klass.id);
+    await page.locator("[data-e2e=material-class]").click();
+    await page.locator(`[data-e2e=material-class-list] [data-value="${klass.id}"]`).click();
     await expect(vis).toHaveText("Élèves de cette séance");
 
     await page.locator("#m-title").fill("Corrigé L5 séance");
+    await page.locator("[data-e2e=material-source] [data-value=youtube]").click();
     await page.locator("#m-yt").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
     await page.getByRole("button", { name: "Ajouter", exact: true }).click();
     await expect.poll(async () => (await sql<{ class_id: string | null }[]>`

@@ -7,6 +7,7 @@
      class    /class/{id}
      offer    /{slug}?offre=mensuel
      promo    /{slug}?promo=CODE
+     pack     /{slug}                 a fiche (live-fixes-1 · B): it is listed on the page
 
    each with `utm_source={target}`. LOCALE-BARE, like apps/web/components/app/links.ts
    (the links the tutor copies): the proxy sends each reader to THEIR language (the
@@ -48,7 +49,7 @@ export function normalizeUtmSource(raw: unknown): VitrineSource {
   return "other";
 }
 
-export type ShareKind = "profile" | "class" | "offer" | "promo";
+export type ShareKind = "profile" | "class" | "offer" | "promo" | "pack"; // live-fixes-1 · B: + pack (a fiche)
 
 /** What is being shared. `classId` for kind "class", `promoCode` for kind "promo". */
 export type ShareSubject = {
@@ -125,6 +126,8 @@ export type ShareMessageContext = {
   /** "DD/MM", Africa/Tunis. */
   endsOn?: string | null;
   promoCode?: string | null;
+  /** live-fixes-1 · B: the fiche's title (kind "pack"). */
+  ficheTitle?: string | null;
 };
 
 type Tone = "chat" | "short" | "post";
@@ -153,6 +156,12 @@ const MESSAGES: Record<Locale, Record<ShareKind, Record<Tone, (c: ShareMessageCo
       short: (c) => `${c.percent ? `−${c.percent} %` : "Promo"} sur mes cours${c.endsOn ? ` jusqu'au ${c.endsOn}` : ""}${c.promoCode ? ` (code ${c.promoCode})` : ""} :`,
       post: (c) => `${c.percent ? `−${c.percent} % sur mes cours` : "Une promotion sur mes cours"}${c.endsOn ? ` jusqu'au ${c.endsOn}` : ""}${c.promoCode ? ` avec le code ${c.promoCode}` : ""}. Tout est sur ma page Tnajem :`,
     },
+    // live-fixes-1 · B — a fiche. It is on the page; its file opens for enrolled students only.
+    pack: {
+      chat: (c) => `${c.ficheTitle ? `Ma fiche « ${c.ficheTitle} » est` : "Mes fiches sont"} sur ma page Tnajem. C'est ici 👇`,
+      short: (c) => `${c.ficheTitle ? `Ma fiche « ${c.ficheTitle} »` : "Mes fiches"} sur Tnajem :`,
+      post: (c) => `${c.ficheTitle ? `Ma fiche « ${c.ficheTitle} » est` : "Mes fiches sont"} sur ma page Tnajem, avec mes prochaines séances :`,
+    },
   },
   ar: {
     profile: {
@@ -174,6 +183,11 @@ const MESSAGES: Record<Locale, Record<ShareKind, Record<Tone, (c: ShareMessageCo
       chat: (c) => `${c.percent ? `\u2066−${c.percent} %\u2069 على دروسي` : "تخفيض على دروسي"}${c.endsOn ? ` حتى لـ ${c.endsOn}` : ""}${c.promoCode ? ` بالكود ${c.promoCode}` : ""}. هوني 👇`,
       short: (c) => `${c.percent ? `\u2066−${c.percent} %\u2069` : "تخفيض"} على دروسي${c.endsOn ? ` حتى لـ ${c.endsOn}` : ""}${c.promoCode ? ` (كود ${c.promoCode})` : ""} :`,
       post: (c) => `${c.percent ? `\u2066−${c.percent} %\u2069 على دروسي` : "تخفيض على دروسي"}${c.endsOn ? ` حتى لـ ${c.endsOn}` : ""}${c.promoCode ? ` بالكود ${c.promoCode}` : ""}. كل شي في صفحتي على Tnajem :`,
+    },
+    pack: {
+      chat: (c) => `${c.ficheTitle ? `الملخّص متاعي « ${c.ficheTitle} »` : "الملخّصات متاعي"} في صفحتي على Tnajem. هوني 👇`,
+      short: (c) => `${c.ficheTitle ? `الملخّص متاعي « ${c.ficheTitle} »` : "الملخّصات متاعي"} على Tnajem :`,
+      post: (c) => `${c.ficheTitle ? `الملخّص متاعي « ${c.ficheTitle} »` : "الملخّصات متاعي"} في صفحتي على Tnajem، مع الحصص الجاية متاعي :`,
     },
   },
 };

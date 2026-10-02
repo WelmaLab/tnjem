@@ -35,7 +35,7 @@ const SITE_ORIGIN = new URL(pageUrl("x")).origin;
 
 const copy = bilingual({
   fr: {
-    titles: { profile: "Partager ma page", class: "Partager cette séance", offer: "Partager mon abonnement", promo: "Partager ma promotion" } as Record<ShareKind, string>,
+    titles: { profile: "Partager ma page", class: "Partager cette séance", offer: "Partager mon abonnement", promo: "Partager ma promotion", pack: "Partager cette fiche" } as Record<ShareKind, string>,
     close: "Fermer",
     link: "Ton lien",
     copyLink: "Copier le lien",
@@ -60,7 +60,7 @@ const copy = bilingual({
     copyFailed: "Copie impossible — sélectionne le lien et copie-le à la main.",
   },
   ar: {
-    titles: { profile: "شارك صفحتي", class: "شارك الحصة هاذي", offer: "شارك الاشتراك متاعي", promo: "شارك التخفيض متاعي" } as Record<ShareKind, string>,
+    titles: { profile: "شارك صفحتي", class: "شارك الحصة هاذي", offer: "شارك الاشتراك متاعي", promo: "شارك التخفيض متاعي", pack: "شارك الملخّص هذا" } as Record<ShareKind, string>,
     close: "سكّر",
     link: "الرابط متاعك",
     copyLink: "انسخ الرابط",
@@ -113,6 +113,8 @@ export type ShareSheetProps = {
   percent?: number | null;
   /** ISO instant the promotion ends. */
   endsAt?: string | null;
+  /** live-fixes-1 · B: the fiche's title (kind "pack"). */
+  ficheTitle?: string | null;
   /** Fired on any share / copy / QR (the owner's "link shared" step, contract C2). */
   onShared?: (target: ShareTarget) => void;
 };
@@ -186,7 +188,8 @@ export function ShareSheet({ open, onClose, ...props }: ShareSheetProps & { open
     percent: props.percent ?? null,
     endsOn: props.endsAt ? formatNumericDate(props.endsAt) : null,
     promoCode: props.promoCode ?? null,
-  }), [props.subject, props.classTitle, props.startsAt, props.sessionsPerMonth, props.priceTnd, props.percent, props.endsAt, props.promoCode]);
+    ficheTitle: props.ficheTitle ?? null,
+  }), [props.subject, props.classTitle, props.startsAt, props.sessionsPerMonth, props.priceTnd, props.percent, props.endsAt, props.promoCode, props.ficheTitle]);
 
   const subject = { kind: props.kind, slug: props.slug, classId: props.classId, promoCode: props.promoCode };
   const urlFor = (t: ShareTarget) => shareUrl(origin, subject, t);

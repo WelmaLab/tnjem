@@ -1358,3 +1358,67 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .cs-follow{display:grid;justify-items:center;gap:10px;margin-block-end:22px;padding:16px;border-radius:var(--r);background:var(--blue50)}
   .cs-follow-t{font-size:14px;color:var(--ink2);line-height:1.55;margin:0;max-width:420px}
 }
+
+/* ── live-fixes-1 · pages ── ────────────────────────────────────────────────
+   Mes fiches and the controls that replace the native ones (B). */
+@layer components {
+  /* B · the Select of the prof space (components/app/Select.tsx) — looks like .inp, opens a listbox. */
+  .lf-sel{position:relative;min-width:0}
+  .lf-sel-btn{width:100%;justify-content:space-between;cursor:pointer;color:var(--ink);text-align:start;font:inherit;font-size:14px}
+  .lf-sel-btn:focus-visible{border-color:var(--blue);outline:3px solid var(--blue);outline-offset:2px}
+  .lf-sel-btn[aria-expanded="true"]{border-color:var(--blue)}
+  .lf-sel-btn:disabled{cursor:not-allowed;opacity:.6}
+  .lf-sel-v{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lf-sel-chev{width:18px;height:18px;flex:none;color:var(--muted)}
+  .lf-sel-list{inset-inline:0;max-height:min(280px,50vh);overflow-y:auto;outline:none}
+  .lf-sel-list.is-below{inset-block-start:calc(100% + 6px)}
+  .lf-sel-list.is-above{inset-block-end:calc(100% + 6px)}
+  .lf-sel-list:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+  .lf-sel-opt{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;padding:10px 12px;
+    border-radius:10px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
+  .lf-sel-opt.is-active{background:var(--blue50);color:var(--blue700)}
+  .lf-sel-opt[aria-selected="true"]{color:var(--blue700)}
+  .lf-sel-opt-t{min-width:0;overflow-wrap:anywhere}
+  .lf-sel-opt-h{display:block;font-size:13px;font-weight:600;color:var(--muted)}
+  .lf-sel-tick{width:16px;height:16px;flex:none;color:var(--blue)}
+  /* A hidden file input behind a button-styled <label> (« Changer », the profile photo):
+     the label shows the input's keyboard focus. */
+  label.btn:has(> input[type="file"]:focus-visible){outline:3px solid var(--blue);outline-offset:2px}
+
+  /* B · Mes fiches */
+  .fx-stack{display:flex;flex-direction:column;gap:clamp(14px,2vw,20px)}
+  .fx-list{list-style:none;display:flex;flex-direction:column;margin-block-start:6px}
+  .fx-row{display:flex;align-items:flex-start;gap:12px;padding-block:14px;border-block-end:1px solid var(--line)}
+  .fx-row:last-child{border-block-end:0;padding-block-end:2px}
+  .fx-ic{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:var(--blue50);color:var(--blue)}
+  .fx-ic .ic{width:19px;height:19px}
+  .fx-main{min-width:0;flex:1}
+  .fx-head{display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
+  .fx-title{min-width:0;flex:1 1 180px;font-size:14.5px;font-weight:700;line-height:1.35;color:var(--ink);overflow-wrap:anywhere}
+  .fx-price{flex:none;font-family:var(--fb);font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .fx-price.is-none{color:var(--muted)}
+  .fx-detail{margin-block-start:2px;font-size:13px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+  .fx-facts{list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-block-start:6px;font-size:13px;color:var(--ink2)}
+  .fx-fact{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}
+  .fx-fact > .ic,.fx-link .ic{width:15px;height:15px;flex:none;color:var(--muted)}
+  .fx-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;min-width:0;max-width:100%;color:var(--blue);font-weight:700}
+  .fx-link:hover .fx-file{text-decoration:underline}
+  .fx-file{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fx-muted{color:var(--muted);font-weight:600}
+  .fx-actions{display:flex;align-items:center;gap:2px;flex:none}
+  .fx-actions .iconbtn{background:transparent;color:var(--ink2)}
+  .fx-actions .iconbtn:hover{background:var(--blue50);color:var(--blue)}
+  .fx-actions .iconbtn .ic{width:18px;height:18px}
+  @media (max-width:599px){
+    .fx-row{flex-wrap:wrap}
+    .fx-main{flex-basis:calc(100% - 52px)}
+    .fx-actions{width:100%;justify-content:flex-end;margin-block-start:-6px}
+  }
+  .fx-lib-head{display:flex;align-items:flex-start;gap:10px 14px;flex-wrap:wrap}
+  .fx-lib-head .hp-muted{margin-block-start:4px}
+  .fx-lib-body:not([hidden]){margin-block-start:16px;padding-block-start:16px;border-block-start:1px solid var(--line)}
+  /* The edit dialog: a form, so a little wider than a confirmation. */
+  .lf-edit{width:min(520px,calc(100vw - 32px))}
+  /* A field that is not a <Field> (its .field label rule would flatten the drop zone). */
+  .lf-field{margin-block-end:14px}
+}

@@ -53,3 +53,6 @@ export const Help = (p: P) => <S {...p}><circle cx="12" cy="12" r="8.5" /><path 
 export const ChevronUp = (p: P) => <S {...p}><polyline points="6 15 12 9 18 15" /></S>;
 export const Chain = (p: P) => <S {...p}><path d="M10 13.5a4 4 0 0 0 5.7.3l2.9-2.9a4 4 0 0 0-5.7-5.7l-1.4 1.4" /><path d="M14 10.5a4 4 0 0 0-5.7-.3l-2.9 2.9a4 4 0 0 0 5.7 5.7l1.4-1.4" /></S>;
 export const Close = (p: P) => <S {...p}><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></S>;
+// live-fixes-1 · pages — the Mes fiches row actions (Modifier, Retirer).
+export const Pencil = (p: P) => <S {...p}><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z" /><line x1="13.5" y1="6.5" x2="17.5" y2="10.5" /></S>;
+export const Trash = (p: P) => <S {...p}><path d="M4.5 7h15" /><path d="M9.5 7V4.5h5V7" /><path d="M6.5 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5l1-12.5" /></S>;

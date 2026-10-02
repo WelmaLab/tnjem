@@ -1,12 +1,13 @@
 "use client";
-import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "@/components/Link";
 import { Button, Field } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
-import { Book, Check, Close, Lock, Upload } from "@/components/icons";
+import { Book, Check, Lock } from "@/components/icons";
 import { useToast } from "@/components/useToast";
 import { AppPage, Blocker, ActionBar, FormSection } from "@/components/app/AppShell";
 import { UserText } from "@/components/UserText";
+import { FileDrop } from "@/components/dashboard/FileDrop"; // live-fixes-1 · B: the one upload field
 import { createMaterial, createPack, getOnboardingState } from "@/app/actions";
 import type { TutorVerifStatus } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
@@ -28,10 +29,6 @@ import { bilingual } from "@/lib/i18n";
    uploaded id, so « Publier » again does not upload the same file twice.
    ══════════════════════════════════════════════════════════════════════════════ */
 
-const MAX_BYTES = 8 * 1024 * 1024;
-const ACCEPT = "application/pdf,image/png,image/jpeg,image/webp";
-const OK_TYPE = /^(application\/pdf|image\/(png|jpeg|webp))$/;
-
 const copy = bilingual({
   fr: {
     title: "Nouvelle fiche",
@@ -42,11 +39,6 @@ const copy = bilingual({
     metaHelp: "ex. 42 pages · 6 vidéos · 3 exercices corrigés",
     titlePh: "ex. Pack révision : Dérivées & Limites",
     metaPh: "42 pages · 6 vidéos",
-    drop: "Choisis un fichier",
-    dropOr: "ou glisse-le ici",
-    dropHelp: "PDF ou image (PNG, JPEG, WEBP) · 8 Mo max",
-    change: "Changer",
-    remove: "Retirer le fichier",
     onlyStudents: "Partagé seulement avec tes élèves inscrits : jamais public.",
     later: "Pas de fichier pour l'instant ? Tu pourras l'ajouter plus tard dans",
     laterCta: "Mes fiches",
@@ -87,11 +79,6 @@ const copy = bilingual({
     metaHelp: "مثال: 42 صفحة · 6 فيديوهات · 3 تمارين مصحّحة",
     titlePh: "مثال: پاك مراجعة : المشتقات والنهايات",
     metaPh: "42 صفحة · 6 فيديوهات",
-    drop: "اختار ملف",
-    dropOr: "ولا جرّو لهوني",
-    dropHelp: "PDF ولا صورة (PNG، JPEG، WEBP) · 8 ميڨا أقصى",
-    change: "بدّل",
-    remove: "نحّي الملف",
     onlyStudents: "يتشارك كان مع تلامذتك المسجّلين: عمرو ما يكون عمومي.",
     later: "ما عندكش ملف توّا؟ تنجّم تزيدو من بعد في",
     laterCta: "ملخّصاتي",
@@ -136,12 +123,6 @@ function fieldOf(code: string | undefined): PackField | null {
   return (PACK_FIELDS as readonly string[]).includes(name) ? (name as PackField) : null;
 }
 
-function sizeLabel(bytes: number, locale: "fr" | "ar"): string {
-  const mb = bytes / (1024 * 1024);
-  if (mb >= 1) return `${mb.toFixed(1).replace(".", locale === "fr" ? "," : ".")} ${locale === "fr" ? "Mo" : "ميڨا"}`;
-  return `${Math.max(1, Math.round(bytes / 1024))} ${locale === "fr" ? "Ko" : "كيلو"}`;
-}
-
 export function NewPackForm() {
   const { t, locale } = useLocale();
   const c = copy[locale];
@@ -151,8 +132,6 @@ export function NewPackForm() {
   const [meta, setMeta] = useState("");
   const [price, setPrice] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [thumb, setThumb] = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
   const [uploadedId, setUploadedId] = useState<string | null>(null);
   const [phase, setPhase] = useState<"idle" | "uploading" | "publishing">("idle");
   const [demo, setDemo] = useState(false);
@@ -187,35 +166,11 @@ export function NewPackForm() {
     };
   }, []);
 
-  // An image gets a real thumbnail; the object URL is released when it changes.
-  useEffect(() => {
-    if (!file || !file.type.startsWith("image/")) {
-      setThumb(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setThumb(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
-
-  function pick(next: File | null | undefined) {
+  /* FileDrop has already checked the type and the size (the API checks again). */
+  function pick(next: File) {
     clearError("file");
-    if (!next) return;
-    if (!OK_TYPE.test(next.type)) {
-      refuse("file", c.errType);
-      return;
-    }
-    if (next.size > MAX_BYTES) {
-      refuse("file", c.errSize);
-      return;
-    }
     setFile(next);
     setUploadedId(null);
-  }
-  function dropFile(e: DragEvent<HTMLLabelElement>) {
-    e.preventDefault();
-    setDragging(false);
-    pick(e.dataTransfer.files?.[0]);
   }
   function removeFile() {
     setFile(null);
@@ -249,7 +204,8 @@ export function NewPackForm() {
     }
 
     // 1. The file, through Mes fiches' own pipeline — for enrolled students only.
-    if (file && !uploadedId) {
+    let materialId = uploadedId;
+    if (file && !materialId) {
       setPhase("uploading");
       const form = new FormData();
       form.set("title", title.trim());
@@ -264,12 +220,17 @@ export function NewPackForm() {
         else refuse("file", uploadMessage(up?.error));
         return;
       }
-      setUploadedId(up.id ?? "demo");
+      materialId = up.id ?? "demo";
+      setUploadedId(materialId);
     }
 
-    // 2. The pack.
+    /* 2. The pack — tied to its file (live-fixes-1 · B, 0041), so Mes fiches lists ONE
+       fiche with its price and its file, not two rows. */
     setPhase("publishing");
-    const res = await createPack({ title, meta, priceTnd: priceN || 0 }).catch(() => null);
+    const res = await createPack({
+      title, meta, priceTnd: priceN || 0,
+      ...(file && materialId && materialId !== "demo" ? { materialId } : {}),
+    }).catch(() => null);
     setPhase("idle");
     if (res?.ok) {
       setDemo(Boolean(res.demo));
@@ -356,57 +317,14 @@ export function NewPackForm() {
             </FormSection>
 
             <FormSection n={2} title={c.s2} id="np-s2">
-              {file ? (
-                <div className="np-file" data-e2e="pack-file">
-                  {thumb ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- a local blob preview, never a remote image
-                    <img src={thumb} alt="" className="np-thumb" />
-                  ) : (
-                    <span className="np-thumb np-thumb-doc" aria-hidden="true">PDF</span>
-                  )}
-                  <div className="np-file-txt">
-                    <span className="np-file-name" dir="auto">{file.name}</span>
-                    <span className="np-file-meta">{sizeLabel(file.size, locale)}</span>
-                  </div>
-                  <label className="btn btn-ghost btn-sm np-change">
-                    {c.change}
-                    <input
-                      ref={refs.file}
-                      type="file"
-                      accept={ACCEPT}
-                      className="sr-only"
-                      onChange={(e) => pick(e.target.files?.[0])}
-                    />
-                  </label>
-                  <button type="button" className="aps-tool" onClick={removeFile} aria-label={c.remove} title={c.remove}>
-                    <Close />
-                  </button>
-                </div>
-              ) : (
-                <label
-                  className={`np-drop${dragging ? " is-over" : ""}`}
-                  onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={dropFile}
-                  data-e2e="pack-drop"
-                >
-                  <span className="np-drop-ic" aria-hidden="true"><Upload /></span>
-                  <span className="np-drop-t">
-                    <b>{c.drop}</b> {c.dropOr}
-                  </span>
-                  <span className="np-drop-h" id="np-drop-h">{c.dropHelp}</span>
-                  <input
-                    ref={refs.file}
-                    type="file"
-                    accept={ACCEPT}
-                    className="sr-only"
-                    aria-describedby="np-drop-h"
-                    onChange={(e) => pick(e.target.files?.[0])}
-                    data-e2e="pack-file-input"
-                  />
-                </label>
-              )}
-              {errorFor("file") && <div role="alert" className="help text-rose font-semibold">{errorFor("file")}</div>}
+              <FileDrop
+                file={file}
+                onPick={pick}
+                onRemove={removeFile}
+                error={errorFor("file")}
+                inputRef={refs.file}
+                e2e={{ drop: "pack-drop", input: "pack-file-input", file: "pack-file" }}
+              />
               <p className="np-note">
                 <Lock />
                 <span>{c.onlyStudents}</span>

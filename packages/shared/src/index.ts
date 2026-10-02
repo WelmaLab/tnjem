@@ -77,3 +77,5 @@ export * from "./ics";
 export * from "./review-eligibility";
 export * from "./structured-data";
 export * from "./admin-offers";
+// live-fixes-1 · pages (B) — « Mes fiches »: a pack and its file or video as ONE fiche. Pure.
+export * from "./fiches";

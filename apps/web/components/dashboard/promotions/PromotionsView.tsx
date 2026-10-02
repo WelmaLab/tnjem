@@ -4,6 +4,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { AppPage, Blocker, EmptyState, ErrorState, FormMode, PageSkeleton, useShell } from "@/components/app/AppShell";
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 import { DatePicker } from "@/components/app/DatePicker";
+import { Select } from "@/components/app/Select"; // live-fixes-1 · B
 import { ShareButton } from "@/components/share/ShareButton";
 import { Field } from "@/components/ui";
 import { Gift } from "@/components/icons";
@@ -326,14 +327,21 @@ export function PromotionsView() {
             targets.length === 0 ? (
               <p className="pv-muted">{c.noTarget}</p>
             ) : (
-              <Field label={c.target}>
-                <div className="inp">
-                  <select value={targetId} onChange={(e) => setTargetId(e.target.value)} data-e2e="promo-target">
-                    <option value="">{scope === "monthly" ? c.allOffers : c.pick}</option>
-                    {targets.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-                  </select>
-                </div>
-              </Field>
+              /* live-fixes-1 · B: the prof space's Select, not the native one (its list
+                 rendered in the system's language and style). */
+              <div className="field">
+                <span className="field-label" id="pv-target-l">{c.target}</span>
+                <Select
+                  value={targetId}
+                  onChange={setTargetId}
+                  options={[
+                    { value: "", label: scope === "monthly" ? c.allOffers : c.pick },
+                    ...targets.map((t) => ({ value: t.id, label: t.label })),
+                  ]}
+                  labelledBy="pv-target-l"
+                  e2e="promo-target"
+                />
+              </div>
             )
           )}
 

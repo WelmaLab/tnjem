@@ -311,7 +311,7 @@ export async function createClass(input: {
   return call<ActionResult & { limit?: number; planCode?: string }>("/classes", input);
 }
 
-export async function createPack(input: { title: string; meta?: string; priceTnd: number }): Promise<ActionResult> {
+export async function createPack(input: { title: string; meta?: string; priceTnd: number; materialId?: string }): Promise<ActionResult> { // live-fixes-1 · B: + materialId (the fiche's file)
   if (demoFallback) return { ok: true, demo: true };
   // PORTED to apps/api (POST /packs).
   return call<ActionResult>("/packs", input);

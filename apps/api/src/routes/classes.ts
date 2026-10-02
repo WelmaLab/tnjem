@@ -5,8 +5,10 @@ import {
   bookings, cancellations, classes, packs, profiles, reviews, tutors,
   notify,
 } from "@tnajem/db";
+import { isNull, materials } from "@tnajem/db"; // live-fixes-1 · B: a fiche's file
 import {
   vText, vOptionalText, vFutureDate, vInt, vPrice, vOptionalUrl, isUuid,
+  vUuid, // live-fixes-1 · B
   classWhen,
   type ClassItem, type DashboardResult, type DashboardBooking,
   isEffectivelyFreeFirst,
@@ -52,6 +54,9 @@ const createPackBody = z.object({
   title: z.string(),
   meta: z.string().optional(),
   priceTnd: z.number(),
+  /* live-fixes-1 · B (0041): the file just uploaded for this fiche (POST /materials).
+     Must be the caller's own live material, not already another fiche's. */
+  materialId: z.string().optional(),
 });
 
 export async function classRoutes(app: FastifyInstance): Promise<void> {
@@ -213,14 +218,33 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
       return { ok: false, error: CONTACT_ERROR };
     }
 
-    await db.insert(packs).values({
+    /* live-fixes-1 · B (0041): tie the fiche to its file. The material must be this
+       tutor's, live, and nobody else's fiche yet — a crafted id can neither borrow
+       another tutor's file nor steal one from another fiche. */
+    let materialId: string | null = null;
+    if (input.materialId) {
+      const mid = vUuid(input.materialId, { field: "material" });
+      if (!mid.ok) return { ok: false, error: "not-found" };
+      const [m] = await db
+        .select({ id: materials.id })
+        .from(materials)
+        .where(and(eq(materials.id, mid.value), eq(materials.tutorId, mine.id), isNull(materials.removedAt)))
+        .limit(1);
+      if (!m) return { ok: false, error: "not-found" };
+      const [taken] = await db.select({ id: packs.id }).from(packs).where(eq(packs.materialId, m.id)).limit(1);
+      if (taken) return { ok: false, error: "material-already-linked" };
+      materialId = m.id;
+    }
+
+    const [created] = await db.insert(packs).values({
       tutorId: mine.id,
       title: title.value,
       description: meta.value,
       priceTnd: String(price.value),
-    });
+      materialId,
+    }).returning({ id: packs.id });
 
-    return { ok: true, revalidate: { tutors: [mine.slug] } }; // packs render publicly
+    return { ok: true, id: created?.id, revalidate: { tutors: [mine.slug] } }; // packs render publicly
   });
 
   /* ── GET /classes/:id ────────────────────────────────────────────────────── */

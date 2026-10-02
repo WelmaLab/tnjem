@@ -317,9 +317,14 @@ export const packs = pgTable("packs", {
   priceTnd: numeric("price_tnd", { precision: 7, scale: 2 }).notNull().default("0"),
   fileUrl: text("file_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  /* live-fixes-1 · B (0041): the file or video this fiche hands to enrolled students —
+     a materials row, so the access decision stays canRead()'s. set null: removing the
+     file leaves the listed fiche, without a file. */
+  materialId: uuid("material_id").references((): AnyPgColumn => materials.id, { onDelete: "set null" }),
 }, (t) => ({
   // getStorefront() + getDashboard(): `where tutor_id = ?`. Same hot path as classes.
   tutorIdIdx: index("packs_tutor_id_idx").on(t.tutorId),
+  materialIdx: index("packs_material_id_idx").on(t.materialId),
 }));
 
 export const bookings = pgTable("bookings", {
