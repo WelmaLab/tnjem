@@ -284,7 +284,7 @@ export function NewPackForm() {
 
   const priceN = Number(price);
   return (
-    <AppPage title={c.title} blockers={blocker} note={c.hintBody} width="wide">
+    <AppPage title={c.title} subtitle={c.hintBody} blockers={blocker}>
       <form onSubmit={handleSubmit} className="nc-form">
         <div className="nc-grid">
           <div className="nc-main">

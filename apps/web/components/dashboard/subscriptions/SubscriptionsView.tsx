@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useLocale } from "@/components/LocaleProvider";
 import { AppPage, Blocker, EmptyState, ErrorState, FormMode, PageSkeleton, useShell } from "@/components/app/AppShell";
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
+import { InfoTip } from "@/components/app/InfoTip"; // live-fixes-1 · E
 import { ShareButton } from "@/components/share/ShareButton";
 import { Field } from "@/components/ui";
 import { Calendar, Plus, Users } from "@/components/icons";
@@ -30,7 +31,9 @@ const copy = bilingual({
   fr: {
     title: "Abonnements",
     sub: "Un forfait de séances par mois avec tes élèves.",
+    // live-fixes-1 · E: no second note under the blocker — this sits in the « ? » beside « Demandes ».
     note: "Paiement en ligne bientôt : pour l'instant l'élève te paie hors Tnajem. Confirme ici chaque mois, une fois le paiement reçu.",
+    noteLabel: "Comment se passe le paiement ?",
     bOfflineT: "Ta page n'est pas encore en ligne",
     bOfflineB: "tes offres seront visibles dès que ton compte est vérifié.",
     bOfflineCta: "Envoyer mes documents",
@@ -113,6 +116,7 @@ const copy = bilingual({
     title: "الاشتراكات",
     sub: "عدد حصص في الشهر بسوم ثابت مع تلامذتك.",
     note: "الخلاص أونلاين قريب : للوقت هذا التلميذ يخلّصك برّا Tnajem. أكّد هوني كل شهر كيف يوصلك الخلاص.",
+    noteLabel: "كيفاش يصير الخلاص؟",
     bOfflineT: "صفحتك موش على الخط لتوّا",
     bOfflineB: "العروض متاعك يبانو أوّل ما يتثبّت حسابك.",
     bOfflineCta: "ابعث وثائقي",
@@ -364,7 +368,10 @@ export function SubscriptionsView() {
 
         {/* ── Demandes ── */}
         <section className="u-card u-card-pad sb-card" aria-labelledby="sb-req-t" data-e2e="subscription-requests">
-          <h2 id="sb-req-t" className="sb-t">{c.requests}</h2>
+          <div className="lf-head-tip">
+            <h2 id="sb-req-t" className="sb-t">{c.requests}</h2>
+            <InfoTip label={c.noteLabel} e2e="subs-info">{c.note}</InfoTip>
+          </div>
           {requests.length === 0 ? (
             <p className="sb-muted">{c.noRequests}</p>
           ) : (
@@ -460,7 +467,7 @@ export function SubscriptionsView() {
               : null;
 
   return (
-    <AppPage title={c.title} subtitle={c.sub} blockers={blocker} note={c.note}>
+    <AppPage title={c.title} subtitle={c.sub} blockers={blocker}>
       <div className="sb-stack">{body}</div>
       <ConfirmDialog
         open={Boolean(dlg)}

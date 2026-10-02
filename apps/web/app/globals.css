@@ -1434,4 +1434,20 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .nc-date{font-family:var(--fn);font-variant-numeric:tabular-nums}
   /* D3 · the calendar opens upward when the room below the field is too short. */
   .aps-dp-pop.is-above{inset-block-start:auto;inset-block-end:calc(100% + 6px)}
+
+  /* E · « ? » (components/app/InfoTip.tsx): the detail beside its field, not a second note.
+     A 44px button around a 22px « ? »; the bubble is a popover (z 70, over the pinned bar). */
+  .lf-tip{position:relative;display:inline-flex;align-items:center;flex:none}
+  .lf-tip-btn{display:grid;place-items:center;width:44px;height:44px;margin-block:-11px;margin-inline:-6px;border:0;
+    border-radius:12px;background:transparent;color:var(--blue);cursor:pointer;font:inherit}
+  .lf-tip-btn > span{display:grid;place-items:center;width:22px;height:22px;border-radius:999px;border:1.5px solid currentColor;
+    font-family:var(--fb);font-size:13px;font-weight:700;line-height:1}
+  .lf-tip-btn:hover > span,.lf-tip-btn[aria-expanded="true"] > span{background:var(--blue50)}
+  .lf-tip-btn:focus-visible{outline:3px solid var(--blue);outline-offset:-6px}
+  .lf-tip-bubble{position:absolute;z-index:70;inset-block-start:calc(100% + 4px);inset-inline-start:-4px;width:max-content;
+    max-width:min(300px,calc(100vw - 48px));padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--paper);
+    box-shadow:var(--sh);font-family:var(--fb);font-size:13px;font-weight:600;line-height:1.55;color:var(--ink2);text-align:start;white-space:normal}
+  .lf-head-tip{display:flex;align-items:center;gap:6px;min-width:0}
+  .lf-label-tip{display:flex;align-items:center;gap:6px;margin-block-end:7px}
+  .lf-label-tip .field-label{margin-block-end:0}
 }

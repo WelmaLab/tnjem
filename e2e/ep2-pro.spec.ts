@@ -238,7 +238,9 @@ test.describe("ep2 · Arabic percentages are bidi-isolated", () => {
     await loginAs(ctx, profile.id);
     const page = await ctx.newPage();
     await page.goto("/ar/dashboard/promotions");
-    await expect(page.locator(".note-info").first()).toContainText("⁦20 %⁩", { timeout: 15_000 });
+    // live-fixes-1 · E: the rule moved from a second note into the « ? » beside « Réduction ».
+    await page.locator("[data-e2e=promo-info]").click({ timeout: 15_000 });
+    await expect(page.locator("[data-e2e=promo-info-text]")).toContainText("⁦20 %⁩");
     await page.goto("/ar/aide");
     await expect(page.locator("#promotions")).toContainText("⁦20 %⁩");
     await ctx.close();

@@ -5,6 +5,7 @@ import { AppPage, Blocker, EmptyState, ErrorState, FormMode, PageSkeleton, useSh
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 import { DatePicker } from "@/components/app/DatePicker";
 import { Select } from "@/components/app/Select"; // live-fixes-1 · B
+import { InfoTip } from "@/components/app/InfoTip"; // live-fixes-1 · E
 import { ShareButton } from "@/components/share/ShareButton";
 import { Field } from "@/components/ui";
 import { Gift } from "@/components/icons";
@@ -34,7 +35,9 @@ const copy = bilingual({
   fr: {
     title: "Promotions",
     sub: "Une réduction de 1 à 20 %, sur toute ta page ou sur une séance, une fiche ou ton abonnement.",
+    // live-fixes-1 · E: no second note under the blocker — this sits in the « ? » beside « Réduction ».
     note: "20 % au maximum. Si plusieurs promotions s'appliquent, l'élève a seulement la meilleure : elles ne s'additionnent pas.",
+    noteLabel: "Comment s'appliquent les promotions ?",
     bOfflineT: "Ta page n'est pas encore en ligne",
     bOfflineB: "tes promotions seront visibles dès que ton compte est vérifié.",
     bOfflineCta: "Envoyer mes documents",
@@ -95,6 +98,7 @@ const copy = bilingual({
     title: "البرومسيونات",
     sub: "تخفيض من 1 حتى \u206620 %\u2069، على صفحتك الكل ولا على حصة، فيشة ولا الاشتراك متاعك.",
     note: "\u206620 %\u2069 على الأكثر. كان فما برشا برومسيونات، التلميذ ياخذ الأحسن برك : ما يتجمّعوش.",
+    noteLabel: "كيفاش يتطبّقو التخفيضات؟",
     bOfflineT: "صفحتك موش على الخط لتوّا",
     bOfflineB: "البرومسيونات متاعك يبانو أوّل ما يتثبّت حسابك.",
     bOfflineCta: "ابعث وثائقي",
@@ -277,7 +281,10 @@ export function PromotionsView() {
           <h2 className="pv-t">{c.newT}</h2>
 
           <div className="field">
-            <span className="field-label" id="pv-pct-l">{c.percent}</span>
+            <div className="lf-label-tip">
+              <span className="field-label" id="pv-pct-l">{c.percent}</span>
+              <InfoTip label={c.noteLabel} e2e="promo-info">{c.note}</InfoTip>
+            </div>
             <div className="pv-slider">
               <input
                 type="range"
@@ -411,7 +418,7 @@ export function PromotionsView() {
   }
 
   return (
-    <AppPage title={c.title} subtitle={c.sub} blockers={blocker} note={c.note}>
+    <AppPage title={c.title} subtitle={c.sub} blockers={blocker}>
       <div className="pv-stack">{body}</div>
       <ConfirmDialog
         open={Boolean(ending)}
