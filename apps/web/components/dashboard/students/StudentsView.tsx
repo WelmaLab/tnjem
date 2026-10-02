@@ -6,7 +6,8 @@ import { Users, ChevronDown } from "@/components/icons";
 import { UserText } from "@/components/UserText";
 import { MessageBookingButton } from "@/components/MessageBookingButton";
 import { getMyStudents } from "@/app/actions-shell";
-import { AppPage, EmptyState, ErrorState, PageSkeleton } from "@/components/app/AppShell";
+import { AppPage, EmptyState, ErrorState, PageSkeleton, useShell } from "@/components/app/AppShell";
+import { ShareButton } from "@/components/share/ShareButton"; // live-fixes-1 · H
 import { formatNumericDate, tunisClock, type TutorStudent, type TutorStudentRelation, type TutorStudentStatus } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 
@@ -31,6 +32,9 @@ const copy = bilingual({
     emptyTitle: "Personne n'a encore réservé",
     emptyBody: "Partage ton lien : dès qu'un élève réserve une séance, il apparaît ici, avec son prénom et ses séances.",
     emptyCta: "Voir ma vitrine",
+    // live-fixes-1 · H: the empty state's one primary action is the one its text asks for.
+    emptyShare: "Partager ma page",
+    emptyNoPage: "Créer ma page",
     since: (d: string) => `depuis le ${d}`,
     history: "Historique",
     anon: "Élève",
@@ -48,6 +52,8 @@ const copy = bilingual({
     emptyTitle: "ما زال حتّى حد ما حجز",
     emptyBody: "شارك اللينك متاعك: أوّل ما تلميذ يحجز حصة، يبان هوني، بإسمو وحصصو.",
     emptyCta: "شوف واجهتي",
+    emptyShare: "شارك صفحتي",
+    emptyNoPage: "اعمل صفحتي",
     since: (d: string) => `من ${d}`,
     history: "التاريخ",
     anon: "تلميذ",
@@ -69,6 +75,7 @@ const STATUS_CLASS: Record<TutorStudentStatus, string> = {
 export function StudentsView() {
   const { locale } = useLocale();
   const c = copy[locale];
+  const slug = useShell()?.shell?.slug ?? null; // live-fixes-1 · H: the page to share, if there is one
   const [rows, setRows] = useState<TutorStudent[] | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
 
@@ -87,7 +94,24 @@ export function StudentsView() {
   else if (rows === undefined) body = <PageSkeleton rows={4} />;
   else if (!rows || rows.length === 0) {
     body = (
-      <EmptyState level={2} icon={<Users />} title={c.emptyTitle} action={<Link href="/dashboard/storefront" className="btn btn-ghost btn-sm">{c.emptyCta}</Link>}>
+      <EmptyState
+        level={2}
+        icon={<Users />}
+        title={c.emptyTitle}
+        action={
+          /* live-fixes-1 · H — « Partage ton lien » is the way forward, so sharing IS the
+             primary action (the share sheet); the vitrine is the quiet second. No page
+             yet: creating it comes first. */
+          slug ? (
+            <>
+              <ShareButton kind="profile" label={c.emptyShare} variant="primary" />
+              <Link href="/dashboard/storefront" className="btn btn-ghost btn-sm">{c.emptyCta}</Link>
+            </>
+          ) : (
+            <Link href="/onboarding" className="btn btn-primary btn-sm">{c.emptyNoPage}</Link>
+          )
+        }
+      >
         {c.emptyBody}
       </EmptyState>
     );

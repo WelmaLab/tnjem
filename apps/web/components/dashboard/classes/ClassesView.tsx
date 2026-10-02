@@ -26,6 +26,9 @@ const copy = bilingual({
     emptyTitle: "Aucune classe pour l'instant",
     emptyBody: "Un titre, une date, ton prix : ta séance apparaît sur ta page et les élèves réservent en un clic.",
     emptyCta: "Créer ma 1ʳᵉ classe",
+    // live-fixes-1 · H: before verification the form keeps a draft — « prepare », not « create ».
+    emptyCtaPrepare: "Préparer ma 1ʳᵉ classe",
+    emptyBodyNoPage: "Commence par ta page : tes classes s'y afficheront.",
     note: "Annuler une séance libère toutes les places : tes élèves sont prévenus et ne doivent rien.",
     pendingNote: "Vérification en cours : tu pourras publier tes classes dès qu'elle est validée, en général sous 24–48 h.",
     bVerifyT: "Fais-toi vérifier",
@@ -48,6 +51,8 @@ const copy = bilingual({
     emptyTitle: "ما فمّا حتى حصة لتوّا",
     emptyBody: "عنوان، وقت، وثمنك: الحصة تبان في صفحتك والتلامذة يحجزو بكليكة.",
     emptyCta: "اعمل أول حصة متاعك",
+    emptyCtaPrepare: "حضّر أول حصة متاعك",
+    emptyBodyNoPage: "ابدا بصفحتك: الحصص متاعك تبان فيها.",
     note: "كي تلغي حصة، البلايص الكل تتسرّح: التلامذة يتعلمو وما عليهم والو.",
     pendingNote: "التثبّت في الطريق: تنجّم تنشر حصصك أوّل ما يتقبل، عادةً في 24–48 ساعة.",
     bVerifyT: "تثبّت من هويتك",
@@ -106,14 +111,20 @@ export function ClassesView() {
   else if (result === undefined) body = <PageSkeleton rows={4} />;
   else if (result && "wrongRole" in result) body = <WrongRoleNotice role={result.wrongRole} />;
   else if (!data || data.classes.length === 0) {
+    /* live-fixes-1 · H — ONE clear primary action per view. Nothing to list: the empty
+       state carries the action and the header button steps aside. With a blocker on top
+       (no page yet, not verified), the blocker's button is the ochre one: the empty state
+       offers to prepare a draft (outline), or nothing when there is no page to put it on. */
+    const action = !data?.has_storefront ? undefined : blocker ? (
+      <Link href="/dashboard/new-class" className="btn btn-outline btn-sm" data-e2e="classes-empty-cta">{c.emptyCtaPrepare}</Link>
+    ) : (
+      <Link href="/dashboard/new-class" className="btn btn-primary btn-sm" data-e2e="classes-empty-cta">
+        {data.status === "verified" ? c.emptyCta : c.emptyCtaPrepare}
+      </Link>
+    );
     body = (
-      <EmptyState
-        level={2}
-        icon={<Video />}
-        title={c.emptyTitle}
-        action={data?.status === "verified" ? <Link href="/dashboard/new-class" className="btn btn-ghost btn-sm">{c.emptyCta}</Link> : undefined}
-      >
-        {c.emptyBody}
+      <EmptyState level={2} icon={<Video />} title={c.emptyTitle} action={action}>
+        {data && !data.has_storefront ? c.emptyBodyNoPage : c.emptyBody}
       </EmptyState>
     );
   } else {
@@ -152,10 +163,12 @@ export function ClassesView() {
       title={c.title}
       subtitle={c.sub}
       actions={
-        <Link href="/dashboard/new-class" className={`btn ${blocker ? "btn-outline" : "btn-primary"} btn-sm aps-hide-mobile`}>
-          <Plus />
-          {c.newClass}
-        </Link>
+        data && data.classes.length > 0 ? (
+          <Link href="/dashboard/new-class" className={`btn ${blocker ? "btn-outline" : "btn-primary"} btn-sm aps-hide-mobile`}>
+            <Plus />
+            {c.newClass}
+          </Link>
+        ) : undefined
       }
       blockers={blocker}
       note={data?.status === "pending" ? c.pendingNote : upcoming.length > 0 ? c.note : undefined}

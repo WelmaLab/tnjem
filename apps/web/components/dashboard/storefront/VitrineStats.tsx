@@ -27,7 +27,9 @@ const copy = bilingual({
     sources: "D'où viennent tes visites",
     srcViews: (n: number) => (n === 1 ? "1 vue" : `${n} vues`),
     srcClicks: (n: number) => (n === 1 ? "1 clic" : `${n} clics`),
-    empty: "Pas encore de visite ces 30 derniers jours. Partage ton lien : chaque visite et chaque clic s'affichent ici.",
+    // live-fixes-1 · H: how the FIRST visit comes — by sharing — and the button that does it.
+    emptyT: "Pas encore de visite",
+    empty: "Ta première visite arrive quand tu partages ton lien : envoie-le dans le groupe WhatsApp de ta classe, mets-le dans ta bio Instagram, ou imprime ton QR code. Chaque visite et chaque clic s'affichent ici.",
     share: "Partager ma page",
     privacy: "Compté sans traceur : aucune adresse IP ni appareil n'est enregistré, seulement des totaux par jour.",
     source: {
@@ -44,7 +46,8 @@ const copy = bilingual({
     sources: "منين جاو الزيارات متاعك",
     srcViews: (n: number) => `${n} زيارة`,
     srcClicks: (n: number) => `${n} كليك`,
-    empty: "ما فماش زيارات في آخر 30 يوم. شارك اللينك متاعك : كل زيارة وكل كليك يبانو هوني.",
+    emptyT: "ما فماش زيارات لتوّا",
+    empty: "أوّل زيارة تجي كي تشارك اللينك متاعك : ابعثو في قروب الواتساب متاع القسم، حطّو في البيو متاع إنستغرام، ولا اطبع الـ QR code. كل زيارة وكل كليك يبانو هوني.",
     share: "شارك صفحتي",
     privacy: "يتحسبو بلا تراكور : حتى عنوان IP ولا جهاز ما يتسجّل، كان المجموع متاع كل نهار.",
     source: {
@@ -55,7 +58,9 @@ const copy = bilingual({
   },
 });
 
-export function VitrineStats() {
+/** `primaryShare`: the empty state's Share is the page's ochre action — unless a blocker
+    above already holds it (live-fixes-1 · H: one ochre button per view). */
+export function VitrineStats({ primaryShare = true }: { primaryShare?: boolean } = {}) {
   const { locale } = useLocale();
   const c = copy[locale];
   const [stats, setStats] = useState<Stats | undefined>(undefined);
@@ -93,9 +98,10 @@ export function VitrineStats() {
           ))}
         </dl>
         {nothing ? (
-          <div className="vs-empty">
+          <div className="vs-empty" data-e2e="vitrine-stats-empty">
+            <h3 className="vs-empty-t">{c.emptyT}</h3>
             <p className="hp-muted">{c.empty}</p>
-            <ShareButton kind="profile" label={c.share} variant="outline" />
+            <ShareButton kind="profile" label={c.share} variant={primaryShare ? "primary" : "outline"} />
           </div>
         ) : (
           <>
@@ -136,6 +142,8 @@ const VS_CSS = `
     padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--paper);font-size:13.5px}
   .vs-source-n{font-weight:700;color:var(--ink)}
   .vs-source-v{display:flex;gap:12px;color:var(--ink2)}
-  .vs-empty{display:grid;gap:10px;justify-items:start}
+  .vs-empty{display:grid;gap:8px;justify-items:start;margin-block-start:14px;padding:14px 16px;border:1px dashed var(--line);border-radius:14px;background:var(--paper)}
+  .vs-empty-t{font-size:15px;font-weight:700;color:var(--ink);margin:0}
+  .vs-empty .ep2-share-btn{margin-block-start:4px}
   .vs-privacy{font-size:13px;color:var(--muted);line-height:1.55;margin:12px 0 0}
 `;
