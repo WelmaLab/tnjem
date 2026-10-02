@@ -393,8 +393,11 @@ function QrPanel({ url, fileName, alt, hint, download, onDownload }: {
   );
 }
 
+/* margin:auto restores the native <dialog> centring that globals.css's `*{margin:0}`
+   reset removes (ConfirmDialog's .aps-dialog does the same); on a phone the
+   block-end and inline margins drop to 0, so the sheet sits on the bottom edge. */
 const SHEET_CSS = `
-  .shs{border:0;padding:0;background:var(--paper);color:var(--ink);border-radius:var(--r-l);
+  .shs{margin:auto;border:0;padding:0;background:var(--paper);color:var(--ink);border-radius:var(--r-l);
     inline-size:min(520px,calc(100% - 32px));max-block-size:calc(100% - 32px);box-shadow:var(--sh-l)}
   .shs::backdrop{background:rgba(10,23,38,.48)}
   .shs-body{padding:20px 20px 22px;display:grid;gap:10px}

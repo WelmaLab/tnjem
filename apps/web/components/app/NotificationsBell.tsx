@@ -127,8 +127,11 @@ export function NotificationsBell({ unread, onRead }: { unread: number; onRead: 
                   <>
                     <span className={`aps-note-dot${n.read ? "" : " is-new"}`} aria-hidden="true" />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[13.5px] font-bold text-ink">{n.title}</span>
-                      <span className="block text-[13px] text-ink2 leading-[1.5] mt-0.5">{n.body}</span>
+                      {/* Stored text (French today, whatever the reader's language):
+                          dir="auto" keeps its punctuation and « » in place inside the
+                          Arabic panel. */}
+                      <span dir="auto" className="block text-[13.5px] font-bold text-ink">{n.title}</span>
+                      <span dir="auto" className="block text-[13px] text-ink2 leading-[1.5] mt-0.5">{n.body}</span>
                       <span className="block text-[13px] text-muted mt-1">{timeAgo(n.createdAt, c)}</span>
                     </span>
                   </>

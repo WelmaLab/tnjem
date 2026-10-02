@@ -951,7 +951,9 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .mc-row:last-child{border-block-end:0}
   .mc-thumb{width:48px;height:54px}
   .mc-main{min-width:0}
-  .mc-title{display:block;font-size:14.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* A 44px tap target (padding) that takes no extra room (the same negative margin). */
+  .mc-title{display:block;font-size:14.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    padding-block:13px;margin-block:-13px}
   .mc-title:hover{color:var(--blue)}
   .mc-meta{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-block-start:4px}
   .mc-actions{grid-column:1 / -1;display:flex;align-items:center;gap:6px;flex-wrap:wrap}

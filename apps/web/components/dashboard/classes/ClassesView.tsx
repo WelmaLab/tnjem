@@ -108,6 +108,7 @@ export function ClassesView() {
   else if (!data || data.classes.length === 0) {
     body = (
       <EmptyState
+        level={2}
         icon={<Video />}
         title={c.emptyTitle}
         action={data?.status === "verified" ? <Link href="/dashboard/new-class" className="btn btn-ghost btn-sm">{c.emptyCta}</Link> : undefined}

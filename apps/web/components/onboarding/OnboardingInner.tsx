@@ -263,6 +263,9 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
     : slugCheck.error === "slug-reserved"
     ? c.errSlugReserved
     : c.errSlugFormat;
+  /* What the field SHOWS: a server refusal, or the live check once a name was typed
+     or the link touched. The border and aria-invalid follow this, not slugError. */
+  const slugShownError = errorFor("slug") ?? (slugError && (name || slugTouched) ? slugError : undefined);
 
 
 
@@ -467,10 +470,12 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
                 <Field
                   label={t.onboarding.link}
                   help={slugLocked ? c.linkLocked : c.linkHelp}
-                  error={errorFor("slug") ?? (slugError && (name || slugTouched) ? slugError : undefined)}
+                  error={slugShownError}
                 >
+                  {/* Red only once the message shows: an empty link on first load is
+                      not yet a mistake (espace prof v2 · phase 8). */}
                   <div
-                    className={`inp ${slugError ? "border-rose" : slug ? "border-blue" : ""}`}
+                    className={`inp ${slugShownError ? "border-rose" : slug ? "border-blue" : ""}`}
                     dir="ltr"
                   >
                     <span className="pre whitespace-nowrap shrink-0">tnajem.com/</span>
@@ -479,7 +484,7 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
                       ref={fieldRefs.slug}
                       value={slug}
                       onChange={(e) => { setSlugTouched(true); setSlug(e.target.value.toLowerCase()); clearError("slug"); }}
-                      aria-invalid={Boolean(slugError || errorFor("slug"))}
+                      aria-invalid={Boolean(slugShownError)}
                       maxLength={40}
                       /* Locked once the page exists — see slugLocked. readOnly rather
                          than disabled so the value stays selectable and copyable:

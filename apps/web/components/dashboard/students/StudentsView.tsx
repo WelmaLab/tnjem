@@ -87,7 +87,7 @@ export function StudentsView() {
   else if (rows === undefined) body = <PageSkeleton rows={4} />;
   else if (!rows || rows.length === 0) {
     body = (
-      <EmptyState icon={<Users />} title={c.emptyTitle} action={<Link href="/dashboard/storefront" className="btn btn-ghost btn-sm">{c.emptyCta}</Link>}>
+      <EmptyState level={2} icon={<Users />} title={c.emptyTitle} action={<Link href="/dashboard/storefront" className="btn btn-ghost btn-sm">{c.emptyCta}</Link>}>
         {c.emptyBody}
       </EmptyState>
     );

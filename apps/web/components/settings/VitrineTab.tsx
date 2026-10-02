@@ -75,7 +75,7 @@ export function VitrineTab({ data, onChanged }: { data: SettingsData; onChanged:
 
   if (!data.dash?.has_storefront || !data.dash.slug || !draft) {
     return (
-      <EmptyState icon={<Store />} title={c.emptyT} action={<Link href="/onboarding" className="btn btn-primary btn-sm">{c.emptyCta}</Link>}>
+      <EmptyState level={2} icon={<Store />} title={c.emptyT} action={<Link href="/onboarding" className="btn btn-primary btn-sm">{c.emptyCta}</Link>}>
         {c.emptyB}
       </EmptyState>
     );
@@ -133,6 +133,10 @@ export function VitrineTab({ data, onChanged }: { data: SettingsData; onChanged:
             <textarea
               rows={5}
               maxLength={1000}
+              /* The bio is written in French OR Arabic, whatever the UI language: take
+                 the direction from the text, as the public page does (UserText). Empty,
+                 it keeps the page's (dir="auto" would left-align an Arabic placeholder). */
+              dir={bio.trim() ? "auto" : undefined}
               value={bio}
               onChange={(e) => {
                 setBio(e.target.value);

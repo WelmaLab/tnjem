@@ -90,7 +90,7 @@ export function OwnerPreviewEmpty() {
   const c = copy[locale];
   return (
     <AppPage title={c.title} width="narrow">
-      <EmptyState icon={<Store />} title={c.emptyTitle} action={<Link href="/onboarding" className="btn btn-primary btn-sm">{c.emptyCta}</Link>}>
+      <EmptyState level={2} icon={<Store />} title={c.emptyTitle} action={<Link href="/onboarding" className="btn btn-primary btn-sm">{c.emptyCta}</Link>}>
         {c.emptyBody}
       </EmptyState>
     </AppPage>

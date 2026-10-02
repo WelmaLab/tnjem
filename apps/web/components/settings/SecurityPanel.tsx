@@ -267,6 +267,8 @@ export function SecurityPanel({ heading = true }: { heading?: boolean } = {}) {
     .sort((a, b) => Number(b.current) - Number(a.current) || b.lastSeenAt.localeCompare(a.lastSeenAt))
     .slice(0, SHOWN);
   const hidden = sessions.length - shown.length;
+  // Without the panel's own h2 (Réglages › Sécurité: the tab names it), the card titles are h2s.
+  const T = heading ? "h3" : "h2";
 
   return (
     <section className="sec-panel" aria-labelledby={heading ? headingId : undefined} aria-label={heading ? undefined : c.heading} data-e2e="security-panel">
@@ -296,7 +298,7 @@ export function SecurityPanel({ heading = true }: { heading?: boolean } = {}) {
             <div className="sec-row">
               <div className="sec-icon" aria-hidden="true"><Lock /></div>
               <div className="sec-body">
-                <h3 className="sec-title">{c.pwTitle}</h3>
+                <T className="sec-title">{c.pwTitle}</T>
                 <p className="sec-text" data-e2e="password-state">
                   {state.password.set && state.password.setAt ? c.pwSet(formatNumericDate(state.password.setAt)) : c.pwNone}
                 </p>
@@ -407,7 +409,7 @@ export function SecurityPanel({ heading = true }: { heading?: boolean } = {}) {
             <div className="sec-row">
               <div className="sec-icon" aria-hidden="true"><Users /></div>
               <div className="sec-body">
-                <h3 className="sec-title">{c.sessionsTitle}</h3>
+                <T className="sec-title">{c.sessionsTitle}</T>
                 <p className="sec-text" data-e2e="sessions-count">{c.connectedOn(sessions.length)}</p>
               </div>
               <div className="sec-actions">

@@ -163,9 +163,9 @@ export const formatLongDate = (instant: Date | string | number, locale: Locale) 
 export const formatShortDate = (instant: Date | string | number, locale: Locale) =>
   formatInTunis(instant, locale, { day: "2-digit", month: "short" });
 
-/** "20 sept., 18:00" */
+/** "20 sept., 18:00". Always 24 h: ar-TN defaults to a 12-hour clock (« 06:00 م »). */
 export const formatShortDateTime = (instant: Date | string | number, locale: Locale) =>
-  formatInTunis(instant, locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  formatInTunis(instant, locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 /** "20/09/2026", in Tunis. */
 export function formatNumericDate(instant: Date | string | number): string {

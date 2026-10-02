@@ -234,7 +234,9 @@ export default function ThreadPage() {
     <SiteShell>
       <section className="web-section">
         <div className="container container-narrow max-w-[760px]">
-          <Link href="/messages" className="text-[13px] text-muted inline-flex items-center gap-1.5 mb-3">
+          {/* A 44px tap target that takes the same room as before: -14px on top, 44px tall,
+              -2px below (was 16px of text + a 12px margin). */}
+          <Link href="/messages" className="text-[13px] text-muted inline-flex items-center gap-1.5 min-h-[44px] -mt-[14px] -mb-[2px]">
             <Forward className="w-3 h-3 rotate-180" aria-hidden="true" />
             {c.back}
           </Link>
@@ -256,7 +258,7 @@ export default function ThreadPage() {
             {thread.messages.length === 0 ? (
               <p className="text-[13px] text-muted text-center py-6">{c.empty}</p>
             ) : (
-              <ul className="flex flex-col gap-2.5" role="list">
+              <ul className="flex flex-col gap-2.5 list-none" role="list">
                 {thread.messages.map((m) => (
                   <li
                     key={m.id}
@@ -270,11 +272,11 @@ export default function ThreadPage() {
                     {/* TEXT NODE. Never dangerouslySetInnerHTML — see the file header. */}
                     <UserText as="p" className="text-[14px] leading-[1.6] whitespace-pre-wrap break-words">{m.body}</UserText>
                     <div className="flex items-center gap-2 flex-wrap mt-1">
-                      <span className="text-[12px] text-muted">
+                      <span className="text-[13px] text-muted">
                         {formatShortDateTime(m.at, locale) /* Tunis time */}
                       </span>
                       {m.masked && (
-                        <span className="text-[12px] font-bold" style={{ color: "var(--ochre-ink)" }}>
+                        <span className="text-[13px] font-bold" style={{ color: "var(--ochre-ink)" }}>
                           {c.masked}
                         </span>
                       )}
@@ -283,9 +285,11 @@ export default function ThreadPage() {
                           type="button"
                           onClick={() => handleReport(m.id)}
                           disabled={reported.has(m.id)}
-                          className="text-[12px] underline"
+                          className="text-[13px] underline"
                           style={{
-                            background: "none", border: 0, padding: 0,
+                            /* 44px to tap (the house target), no extra room: padding + the same negative
+                               margin; and 44px wide, which the short Arabic « بلّغ » is not on its own. */
+                            background: "none", border: 0, paddingInline: 0, paddingBlock: 14, marginBlock: -14, minInlineSize: 44,
                             color: "var(--muted)",
                             cursor: reported.has(m.id) ? "default" : "pointer",
                           }}
@@ -336,8 +340,12 @@ export default function ThreadPage() {
               maxLength={MESSAGE_MAX_LENGTH}
               rows={3}
               disabled={closed}
+              // The brand font (a bare textarea falls back to the UA's monospace), and the
+              // direction from what is typed — a message is French or Arabic either way;
+              // empty, it keeps the page's (dir="auto" would left-align an Arabic placeholder).
+              dir={draft.trim() ? "auto" : undefined}
               className="w-full text-[14px] leading-[1.6] rounded-[12px] p-3"
-              style={{ border: "1px solid var(--line)", background: "var(--paper)", resize: "vertical" }}
+              style={{ border: "1px solid var(--line)", background: "var(--paper)", resize: "vertical", fontFamily: "inherit" }}
             />
             <div className="mt-2.5 flex justify-end">
               <Button type="submit" disabled={busy || closed}>{busy ? c.sending : c.send}</Button>

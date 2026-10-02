@@ -89,6 +89,9 @@ const PAGE_CSS = `
 
   /* ── when / meta ── */
   .cd-when{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  /* The badge is solid blue with white text: the month follows it, not .thumb span's
+     grey (grey on blue was unreadable). */
+  .cd-when .thumb span{color:inherit}
   .cd-when-main{flex:1 1 0;min-width:0}
   .cd-label{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
     color:var(--muted);margin-bottom:7px}

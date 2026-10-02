@@ -8,6 +8,7 @@ import {
   wallTimeToInstant,
   tunisWallTimeFromNow,
   notificationWhen,
+  formatShortDateTime,
   formatLongDate,
   formatNumericDate,
   monthLabel,
@@ -92,6 +93,15 @@ describe(`Tunis time (this process runs in ${processZone})`, () => {
     assert.match(notificationWhen("2026-09-20T17:00:00.000Z"), /20 sept\.?.*18:00/);
     assert.match(formatLongDate("2026-09-30T23:30:00.000Z", "fr"), /^01 octobre 2026$/);
     assert.equal(formatNumericDate("2026-09-30T23:30:00.000Z"), "01/10/2026");
+  });
+
+  // espace prof v2 · phase 8: the message threads showed « 06:00 م » in Arabic.
+  test("short date-times are 24 h in both languages (ar-TN defaults to 12 h)", () => {
+    for (const locale of ["fr", "ar"] as const) {
+      const s = formatShortDateTime("2026-09-20T17:00:00.000Z", locale);
+      assert.match(s, /18:00/, `${locale}: ${s}`);
+      assert.doesNotMatch(s, /[صم]$|AM|PM|06:00/, `${locale}: ${s}`);
+    }
   });
 
   test("month keys have Arabic labels, and French passes through", () => {

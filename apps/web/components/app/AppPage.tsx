@@ -173,12 +173,17 @@ export function PageSkeleton({ rows = 3 }: { rows?: number }) {
 }
 
 /** Empty state: what is missing and the one way forward. */
-export function EmptyState({ icon, title, children, action }: { icon?: ReactNode; title: ReactNode; children?: ReactNode; action?: ReactNode }) {
+export function EmptyState({ icon, title, children, action, level = 3 }: {
+  icon?: ReactNode; title: ReactNode; children?: ReactNode; action?: ReactNode;
+  /** 2 when the empty state IS the page body, right under the page's h1; 3 inside a titled card. */
+  level?: 2 | 3;
+}) {
+  const H = level === 2 ? "h2" : "h3";
   return (
     <div className="aps-empty" data-e2e="shell-empty">
       {icon ? <span className="aps-empty-ic" aria-hidden="true">{icon}</span> : null}
       <div className="min-w-0">
-        <h3 className="aps-empty-t">{title}</h3>
+        <H className="aps-empty-t">{title}</H>
         {children ? <p className="aps-empty-b">{children}</p> : null}
         {action ? <div className="aps-empty-a">{action}</div> : null}
       </div>
@@ -186,14 +191,15 @@ export function EmptyState({ icon, title, children, action }: { icon?: ReactNode
   );
 }
 
-/** Error state: says it failed, offers a retry. */
+/** Error state: says it failed, offers a retry. An h2: it almost always replaces a
+    page's body under the h1, and an h2 inside a titled card never skips a level. */
 export function ErrorState({ onRetry }: { onRetry: () => void }) {
   const { locale } = useLocale();
   const c = copy[locale];
   return (
     <div className="aps-empty aps-error" role="alert" data-e2e="shell-error">
       <div className="min-w-0">
-        <h3 className="aps-empty-t">{c.errTitle}</h3>
+        <h2 className="aps-empty-t">{c.errTitle}</h2>
         <p className="aps-empty-b">{c.errBody}</p>
         <div className="aps-empty-a">
           <button type="button" className="btn btn-ghost btn-sm" onClick={onRetry}>

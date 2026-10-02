@@ -91,7 +91,7 @@ export function MyStorefrontView() {
   else if (result && "wrongRole" in result) body = <WrongRoleNotice role={result.wrongRole} />;
   else if (!d || !d.has_storefront || !d.slug) {
     body = (
-      <EmptyState icon={<Store />} title={c.emptyTitle} action={<Link href="/onboarding" className="btn btn-primary btn-sm">{c.emptyCta}</Link>}>
+      <EmptyState level={2} icon={<Store />} title={c.emptyTitle} action={<Link href="/onboarding" className="btn btn-primary btn-sm">{c.emptyCta}</Link>}>
         {c.emptyBody}
       </EmptyState>
     );
