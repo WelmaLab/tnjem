@@ -5,7 +5,7 @@ import {
   type ShareKind, type ShareTarget,
 } from "@tnajem/shared";
 import { useLocale } from "@/components/LocaleProvider";
-import { Copy, Check, Share } from "@/components/icons";
+import { Apps, Copy, Check, QrCode, Share } from "@/components/icons";
 import { pageUrl } from "@/components/app/links";
 import { bilingual } from "@/lib/i18n";
 
@@ -315,14 +315,21 @@ export function ShareSheet({ open, onClose, ...props }: ShareSheetProps & { open
           {c.shareOn(TARGET_LABEL[target])}
         </button>
 
+        {/* live-fixes-1 · G — two full-width secondary buttons, one per row, the same
+            height, each with its icon: « Plus d'apps · Instagram, TikTok… » used to share a
+            row with « QR code » and wrap onto three lines on a phone. */}
         <div className="shs-secondary">
           {canNative && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={shareNative} data-e2e="share-native">
-              {c.more} <span className="shs-hint">· {c.moreHint}</span>
+            <button type="button" className="btn btn-ghost shs-sec" onClick={shareNative} data-e2e="share-native">
+              <Apps />
+              <span className="shs-sec-t">
+                {c.more} <span className="shs-hint">· {c.moreHint}</span>
+              </span>
             </button>
           )}
-          <button type="button" className="btn btn-ghost btn-sm" aria-expanded={showQr} onClick={() => setShowQr((v) => !v)} data-e2e="share-qr-toggle">
-            {showQr ? c.qrHide : c.qr}
+          <button type="button" className="btn btn-ghost shs-sec" aria-expanded={showQr} onClick={() => setShowQr((v) => !v)} data-e2e="share-qr-toggle">
+            <QrCode />
+            <span className="shs-sec-t">{showQr ? c.qrHide : c.qr}</span>
           </button>
         </div>
 
@@ -432,8 +439,10 @@ const SHEET_CSS = `
   .shs-note{font-size:13px;color:var(--muted);line-height:1.55;margin:0}
   .shs-go{margin-block-start:6px;min-height:50px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
   .shs-go .ic{width:17px;height:17px}
-  .shs-secondary{display:flex;flex-wrap:wrap;gap:8px}
-  .shs-secondary .btn{flex:1 1 160px}
+  .shs-secondary{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+  .shs-sec{min-height:48px;padding-block:10px;padding-inline:14px;font-size:14px;border-radius:12px}
+  .shs-sec .ic{width:18px;height:18px;flex:none}
+  .shs-sec-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .shs-hint{font-weight:600;color:var(--muted)}
   .shs-qr{display:grid;justify-items:center;gap:10px;padding:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--cream)}
   .shs-qr-canvas{inline-size:min(220px,70vw);block-size:auto;image-rendering:pixelated;background:#fff;border-radius:8px}

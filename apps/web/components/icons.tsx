@@ -56,3 +56,6 @@ export const Close = (p: P) => <S {...p}><line x1="6" y1="6" x2="18" y2="18" /><
 // live-fixes-1 · pages — the Mes fiches row actions (Modifier, Retirer).
 export const Pencil = (p: P) => <S {...p}><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z" /><line x1="13.5" y1="6.5" x2="17.5" y2="10.5" /></S>;
 export const Trash = (p: P) => <S {...p}><path d="M4.5 7h15" /><path d="M9.5 7V4.5h5V7" /><path d="M6.5 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5l1-12.5" /></S>;
+// live-fixes-1 · pages (G) — the share sheet's « Plus d'apps » (the phone's own share sheet) and « QR code ».
+export const Apps = (p: P) => <S {...p}><rect x="4" y="4" width="6.5" height="6.5" rx="1.6" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6" /></S>;
+export const QrCode = (p: P) => <S {...p}><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 18.5V20M20 14v1.5" /></S>;
