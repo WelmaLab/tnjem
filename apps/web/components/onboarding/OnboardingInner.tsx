@@ -38,6 +38,7 @@ import type { OnboardingState } from "@tnajem/shared";
 import { LEVEL_CODES, LEVEL_LABELS, sortLevels, type LevelCode } from "@tnajem/shared"; // phase-a lane L5 (A18.7)
 import { bilingual } from "@/lib/i18n";
 import { COMMISSION_PCT, requirePlan, tnd } from "@tnajem/shared";
+import { editableSubject, subjectToSave } from "@tnajem/shared"; // live-fixes-1 · C2
 
 /* The subscription floor, from the catalogue. This string used to say "a partir
    de 29 TND/mois" while /tarifs renders a 0 TND tier as its first card. */
@@ -187,7 +188,9 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
 
   const draft = state?.draft ?? null;
   const [name, setName] = useState(draft?.fullName ?? "");
-  const [subject, setSubject] = useState(draft?.subject ?? "");
+  /* live-fixes-1 · C2: a subject stored as a code (« math ») is shown as its label
+     (« Maths »), never raw; saved untouched, the code goes back as it was (subjectToSave). */
+  const [subject, setSubject] = useState(() => editableSubject(draft?.subject, locale));
   // phase-a lane L5 (A18.7): the levels taught — codes, translated only for display.
   const [levels, setLevels] = useState<LevelCode[]>(state?.levels ?? []);
   const toggleLevel = (code: LevelCode) =>
@@ -312,7 +315,7 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
     setFieldError(null);
     let res: Awaited<ReturnType<typeof createTutor>>;
     try {
-      res = await createTutor({ name, subject, bio, slug, phone: phone || null, levels }); // phase-a lane L5 (A18.7): + levels
+      res = await createTutor({ name, subject: subjectToSave(subject, draft?.subject, locale), bio, slug, phone: phone || null, levels }); // phase-a lane L5 (A18.7): + levels
     } catch {
       setPublishing(false);
       setError(c.errGeneric);

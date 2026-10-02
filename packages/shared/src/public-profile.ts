@@ -44,6 +44,8 @@
    you cannot edit a number you cannot see. The rule is about what one user sees
    of ANOTHER. */
 
+import { displayName } from "./display"; // live-fixes-1 · C2
+
 /** A person as a counterparty may see them. Deliberately tiny. */
 export type PublicProfile = {
   /** First name only. See publicDisplayName. */
@@ -68,7 +70,9 @@ export function publicDisplayName(full: string | null | undefined): string | nul
      "Amine +21620123456" would otherwise pass the first token through untouched
      the moment they put the number first. */
   const cleaned = first.replace(/[^\p{L}\p{M}'’-]/gu, "").trim();
-  return cleaned.length > 0 ? cleaned : null;
+  /* live-fixes-1 · C2: capitalised FOR DISPLAY (« walid » → « Walid »); the stored
+     name is untouched. publicTutorName and publicInitials build on this. */
+  return cleaned.length > 0 ? displayName(cleaned) : null;
 }
 
 /** "Mohamed Ben Ali" -> "Mohamed B." — a TUTOR as a student sees them (D1).

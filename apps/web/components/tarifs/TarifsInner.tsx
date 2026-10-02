@@ -310,7 +310,7 @@ const CSS = `
    clamp(24px,3.6vw,38px) — identical at 1280, so five section headings and four
    prices were nine equal-weight 38px objects and nothing on a PRICING page was
    allowed to be the biggest thing on screen. */
-.tf-price{font-family:var(--fd);font-size:clamp(34px,5vw,46px);line-height:1.02;letter-spacing:-1.5px;color:var(--ink)}
+.tf-price{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:clamp(34px,5vw,46px);line-height:1.02;letter-spacing:-1.5px;color:var(--ink)}
 html[dir="rtl"] .tf-price{font-family:var(--fa);letter-spacing:normal}
 .tf-per{font-size:14px;font-weight:700;color:var(--muted)}
 /* The annual saving is a real ~17 % discount and was the SMALLEST type in the

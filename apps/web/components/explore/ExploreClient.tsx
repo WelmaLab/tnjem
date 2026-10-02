@@ -33,6 +33,7 @@ import { demoStorefrontList } from "@/lib/demo";
 import { tutorStanding, formatNumericDate, type ExploreTutor } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 import { LEVEL_CODES, LEVEL_LABELS, isLevelCode } from "@tnajem/shared"; // phase-a lane L5 (A18.7)
+import { displaySubject } from "@tnajem/shared"; // live-fixes-1 · C2
 
 /* ── Page-local copy (FR + Tunisian Derija) ── */
 const copy = bilingual({
@@ -448,7 +449,7 @@ export function ExploreClient({ initial, adultsOnly = false }: { initial: Explor
                         {/* line-clamp-2, not truncate: "Prof de Maths · Lycée & Bac"
                             (and its longer AR form) needs two lines at 284px. */}
                         <UserText as="div" className="mt-1 line-clamp-2 text-[13px] leading-snug text-muted">
-                          {tutor.subject}
+                          {displaySubject(tutor.subject, locale === "ar" ? "ar" : "fr")}
                         </UserText>
                         {/* phase-a lane L5 (A18.7): the levels this tutor chose — nothing when none. */}
                         {tutor.levels.length > 0 && (
@@ -494,7 +495,7 @@ export function ExploreClient({ initial, adultsOnly = false }: { initial: Explor
                                 <del className="text-[13px] text-muted" data-e2e="price-was">{tutor.price_from_tnd} {c.tnd}</del>
                               </>
                             )}
-                            <b className="font-display text-[18px] font-bold leading-none text-ink">
+                            <b className="font-num tabular-nums text-[18px] font-bold leading-none text-ink">
                               {promo ? promo.final_tnd : tutor.price_from_tnd}
                             </b>
                             <span className="text-[13px] font-semibold text-muted">{c.tnd}</span>

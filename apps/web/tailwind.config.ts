@@ -39,6 +39,7 @@ export default {
         display: [v("fd")],
         body: [v("fb")],
         ar: [v("fa")],
+        num: [v("fn")], // live-fixes-1 · C1: prices and figures (globals.css --fn)
       },
       borderRadius: {
         "brand-sm": "var(--r-s)",

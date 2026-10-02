@@ -11,6 +11,7 @@ import { UserText } from "@/components/UserText";
 import { bilingual } from "@/lib/i18n";
 import { supportWhatsAppHref } from "@tnajem/shared";
 import { accountRole } from "@tnajem/shared"; // phase-a lane L5 (A18.13)
+import { displayName, formatPhone } from "@tnajem/shared"; // live-fixes-1 · C2
 
 /* phase-a A12 (decision D5): the support number is InnoviaBurst's, read from the
    environment — never hard-coded — and the row is hidden when it is unset or not
@@ -85,7 +86,7 @@ export default function AccountPage() {
               </div>
               <div className="flex-[1_1_160px] min-w-0">
                 <UserText as="div" style={{ fontFamily: "var(--fd)", fontSize: "clamp(16px, 2vw, 20px)", fontWeight: 700, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {me?.name || "—"}
+                  {displayName(me?.name) || "—"}
                 </UserText>
                 {/* The login identity first — that is what they type to get back in.
                     The phone is an optional contact and may simply not be set. */}
@@ -93,7 +94,7 @@ export default function AccountPage() {
                   <div dir="ltr" className="text-[14px] text-muted text-start break-all">{me.email}</div>
                 )}
                 {me?.phone && (
-                  <div dir="ltr" className="text-[14px] text-muted text-start">{me.phone}</div>
+                  <div dir="ltr" className="text-[14px] text-muted text-start">{formatPhone(me.phone)}</div>
                 )}
               </div>
             </div>

@@ -651,7 +651,7 @@ export default function PourLesProfsPage() {
           display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
           overflow: hidden; line-height: 1.3; }
         .lpp-card-m { font-size: 13px; color: var(--on-blue-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .lpp-card-price { font-family: var(--fd); font-weight: 700; font-size: 14px; color: var(--amber); flex: none; white-space: nowrap; }
+        .lpp-card-price { font-family: var(--fn); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 14px; color: var(--amber); flex: none; white-space: nowrap; }
         .lpp-card-lbl { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--on-blue-soft); font-weight: 600; margin-bottom: 7px; }
         .lpp-link { font-family: var(--fd); font-weight: 700; font-size: 14px; color: #fff; text-align: start;
           background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16); border-radius: 10px;
@@ -704,7 +704,7 @@ export default function PourLesProfsPage() {
         @media (min-width: 1000px) { .lpp-connector { display: block; inset-inline-start: 16%; inset-inline-end: 16%; } }
 
         /* ---- income ---- */
-        .lpp-amount { font-family: var(--fd); font-size: clamp(34px,5.5vw,52px); font-weight: 700;
+        .lpp-amount { font-family: var(--fn); font-variant-numeric: tabular-nums; font-size: clamp(34px,5.5vw,52px); font-weight: 700;
           letter-spacing: -1.4px; color: var(--amber); line-height: 1.05; overflow-wrap: anywhere; }
         .lpp-later {
           margin-block-start: 16px; padding-block-start: 14px;

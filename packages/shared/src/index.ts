@@ -79,3 +79,5 @@ export * from "./structured-data";
 export * from "./admin-offers";
 // live-fixes-1 · pages (B) — « Mes fiches »: a pack and its file or video as ONE fiche. Pure.
 export * from "./fiches";
+// live-fixes-1 · pages (C2) — names, phones and subjects as they are SHOWN (never stored). Pure.
+export * from "./display";

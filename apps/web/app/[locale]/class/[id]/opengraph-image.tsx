@@ -1,6 +1,6 @@
 import { callAnonymous } from "@/lib/api";
 import { classCard, fallbackCard, OG_SIZE } from "@/lib/og-card";
-import { formatNumericDate, isUuid, tunisClock, type ClassItem } from "@tnajem/shared";
+import { displaySubject, formatNumericDate, isUuid, tunisClock, type ClassItem } from "@tnajem/shared";
 
 /* A class's social preview card — Espace prof v2 · Phase 3.
 
@@ -32,7 +32,7 @@ export default async function Image(props: { params: Promise<{ locale: string; i
     locale,
     title: cls.title,
     tutorName: cls.tutor_name ?? "",
-    subject: cls.tutor_subject ?? "",
+    subject: displaySubject(cls.tutor_subject, locale), // live-fixes-1 · C2
     verified: Boolean(cls.tutor_slug), // the API names a slug only for a public, verified tutor
     date: formatNumericDate(cls.starts_at),
     time: tunisClock(cls.starts_at),

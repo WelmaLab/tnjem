@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { callAnonymous } from "@/lib/api";
 import { isLocale, DEFAULT_LOCALE, type AppLocale } from "@/lib/locale";
-import { formatNumericDate, isUuid, tunisClock, type ClassItem } from "@tnajem/shared";
+import { displaySubject, formatNumericDate, isUuid, tunisClock, type ClassItem } from "@tnajem/shared";
 import { courseJsonLd, priceWithPromotion, type TutorPricing } from "@tnajem/shared"; // espace prof v2 · pro (P7)
 import { JsonLd } from "@/components/JsonLd";
 import { ClassDetail } from "./ClassDetail";
@@ -57,7 +57,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const subpath = `/class/${cls.id}`;
   const canonical = `/${locale}${subpath}`;
   const title = who ? `${cls.title} — ${who}` : cls.title;
-  const description = c.desc(formatNumericDate(cls.starts_at), tunisClock(cls.starts_at), who, cls.tutor_subject ?? "", c.price(cls.price_tnd));
+  const description = c.desc(formatNumericDate(cls.starts_at), tunisClock(cls.starts_at), who, displaySubject(cls.tutor_subject, locale), c.price(cls.price_tnd)); // live-fixes-1 · C2
   const card = `${canonical}/opengraph-image`;
   const image = { url: card, width: 1200, height: 630, alt: c.alt(cls.title, who) };
   return {

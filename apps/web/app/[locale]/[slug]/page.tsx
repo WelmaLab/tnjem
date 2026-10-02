@@ -11,6 +11,7 @@ import { dict } from "@/lib/i18n";
 import { priceWithPromotion, profileJsonLd } from "@tnajem/shared"; // espace prof v2 · pro (P7)
 import { publicTutorName, publicDisplayName } from "@tnajem/shared"; // phase-a lane L2 (A23)
 import { advertisesFreeFirst } from "@tnajem/shared"; // phase-a lane L3 (A5)
+import { displaySubject } from "@tnajem/shared"; // live-fixes-1 · C2
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
 
@@ -122,7 +123,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const subpath = `/${params.slug}`;
   const canonical = `/${locale}${subpath}`; // this locale's canonical URL
   // layout.tsx applies the "%s · Tnajem" template on top of this.
-  const title = `${shownName} — ${tutor.subject}`;
+  const subject = displaySubject(tutor.subject, locale); // live-fixes-1 · C2: « Maths », never the code « math »
+  const title = `${shownName} — ${subject}`;
   /* "paiement en dinar" promised a checkout that does not exist: payments are OFF
      for the pilot (lib/payments.ts), the storefront takes no card, and the link
      preview is the first thing a WhatsApp reader sees. Promise what we deliver. */
@@ -138,9 +140,9 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const pitch = advertisesFreeFirst(tutor.offers_free_first_session, data.classes)
     ? (ar ? "احجز درس دايركت — أول حصة فابور، بلا التزام." : "Réserve un cours en direct — 1ère séance offerte, sans engagement.")
     : (ar ? "احجز درس دايركت — السوم معروف، بلا التزام." : "Réserve un cours en direct — tarif affiché, sans engagement.");
-  const description = tutor.bio ? `${clamp(tutor.bio, 120)} · ${pitch}` : `${tutor.subject}. ${pitch}`;
+  const description = tutor.bio ? `${clamp(tutor.bio, 120)} · ${pitch}` : `${subject}. ${pitch}`;
   const ogTitle = `${title} · Tnajem`;
-  const alt = ar ? `${shownName} على Tnajem — ${tutor.subject}` : `${shownName} sur Tnajem — ${tutor.subject}`;
+  const alt = ar ? `${shownName} على Tnajem — ${subject}` : `${shownName} sur Tnajem — ${subject}`;
   /* espace prof v2 · growth (P3): the tutor's own social card (opengraph-image.tsx in
      this folder — name, subject, Vérifié, the approved photo, the « à partir de »
      price), in this page's language, for og: AND twitter:. It replaces /og.png. */
@@ -152,7 +154,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     description,
     keywords: [
       shownName,
-      tutor.subject,
+      subject,
       tutor.level,
       "cours particuliers",
       "cours en direct",
@@ -236,7 +238,7 @@ export default async function StorefrontPage(props: Props) {
     locale: loc,
     slug: params.slug,
     name: publicTutorName(tutor.full_name) ?? "",
-    subject: tutor.subject,
+    subject: displaySubject(tutor.subject, loc),
     bio: tutor.bio,
     imageUrl: tutor.has_photo ? `${SITE_URL}/api/avatar/${tutor.slug}/md` : null,
     reviews: { count: reviews.count, average: reviews.average },

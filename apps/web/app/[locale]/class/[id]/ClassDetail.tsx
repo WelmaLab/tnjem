@@ -8,7 +8,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { UserText } from "@/components/UserText";
 import { ReportButton } from "@/components/ReportButton";
 import { getClass } from "@/app/actions";
-import { isOpenForBooking, monthLabel, LEVEL_LABELS, type ClassItem } from "@tnajem/shared";
+import { isOpenForBooking, monthLabel, LEVEL_LABELS, displaySubject, type ClassItem } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 import { VitrineBeacon } from "@/components/share/VitrineBeacon"; // espace prof v2 · growth (P3)
 import { FollowButton } from "@/components/follow/FollowButton"; // espace prof v2 · growth (P4)
@@ -150,7 +150,7 @@ const PAGE_CSS = `
     padding:12px clamp(16px,4vw,40px) max(14px,env(safe-area-inset-bottom))}
   .cd-mcta-row{display:flex;align-items:center;gap:12px}
   .cd-mcta-price{min-width:0;display:flex;flex-direction:column;line-height:1.2}
-  .cd-mcta-price b{font-family:var(--fd);font-size:17px;letter-spacing:-.3px;white-space:nowrap}
+  .cd-mcta-price b{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:17px;letter-spacing:-.3px;white-space:nowrap}
   .cd-mcta-price span{font-size:13px;color:var(--muted);margin-top:2px}
   .cd-mcta-btn{flex:1 1 auto;width:auto;max-width:260px;margin-inline-start:auto;min-height:50px}
 
@@ -233,7 +233,7 @@ export function ClassDetail({ id }: { id: string }) {
   const tutorSlug = cls.tutor_slug ?? null;
   const backHref = tutorSlug ? `/${tutorSlug}` : "/explore";
   // Real subject/level from the tutor row — shown only when we actually have it.
-  const tutorSubject = cls.tutor_subject ?? "";
+  const tutorSubject = displaySubject(cls.tutor_subject, locale); // live-fixes-1 · C2: the label, not the code
   /* phase-a/integrate (A18.7): the class's own level if the tutor set one, else the
      levels the tutor chose — codes from the API, labelled here in the page's
      language. Nothing chosen → nothing shown (no default "Bac"). */

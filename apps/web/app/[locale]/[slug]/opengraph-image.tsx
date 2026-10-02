@@ -1,6 +1,6 @@
 import { getCachedStorefront } from "@/lib/cache";
 import { fallbackCard, OG_SIZE, tutorCard } from "@/lib/og-card";
-import { isOpenForBooking } from "@tnajem/shared";
+import { displaySubject, isOpenForBooking } from "@tnajem/shared";
 
 /* The tutor's social preview card — Espace prof v2 · Phase 3.
 
@@ -50,7 +50,7 @@ export default async function Image(props: { params: Promise<{ locale: string; s
   return tutorCard({
     locale,
     name: tutor.full_name, // already "Mohamed B." from the API (A23)
-    subject: tutor.subject,
+    subject: displaySubject(tutor.subject, locale), // live-fixes-1 · C2
     initials: tutor.avatar_initials,
     verified: tutor.verified,
     photo: tutor.has_photo ? await approvedPhoto(tutor.slug) : null,

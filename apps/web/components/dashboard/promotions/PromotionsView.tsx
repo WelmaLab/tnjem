@@ -440,7 +440,7 @@ const PR_CSS = `
   .pv-slider{display:flex;align-items:center;gap:14px}
   .pv-slider input[type=range]{flex:1 1 auto;min-width:0;min-height:44px;accent-color:var(--blue)}
   .pv-slider input[type=range]:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
-  .pv-pct{flex:none;min-width:72px;text-align:center;font-family:var(--fd);font-size:22px;font-weight:700;color:var(--blue700);
+  .pv-pct{flex:none;min-width:72px;text-align:center;font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:var(--blue700);
     background:var(--blue50);border-radius:12px;padding:6px 10px}
   .pv-preview{display:grid;gap:6px;margin-block-start:10px;padding:12px;border-radius:12px;background:var(--cream);border:1px solid var(--line)}
   .pv-prev-row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13.5px}
@@ -457,7 +457,7 @@ const PR_CSS = `
   .pv-err{font-size:13.5px;color:var(--rose700);font-weight:600;margin:0}
   .pv-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
   .pv-item{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--paper)}
-  .pv-big{flex:none;font-family:var(--fd);font-size:22px;font-weight:700;color:var(--blue700);min-width:72px}
+  .pv-big{flex:none;font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:var(--blue700);min-width:72px}
   .pv-main{flex:1 1 220px;display:grid;gap:5px;justify-items:start}
   .pv-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;font-size:14.5px;color:var(--ink)}
   .pv-code{font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.5px;padding:3px 8px;border-radius:8px;background:var(--sand);color:var(--ink2)}

@@ -92,7 +92,7 @@ const PP_CSS = `
   .pp-was{font-size:13.5px;color:var(--muted);text-decoration-thickness:1.5px}
   .pp-badge{display:inline-flex;align-items:center;font-size:13px;font-weight:700;line-height:1;
     padding:4px 8px;border-radius:999px;background:var(--blue50);color:var(--blue700);white-space:nowrap}
-  .pp-amount{font-family:var(--fd);font-weight:700;font-size:17px;letter-spacing:-.3px;white-space:nowrap;line-height:1.15;color:var(--ink)}
+  .pp-amount{font-family:var(--fn);font-variant-numeric:tabular-nums;font-weight:700;font-size:17px;letter-spacing:-.3px;white-space:nowrap;line-height:1.15;color:var(--ink)}
   .pp-cur{font-size:max(13px,.72em);font-weight:600;color:var(--muted)}
   .pp-unit{font-family:var(--fb);font-size:13px;font-weight:600;color:var(--muted)}
   .pp-then{font-size:13px;color:var(--muted);line-height:1.4}

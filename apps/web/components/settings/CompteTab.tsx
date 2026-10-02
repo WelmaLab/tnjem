@@ -3,7 +3,7 @@ import { Link } from "@/components/Link";
 import { LocaleToggle } from "@/components/LocaleToggle";
 import { useLocale } from "@/components/LocaleProvider";
 import { UserText } from "@/components/UserText";
-import { accountRole, initials } from "@tnajem/shared";
+import { accountRole, displayName, formatPhone, initials } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 import type { SettingsData } from "./SettingsView";
 
@@ -20,8 +20,9 @@ const copy = bilingual({
 export function CompteTab({ data }: { data: SettingsData }) {
   const { t, locale } = useLocale();
   const c = copy[locale];
-  const name = data.dash?.name ?? data.me?.name ?? "";
-  const contact = [data.me?.email, data.me?.phone].filter(Boolean) as string[];
+  // live-fixes-1 · C2: shown capitalised, the phone grouped (+216 56 561 226) — never rewritten.
+  const name = displayName(data.dash?.name ?? data.me?.name ?? "");
+  const contact = [data.me?.email, data.me?.phone ? formatPhone(data.me.phone) : null].filter(Boolean) as string[];
   return (
     <section className="u-card st-card" aria-label={t.account.title} data-e2e="settings-compte">
       <div className="st-id">

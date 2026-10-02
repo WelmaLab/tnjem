@@ -44,6 +44,7 @@ import { paymentsEnabled } from "@tnajem/shared/payments";
 import { PaymentStory } from "@/components/PaymentStory";
 import { LEVEL_LABELS } from "@tnajem/shared"; // phase-a lane L5 (A18.7)
 import { nextSessionOf } from "@tnajem/shared"; // phase-a lane L5 (A18.11)
+import { displaySubject } from "@tnajem/shared"; // live-fixes-1 · C2
 
 
 /* Component-local copy (FR + Tunisian Derija). lib/i18n.ts is owned elsewhere, so
@@ -318,7 +319,7 @@ export function StorefrontView({
                   <UserText className="sf-name-txt">{tutor.full_name}</UserText>
                   {tutor.verified && <Verified label={c.verifiedLabel} pill={c.verifiedPill} />}
                 </h1>
-                <UserText as="div" className="sf-subject">{tutor.subject}</UserText>
+                <UserText as="div" className="sf-subject">{displaySubject(tutor.subject, locale === "ar" ? "ar" : "fr")}</UserText>
                 {/* phase-a lane L5 (A18.7): the levels this tutor chose — nothing when none, never a default. */}
                 {tutor.levels.length > 0 && (
                   <ul className="sf-levels flex flex-wrap gap-1.5 mt-1.5" role="list" aria-label={c.levelsAria} data-e2e="sf-levels">
@@ -808,7 +809,7 @@ export function StorefrontView({
           color:var(--blue);display:grid;place-items:center} /* Phase A+ (U1): a decorative tile, not a success */
         .sf-pack-main{min-width:0;flex:1}
         .sf-pack-price{flex:none;margin-inline-start:auto;text-align:end;display:grid;gap:2px}
-        .sf-pack-price b{font-family:var(--fd);font-size:15px;color:var(--ink);white-space:nowrap}
+        .sf-pack-price b{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink);white-space:nowrap}
         .sf-pack-price span{font-size:13px;color:var(--muted);white-space:nowrap} /* 13px floor (ui-audit a11y); was 12px since phase-a A18.8 */
         .sf-pack-price .pp{justify-items:end}
         .sf-promo{margin-bottom:18px}
@@ -860,7 +861,7 @@ export function StorefrontView({
         }
         .sf-mcta-row{display:flex;align-items:center;gap:12px}
         .sf-mcta-price{min-width:0;display:flex;flex-direction:column;line-height:1.2}
-        .sf-mcta-price b{font-family:var(--fd);font-size:17px;letter-spacing:-.3px;white-space:nowrap}
+        .sf-mcta-price b{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:17px;letter-spacing:-.3px;white-space:nowrap}
         .sf-mcta-price span{font-size:13px;color:var(--muted);margin-top:2px}
         .sf-mcta-btn{flex:1 1 auto;width:auto;max-width:260px;margin-inline-start:auto;min-height:50px}
         .sf-mcta-note{

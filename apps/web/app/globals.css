@@ -89,6 +89,11 @@
   --fd:var(--font-display),'Space Grotesk',system-ui,sans-serif;
   --fb:var(--font-body),'Plus Jakarta Sans',system-ui,sans-serif;
   --fa:var(--font-ar),'IBM Plex Sans Arabic',system-ui,sans-serif;
+  /* live-fixes-1 · C1 — FIGURES (prices, « TND », counters): the brand's text face with
+     tabular figures, never --fd. Space Grotesk descends from Space Mono, and its capitals
+     and figures read as a monospace font: « 0 TND », « — TND ». In Arabic --fb is the
+     Arabic face (see html[dir="rtl"] below), so this follows it. */
+  --fn:var(--fb);
 }
 
 /* keyframes — global (cascade layers don't apply to @keyframes) */
@@ -183,7 +188,7 @@
   .sec{font-family:var(--fd);font-size:15px;margin:6px 2px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;min-width:0}
   .sec a{color:var(--blue);font-size:13px;font-weight:700;cursor:pointer}
   .muted{color:var(--muted)}
-  .price{font-family:var(--fd);font-weight:700;letter-spacing:-.3px}
+  .price{font-family:var(--fn);font-weight:700;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
   .divider{height:1px;background:var(--line);margin:4px 0}
 
   /* ---- chips / badges ----
@@ -266,7 +271,7 @@
   .inp textarea{resize:vertical}
   .inp:has(> textarea){align-items:flex-start}
   .inp:has(> textarea) > .ic{margin-block-start:14px}
-  .inp .pre{color:var(--muted);font-family:var(--fd);flex:none;display:flex;align-items:center}
+  .inp .pre{color:var(--muted);font-family:var(--fn);font-variant-numeric:tabular-nums;flex:none;display:flex;align-items:center}
   /* The leading icon: 18px, muted, and flex:none so a tight row never squashes it
      (the .verified lesson). :where() keeps this at ONE class of weight, so a
      utility on the icon (w-4, text-blue) still wins, as everywhere else here. */
@@ -319,7 +324,7 @@
      proportional figures made the amount jitter as it updated. Both the dashboard
      and the payout page had independently patched this locally; fixing it here
      makes those overrides redundant rather than required. */
-  .balance .amt{font-family:var(--fd);font-size:clamp(26px,6.5vw,42px);font-weight:700;margin-top:6px;letter-spacing:-1px;line-height:1.08;font-variant-numeric:tabular-nums}
+  .balance .amt{font-family:var(--fn);font-size:clamp(26px,6.5vw,42px);font-weight:700;margin-top:6px;letter-spacing:-1px;line-height:1.08;font-variant-numeric:tabular-nums}
   .balance .amt small{font-size:18px;opacity:.85;font-weight:600}
 
   /* ---- bottom nav ---- */
@@ -994,9 +999,9 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   @media (min-width:700px){.hp-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
   .hp-kpi{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
   .hp-kpi-l{font-size:13px;font-weight:600;color:var(--ink2)}
-  .hp-kpi-v{font-family:var(--fd);font-size:26px;font-weight:700;color:var(--ink);margin-block-start:6px;line-height:1.1}
+  .hp-kpi-v{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:26px;font-weight:700;color:var(--ink);margin-block-start:6px;line-height:1.1}
   .hp-kpi-v.is-zero{color:var(--muted)}
-  .hp-num{direction:ltr;unicode-bidi:isolate;display:inline-block;font-variant-numeric:tabular-nums}
+  .hp-num{direction:ltr;unicode-bidi:isolate;display:inline-block;font-family:var(--fn);font-variant-numeric:tabular-nums}
   .hp-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
   @media (min-width:1000px){.hp-grid{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);align-items:start}}
   .hp-card{height:auto}
@@ -1126,7 +1131,7 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .ofr-now-t{font-family:var(--fd);font-size:clamp(19px,2.2vw,22px);font-weight:700;color:var(--ink);margin-block:10px 4px}
   .ofr-now-b{font-size:13.5px;color:var(--muted);line-height:1.55}
   .ofr-now-price{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none}
-  .ofr-price{font-family:var(--fd);font-size:clamp(28px,3vw,34px);font-weight:700;color:var(--ink);line-height:1}
+  .ofr-price{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:clamp(28px,3vw,34px);font-weight:700;color:var(--ink);line-height:1}
   .ofr-per{font-size:13px;color:var(--muted)}
   .ofr-grid{list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   @media (min-width:820px){.ofr-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
@@ -1135,7 +1140,7 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .ofr-mini-name{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:var(--fd);font-size:16px;font-weight:700;color:var(--ink)}
   .ofr-mini-band{font-size:13px;color:var(--muted)}
   .ofr-mini-price{display:flex;align-items:baseline;gap:4px;margin-block-start:8px}
-  .ofr-price-sm{font-family:var(--fd);font-size:22px;font-weight:700;color:var(--ink);line-height:1.1}
+  .ofr-price-sm{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:var(--ink);line-height:1.1}
   .ofr-mini-line{font-size:13px;color:var(--ink2);line-height:1.5;margin-block-start:4px}
   .ofr-foot{margin-block-start:14px;font-size:13.5px;color:var(--muted);line-height:1.6}
 
@@ -1191,7 +1196,7 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .nc-preview-meta{font-size:13px;color:var(--muted);margin-block-start:4px}
   .nc-preview-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-block-start:12px;
     border-block-start:1px solid var(--line)}
-  .nc-preview-price{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--ink)}
+  .nc-preview-price{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:18px;font-weight:700;color:var(--ink)}
   .nc-preview-book{pointer-events:none}
   .nc-preview-foot{font-size:13px;color:var(--muted)}
   /* The promotion (phase 5): the plain price struck through, the one the student pays, the −N % in blue. */
@@ -1234,7 +1239,7 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .np-pv-ic{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:var(--blue50);color:var(--blue)}
   .np-pv-ic .ic{width:18px;height:18px}
   .np-pv-price{flex:none;display:grid;gap:2px;margin-inline-start:auto;text-align:end}
-  .np-pv-price b{font-family:var(--fd);font-size:15px;color:var(--ink);white-space:nowrap}
+  .np-pv-price b{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink);white-space:nowrap}
   .np-pv-price span{font-size:13px;color:var(--muted)}
   .np-pv-file{display:flex;align-items:center;gap:6px;padding-block-start:10px;border-block-start:1px solid var(--line)}
   .np-pv-file .ic{width:14px;height:14px;color:var(--blue)}
@@ -1395,7 +1400,7 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .fx-main{min-width:0;flex:1}
   .fx-head{display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
   .fx-title{min-width:0;flex:1 1 180px;font-size:14.5px;font-weight:700;line-height:1.35;color:var(--ink);overflow-wrap:anywhere}
-  .fx-price{flex:none;font-family:var(--fb);font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .fx-price{flex:none;font-family:var(--fn);font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
   .fx-price.is-none{color:var(--muted)}
   .fx-detail{margin-block-start:2px;font-size:13px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
   .fx-facts{list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-block-start:6px;font-size:13px;color:var(--ink2)}
