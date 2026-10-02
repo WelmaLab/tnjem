@@ -125,29 +125,32 @@ test.describe("Réglages (/dashboard/settings, image 4)", () => {
     await ctx.close();
   });
 
-  test("Notifications: four e-mail switches; each one saves on its own and survives a reload", async ({ browser }) => {
+  test("Notifications: two working e-mail switches, two « Bientôt »; a switch saves on its own and survives a reload", async ({ browser }) => {
     const { profile } = await newTutor("verified");
     const ctx = await tutorCtx(browser, profile.id);
     const page = await ctx.newPage();
     await page.goto("/fr/dashboard/settings?tab=notifications");
     const panel = page.locator("[data-e2e=settings-notifications]");
     await expect(panel.getByRole("switch")).toHaveCount(4);
-    /* Truth: the tab says which switches already send a tutor e-mail (Réservations,
-       Rappels — espace prof v2 · pro P7) and which do not yet (Messages, Abonnés). */
-    await expect(page.locator("[data-e2e=prefs-not-yet]")).toContainText("« Réservations » et « Rappels » t'envoient déjà des e-mails");
-    await expect(page.locator("[data-e2e=prefs-not-yet]")).toContainText("« Messages » et « Abonnés » n'en envoient pas encore à un prof");
+    /* Truth: Réservations and Rappels e-mail a tutor (espace prof v2 · pro P7); Messages
+       and Abonnés do not yet — live-fixes-1 · F1: they say « Bientôt » and cannot be moved. */
+    await expect(page.locator("[data-e2e=prefs-not-yet]")).toHaveText("Choisis les e-mails que tu reçois. La cloche reste toujours active.");
     for (const k of ["bookings", "messages", "reminders", "followers"]) {
       await expect(page.locator(`[data-e2e=pref-${k}] [role=switch]`)).toHaveAttribute("aria-checked", "true");
     }
-    await page.locator("[data-e2e=pref-messages] [role=switch]").click();
-    await expect(page.locator("[data-e2e=pref-messages] [role=switch]")).toHaveAttribute("aria-checked", "false");
+    for (const k of ["messages", "followers"]) {
+      await expect(page.locator(`[data-e2e=pref-${k}]`)).toContainText("Bientôt");
+      await expect(page.locator(`[data-e2e=pref-${k}] [role=switch]`)).toBeDisabled();
+    }
+    await page.locator("[data-e2e=pref-bookings] [role=switch]").click();
+    await expect(page.locator("[data-e2e=pref-bookings] [role=switch]")).toHaveAttribute("aria-checked", "false");
     await expect
       .poll(async () => (await sql<{ messages: boolean; bookings: boolean }[]>`
         select messages, bookings from notification_prefs where profile_id = ${profile.id}`)[0] ?? null)
-      .toEqual({ messages: false, bookings: true });
+      .toEqual({ messages: true, bookings: false });
     await page.reload();
-    await expect(page.locator("[data-e2e=pref-messages] [role=switch]")).toHaveAttribute("aria-checked", "false");
-    await expect(page.locator("[data-e2e=pref-bookings] [role=switch]")).toHaveAttribute("aria-checked", "true");
+    await expect(page.locator("[data-e2e=pref-bookings] [role=switch]")).toHaveAttribute("aria-checked", "false");
+    await expect(page.locator("[data-e2e=pref-reminders] [role=switch]")).toHaveAttribute("aria-checked", "true");
     await ctx.close();
   });
 

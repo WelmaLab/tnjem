@@ -1450,4 +1450,17 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .lf-head-tip{display:flex;align-items:center;gap:6px;min-width:0}
   .lf-label-tip{display:flex;align-items:center;gap:6px;margin-block-end:7px}
   .lf-label-tip .field-label{margin-block-end:0}
+
+  /* F1 · Réglages › Notifications: an e-mail that does not exist yet says « Bientôt »,
+     and its switch cannot be moved. */
+  .st-row-t-tag{display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap}
+  .st-row-soon .aps-switch:disabled{cursor:not-allowed}
+  /* F2 · Réglages › Vitrine: name, subject, levels and presentation, edited in place. */
+  .st-form-t{margin-block-end:12px}
+  .st-levels{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:2px}
+  .st-level{min-height:44px;padding-inline:14px;border-radius:999px;border:1.5px solid var(--line);background:var(--paper);
+    font:inherit;font-size:13.5px;font-weight:600;color:var(--ink2);cursor:pointer}
+  .st-level:hover{border-color:var(--blue)}
+  .st-level.is-on{border-color:var(--blue);background:var(--blue50);color:var(--blue)}
+  .st-level:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 }

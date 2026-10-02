@@ -189,14 +189,15 @@ test("Réglages › Sécurité: « Déconnecter partout » asks first; keeping c
   await ctx.close();
 });
 
-test("Réglages › Notifications says which switches already e-mail a tutor — in Arabic too", async ({ browser }) => {
+test("Réglages › Notifications: the one-line intro, and « Bientôt » on what is not sent yet — in Arabic too", async ({ browser }) => {
   const { profile } = await tutorWithProfile();
   const ctx = await browser.newContext();
   await loginAs(ctx, profile.id);
   const page = await ctx.newPage();
   await page.goto("/ar/dashboard/settings?tab=notifications");
   const note = page.locator("[data-e2e=prefs-not-yet]");
-  await expect(note).toContainText("« الحجوزات » و« التذكيرات » يبعثولك إيمايلات من توّا", { timeout: 15_000 });
+  await expect(note).toHaveText("اختار الإيمايلات اللي توصلك. الجرس يقعد ديما خدّام.", { timeout: 15_000 }); // live-fixes-1 · F1
+  await expect(page.locator("[data-e2e=pref-messages]")).toContainText("قريب");
   await expect(page.locator("[data-e2e=pref-reminders]")).toContainText("24 ساعة");
   await ctx.close();
 });
