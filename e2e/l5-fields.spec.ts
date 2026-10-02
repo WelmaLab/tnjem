@@ -42,21 +42,20 @@ test.describe("A18.2 — the guardian phone is not collected", () => {
   });
 });
 
-test.describe("A18.6 — the free-first box is disabled while the option is off", () => {
-  test("option off: the box is disabled and links to the setting; option on: it can be ticked", async ({ browser }) => {
+test.describe("A18.6 — no free first session in a class while the option is off", () => {
+  test("option off: one muted line that links to the setting, nothing to tick; option on: a toggle", async ({ browser }) => {
     const offMe = await seedProfile({ role: "tutor", birthYear: 1985 });
     await seedTutor({ profileId: offMe.id, status: "verified", offersFreeFirstSession: false });
     const ctx = await contextAs(browser, offMe.id);
     const page = await ctx.newPage();
     await page.goto("/fr/dashboard/new-class", { waitUntil: "networkidle" });
-    const box = page.locator("[data-e2e=free-first-box]");
-    await expect(box).toHaveAttribute("aria-disabled", "true");
+    // live-fixes-1 · D1: not a disabled box any more — one line, and the way to switch it on.
+    await expect(page.locator("[data-e2e=free-first-box]")).toHaveCount(0);
+    await expect(page.locator("[data-e2e=free-first-off]")).toContainText("1re séance offerte : désactivée");
     const link = page.locator("[data-e2e=free-first-off] a");
-    await expect(link).toHaveText("Active d'abord l'option dans tes réglages");
+    await expect(link).toHaveText("Activer dans Réglages ›");
     // espace prof v2 · phase 6: the option lives in Réglages › Vitrine.
     await expect(link).toHaveAttribute("href", "/fr/dashboard/settings?tab=vitrine#free-first");
-    await box.click({ force: true });
-    await expect(box).toHaveAttribute("aria-checked", "false");
     await ctx.close();
 
     const onMe = await seedProfile({ role: "tutor", birthYear: 1985 });
@@ -65,7 +64,8 @@ test.describe("A18.6 — the free-first box is disabled while the option is off"
     const page2 = await ctx2.newPage();
     await page2.goto("/fr/dashboard/new-class", { waitUntil: "networkidle" });
     const box2 = page2.locator("[data-e2e=free-first-box]");
-    await expect(box2).toHaveAttribute("aria-disabled", "false");
+    await expect(box2).toHaveAttribute("role", "switch");
+    await expect(box2).toHaveAttribute("aria-checked", "false");
     await box2.click();
     await expect(box2).toHaveAttribute("aria-checked", "true");
     await expect(page2.locator("[data-e2e=free-first-off]")).toHaveCount(0);

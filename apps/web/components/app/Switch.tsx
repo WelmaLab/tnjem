@@ -10,6 +10,7 @@ export function Switch({
   describedBy,
   disabled,
   id,
+  e2e,
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
@@ -18,6 +19,8 @@ export function Switch({
   describedBy?: string;
   disabled?: boolean;
   id?: string;
+  /** live-fixes-1 · D1: a data-e2e hook (the class form's « 1re séance offerte »). */
+  e2e?: string;
 }) {
   return (
     <button
@@ -31,6 +34,7 @@ export function Switch({
       onClick={() => onChange(!checked)}
       className="aps-switch"
       data-on={checked ? "true" : "false"}
+      data-e2e={e2e}
     >
       <span className="aps-switch-track" aria-hidden="true">
         <span className="aps-switch-thumb" />

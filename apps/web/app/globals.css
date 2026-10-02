@@ -1170,11 +1170,6 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .nc-chip:has(input:checked){background:var(--blue50);border-color:var(--blue);color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
   .nc-chip:has(input:focus-visible){outline:3px solid var(--blue);outline-offset:2px}
   .nc-chip.is-static,.nc-chip.is-static:hover{cursor:default;background:var(--blue50);border-color:var(--blue50);color:var(--blue700)}
-  .nc-ff{display:flex;align-items:center;gap:14px;padding:14px 16px;margin-block-start:4px;height:auto;transition:.15s}
-  .nc-ff[data-on="true"]{border:2px solid var(--blue);background:var(--blue50)}
-  .nc-ff:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
-  .nc-ff-box{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:7px;border:1.5px solid var(--muted);background:var(--paper)}
-  .nc-ff[data-on="true"] .nc-ff-box{background:var(--blue);border-color:var(--blue)}
   .nc-tools > summary{cursor:pointer;list-style:none;flex-wrap:wrap;min-height:44px;margin-block-end:0}
   .nc-tools > summary::-webkit-details-marker{display:none}
   .nc-tools > summary::after{content:"▾";content:"▾" / "";margin-inline-start:auto;color:var(--muted);transition:transform .15s}
@@ -1426,4 +1421,17 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .lf-edit{width:min(520px,calc(100vw - 32px))}
   /* A field that is not a <Field> (its .field label rule would flatten the drop zone). */
   .lf-field{margin-block-end:14px}
+
+  /* D1 · « 1re séance offerte » in the class form: a toggle row when the option is on,
+     one muted line (and the way to Réglages) when it is off. */
+  .nc-ff-row{display:flex;align-items:center;gap:12px 16px;margin-block-start:6px;padding:12px 14px;
+    border:1px solid var(--line);border-radius:14px;background:var(--paper)}
+  .nc-ff-t{font-size:14px;font-weight:700;color:var(--ink)}
+  .nc-ff-h{font-size:13px;line-height:1.5;color:var(--muted);margin-block-start:2px}
+  .nc-ff-off{margin-block-start:6px;font-size:13px;line-height:1.6;color:var(--muted)}
+  .nc-ff-off-a{font-size:13px}
+  /* D2 · the preview's date tile is figures too (C1). */
+  .nc-date{font-family:var(--fn);font-variant-numeric:tabular-nums}
+  /* D3 · the calendar opens upward when the room below the field is too short. */
+  .aps-dp-pop.is-above{inset-block-start:auto;inset-block-end:calc(100% + 6px)}
 }

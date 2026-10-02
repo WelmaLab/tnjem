@@ -8,6 +8,7 @@ import { createClass, getClass, getOnboardingState } from "@/app/actions";
 import { useToast } from "@/components/useToast";
 import { AppPage, Blocker, ActionBar, FormSection, ErrorState, PageSkeleton } from "@/components/app/AppShell";
 import { DateTimeField } from "@/components/app/DatePicker";
+import { Switch } from "@/components/app/Switch"; // live-fixes-1 · D1
 import { classUrl } from "@/components/app/links";
 import { useShell } from "@/components/app/ShellContext";
 import { ShareButton } from "@/components/share/ShareButton"; // espace prof v2 · growth (P3), contract C3
@@ -80,7 +81,10 @@ const copy = bilingual({
     errPrice: "Le prix doit être entre 0 et 5000 TND.",
     errSeats: `Choisis entre ${CLASS_LIMITS.seatsMin} et ${CLASS_LIMITS.seatsMax} places.`,
     errUrl: "Ce lien n'est pas valide : il doit commencer par https://",
-    ffOff: "Active d'abord l'option dans tes réglages",
+    // live-fixes-1 · D1: one muted line while the option is off; a toggle when it is on.
+    ffOffLine: "1re séance offerte : désactivée",
+    ffOffCta: "Activer dans Réglages ›",
+    ffOnHelp: "Pour cette classe : la première séance d'un nouvel élève avec toi est offerte.",
     ffOffErr: "La 1ʳᵉ séance offerte est désactivée dans tes réglages. Active-la d'abord, ou décoche la case.",
     errLevel: "Choisis un niveau de la liste.",
     s1: "L'essentiel",
@@ -126,7 +130,9 @@ const copy = bilingual({
     errPrice: "الثمن لازم يكون بين 0 و 5000 د.ت.",
     errSeats: `اختار بين ${CLASS_LIMITS.seatsMin} و ${CLASS_LIMITS.seatsMax} بلاصة.`,
     errUrl: "الرابط هذا موش صحيح : لازم يبدا بـ https://",
-    ffOff: "فعّل الخيار الأول في الإعدادات متاعك",
+    ffOffLine: "الحصة الأولى فابور: مطفية",
+    ffOffCta: "فعّلها في الإعدادات ‹",
+    ffOnHelp: "في الحصة هاذي: أول حصة لتلميذ جديد معاك فابور.",
     ffOffErr: "الحصة الأولى فابور مطفية في الإعدادات متاعك. فعّلها الأول، ولا نحّي العلامة.",
     errLevel: "اختار مستوى من الليستة.",
     s1: "الأساسي",
@@ -302,9 +308,6 @@ export function NewClassForm() {
   }, [f, draftKey]);
 
   const ffDisabled = ffOption !== true;
-  const toggleFreeFirst = () => {
-    if (!ffDisabled) set("freeFirst", !f.freeFirst);
-  };
   const [submitted, setSubmitted] = useState(false);
   const [demo, setDemo] = useState(false);
   const [planLimit, setPlanLimit] = useState<{ limit: number; plan: string } | null>(null);
@@ -652,44 +655,32 @@ export function NewClassForm() {
                 </p>
               )}
 
-              {/* Free-first checkbox — phase-a lane L5 (A18.6): disabled while the
-                  tutor's own option is off, with the way to switch it on. */}
-              <div
-                className="card nc-ff"
-                role="checkbox"
-                aria-checked={f.freeFirst && !ffDisabled}
-                aria-disabled={ffDisabled}
-                aria-label={t.createClass.freeFirst}
-                aria-describedby={ffDisabled && ffOption !== null ? "ff-off-note" : undefined}
-                data-e2e="free-first-box"
-                data-on={f.freeFirst && !ffDisabled ? "true" : "false"}
-                tabIndex={ffDisabled ? -1 : 0}
-                onKeyDown={(e) => {
-                  if (e.key === " " || e.key === "Enter") {
-                    e.preventDefault();
-                    toggleFreeFirst();
-                  }
-                }}
-                onClick={toggleFreeFirst}
-                style={{ cursor: ffDisabled ? "not-allowed" : "pointer", opacity: ffDisabled ? 0.6 : 1 }}
-              >
-                <span className="nc-ff-box" aria-hidden="true">
-                  {f.freeFirst && !ffDisabled && (
-                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="5 13 10 18 19 7" />
-                    </svg>
-                  )}
-                </span>
-                <span>
-                  <span className="block text-[14px] font-semibold">{t.createClass.freeFirst}</span>
-                  <span className="block text-[13px] text-muted mt-0.5">{t.common.free1st}</span>
-                </span>
-              </div>
-              {ffDisabled && ffOption !== null && (
-                <p id="ff-off-note" data-e2e="free-first-off" className="text-[13px] text-muted leading-[1.5] mt-2">
-                  <Link href="/dashboard/settings?tab=vitrine#free-first" className="linklike text-[13px]">{c.ffOff}</Link>
+              {/* « 1re séance offerte » — live-fixes-1 · D1. The tutor's own option
+                  (Réglages › Vitrine) decides what is shown: OFF, one muted line with the
+                  way to switch it on — not a disabled box that looks broken; ON, a real
+                  toggle for this class. The API refuses a free-first class while the
+                  option is off (free-first-off), whatever the page sends. */}
+              {ffOption === true ? (
+                <div className="nc-ff-row" data-e2e="free-first-row">
+                  <div className="min-w-0 flex-1">
+                    <div className="nc-ff-t">{t.createClass.freeFirst}</div>
+                    <p id="nc-ff-help" className="nc-ff-h">{c.ffOnHelp}</p>
+                  </div>
+                  <Switch
+                    checked={f.freeFirst}
+                    onChange={(v) => set("freeFirst", v)}
+                    label={t.createClass.freeFirst}
+                    describedBy="nc-ff-help"
+                    e2e="free-first-box"
+                  />
+                </div>
+              ) : ffOption === false ? (
+                <p className="nc-ff-off" data-e2e="free-first-off">
+                  <span>{c.ffOffLine}</span>
+                  <span aria-hidden="true"> · </span>
+                  <Link href="/dashboard/settings?tab=vitrine#free-first" className="linklike nc-ff-off-a">{c.ffOffCta}</Link>
                 </p>
-              )}
+              ) : null}
             </FormSection>
 
             {/* Folded: most tutors use the room Tnajem opens for them. */}

@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
 import { useLocale } from "@/components/LocaleProvider";
 import { Calendar, Back, Forward } from "@/components/icons";
 import { MONTHS_FR, monthLabel, tunisWallTime } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
+import { placePopover, type Placement } from "./popover-place"; // live-fixes-1 · D3
 
 /* ══════════════════════════════════════════════════════════════════════════════
    espace prof v2 · shell — THE DATE AND TIME FIELDS OF THE PROF SPACE (rule 6).
@@ -26,6 +27,11 @@ import { bilingual } from "@/lib/i18n";
    incomplete or invalid. Nothing here converts a timezone — the wall time IS the
    value, exactly like the datetime-local it replaces.
    ══════════════════════════════════════════════════════════════════════════════ */
+
+/** The calendar's height before it is measured: a title row and up to six weeks of 44px days. */
+const DP_POP_ESTIMATE = 390;
+/** The visible field a calendar hangs from (the input box, not the whole wrapper). */
+const fieldOf = (wrap: HTMLElement | null): Element | null => wrap?.querySelector(".aps-dp-inp") ?? wrap;
 
 const copy = bilingual({
   fr: {
@@ -162,6 +168,17 @@ export function DatePicker({
   const wrapRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const gridRef = useRef<HTMLTableElement>(null);
+  /* live-fixes-1 · D3: the calendar opens UPWARD when the room below the field — down
+     to the sticky action bar or the phone tab bar — is too short, so the bar never cuts
+     it off. Decided before it opens (a first estimate, so focusing a day never scrolls
+     the page towards the wrong side), then measured once it is there. */
+  const popRef = useRef<HTMLDivElement>(null);
+  const [place, setPlace] = useState<Placement>("below");
+  useLayoutEffect(() => {
+    const a = fieldOf(wrapRef.current);
+    if (!open || !popRef.current || !a) return;
+    setPlace(placePopover(a, popRef.current.offsetHeight));
+  }, [open]);
 
   // Click outside closes; focus goes nowhere surprising.
   useEffect(() => {
@@ -198,6 +215,8 @@ export function DatePicker({
   function openCalendar() {
     const v = fromIso(value);
     setFocus(v ?? (minYmd && cmp(todayTunis(), minYmd) < 0 ? minYmd : todayTunis()));
+    const a = fieldOf(wrapRef.current);
+    if (a) setPlace(placePopover(a, DP_POP_ESTIMATE));
     setOpen(true);
   }
 
@@ -271,7 +290,15 @@ export function DatePicker({
       </div>
 
       {open && (
-        <div className="aps-pop aps-dp-pop" role="dialog" aria-modal="false" aria-label={c.choose} data-e2e="date-calendar">
+        <div
+          ref={popRef}
+          className={`aps-pop aps-dp-pop${place === "above" ? " is-above" : ""}`}
+          role="dialog"
+          aria-modal="false"
+          aria-label={c.choose}
+          data-e2e="date-calendar"
+          data-place={place}
+        >
           <div className="aps-dp-head">
             <button type="button" className="aps-tool" aria-label={c.prev} onClick={() => setFocus(addMonths(focus, -1))}>
               <Back />
