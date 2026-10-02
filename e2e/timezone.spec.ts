@@ -3,6 +3,7 @@ import { sql } from "./support/db";
 import { seedProfile, seedTutor, seedClass } from "./support/seed";
 import { mintSession, sessionCookie } from "./support/session";
 import { fillWallTime, wallTimeOf } from "./support/datetime"; // espace prof v2 · shell
+import { notificationTexts } from "./support/journey"; // 0040: notifications are rendered when read
 
 /* ════════════════════════════════════════════════════════════════════════════
    timezone: every class time is Tunis time — for a browser in São Paulo and a
@@ -130,9 +131,11 @@ test.describe("timezone: class times are Tunis time", () => {
     await expect(dash.locator(`time[datetime="${iso}"]`).first()).toContainText(want.clock, { timeout: 15_000 });
     await tutorCtx.close();
 
-    const bodies = await sql<{ kind: string; body: string }[]>`
-      select kind, body from notifications
-       where profile_id in (${student.id}, ${tutorProfile.id}) and kind in ('booking_confirmed', 'new_booking')`;
+    // Rendered as the bell shows them (a key + parameters since 0040).
+    const bodies = [
+      ...(await notificationTexts(student.id, "booking_confirmed")).map((t) => ({ kind: "booking_confirmed", body: t.body })),
+      ...(await notificationTexts(tutorProfile.id, "new_booking")).map((t) => ({ kind: "new_booking", body: t.body })),
+    ];
     expect(bodies.map((b) => b.kind).sort()).toEqual(["booking_confirmed", "new_booking"]);
     for (const b of bodies) {
       expect(b.body, `${b.kind} says the Tunis time`).toContain(want.clock);
@@ -209,8 +212,7 @@ test.describe("timezone: class times are Tunis time", () => {
     await expect(page.locator(`time[datetime="${moved.toISOString()}"]`).first()).toContainText("19:30", { timeout: 15_000 });
     await ctx.close();
 
-    const [note] = await sql<{ body: string }[]>`
-      select body from notifications where profile_id = ${student.id} and kind = 'class_reminder'`;
+    const [note] = await notificationTexts(student.id, "class_reminder");
     expect(note?.body).toContain("19:30");
   });
 });

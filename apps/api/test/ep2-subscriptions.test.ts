@@ -5,6 +5,7 @@ import {
 } from "./support/fx";
 import { MONTHLY_PAYMENT_NOTE } from "@tnajem/shared";
 import { runSubscriptionJobs } from "../src/lib/subscription-cron";
+import { renderNotification } from "@tnajem/shared/notification-messages";
 import type { MailSender } from "../src/lib/follow-digest";
 import { db } from "../src/db";
 
@@ -97,10 +98,12 @@ describe("P5 · request → confirm", () => {
     assert.equal(res.body.subscription.priceTnd, 120);
     assert.equal(res.body.subscription.periodEnd, null);
     assert.deepEqual((await call(app, "POST", "/subscriptions", sc, { offerId })).body, { ok: false, error: "already-subscribed" });
-    const [n] = await sql<{ body: string; kind: string }[]>`select kind, body from notifications where profile_id = ${tutor.profileId}`;
+    const [n] = await sql<{ kind: string; msg_key: string; msg_params: unknown }[]>`
+      select kind, msg_key, msg_params from notifications where profile_id = ${tutor.profileId}`;
     assert.equal(n.kind, "subscription_requested");
-    assert.match(n.body, /^Skander /);
-    assert.doesNotMatch(n.body, /Ayari/);
+    const shown = renderNotification({ key: n.msg_key, params: n.msg_params, title: null, body: null }, "fr");
+    assert.match(shown.body, /^Skander /);
+    assert.doesNotMatch(JSON.stringify(n.msg_params), /Ayari/);
   });
 
   test("own offer, a tutor account, a minor without consent: refused", async () => {
@@ -207,9 +210,9 @@ describe("P5 · covered seats (C7)", () => {
 
 describe("P5 · the nightly sweep, renewal, pause and cancel", () => {
   const capture = () => {
-    const sent: { to: string; headers?: Record<string, string>; text: string }[] = [];
-    const send: MailSender = async (to, _s, text, extras) => {
-      sent.push({ to, headers: extras?.headers, text });
+    const sent: { to: string; subject: string; headers?: Record<string, string>; text: string }[] = [];
+    const send: MailSender = async (to, subject, text, extras) => {
+      sent.push({ to, subject, headers: extras?.headers, text });
       return true;
     };
     return { sent, send };
@@ -227,6 +230,23 @@ describe("P5 · the nightly sweep, renewal, pause and cancel", () => {
     assert.match(mail[0].text, /Paiement en ligne bientôt/);
     const kinds = await sql<{ profile_id: string }[]>`select profile_id from notifications where kind = 'subscription_ending' and profile_id in ${sql([student.id, tutor.profileId])}`;
     assert.equal(kinds.length, 2);
+  });
+
+  test("the reminder speaks the student's language: an Arabic account gets, by e-mail, the Arabic sentence its bell shows", async () => {
+    const { subId, student } = await activeSubscriber();
+    await sql`update profiles set locale = 'ar' where id = ${student.id}`;
+    await sql`update student_subscriptions set period_end = now() + interval '2 days' where id = ${subId}`;
+    const { sent, send } = capture();
+    await runSubscriptionJobs(db, { send });
+    const [mail] = sent.filter((m) => m.to === student.email);
+    assert.ok(mail, "one e-mail");
+    const [n] = await sql<{ msg_key: string; msg_params: unknown }[]>`
+      select msg_key, msg_params from notifications where kind = 'subscription_ending' and profile_id = ${student.id}`;
+    const ar = renderNotification({ key: n.msg_key, params: n.msg_params, title: null, body: null }, "ar");
+    assert.equal(ar.lang, "ar");
+    assert.ok(mail.text.includes(ar.body), "the e-mail carries the bell's Arabic sentence");
+    assert.match(mail.subject, /الاشتراك/);
+    assert.doesNotMatch(mail.text, /Ton abonnement/, "no French sentence in an Arabic e-mail");
   });
 
   test("past period_end → expired; seats are ordinary again; one click renews it for a month", async () => {

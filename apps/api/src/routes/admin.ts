@@ -519,11 +519,8 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       }
       if (t.profileId) {
         await notify(db, t.profileId, {
-          kind: "verification_approved",
-          title: "Modification validée ✅",
-          body: expectedName !== null
-            ? "Ton nouveau nom est validé : il est maintenant affiché sur ta page."
-            : "Tes nouveaux documents sont validés. Ta page reste en ligne.",
+          key: expectedName !== null ? "verificationChangeApprovedName" : "verificationChangeApprovedDocs",
+          params: {},
           href: "/dashboard",
         });
       }
@@ -555,11 +552,10 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
 
     if (t.profileId) {
       await notify(db, t.profileId, {
-        kind: "verification_approved",
-        title: "Profil vérifié ✅",
-        body: "Ton profil est validé. Ta page est en ligne et visible dans Explorer.",
+        key: "verificationApproved",
+        params: { slug: t.slug },
         href: "/dashboard",
-        sms: `Tnajem : ton profil est vérifié ✅ Ta page tnajem.com/${t.slug} est en ligne.`,
+        sms: true,
       });
     }
 
@@ -608,9 +604,8 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       if (!decidedRe) return { ok: false, error: "not-pending" };
       if (t.profileId) {
         await notify(db, t.profileId, {
-          kind: "verification_rejected",
-          title: "Modification non validée",
-          body: `Ta modification n'a pas été validée : ${note.value}. Ta page reste en ligne telle qu'elle a été validée.`,
+          key: "verificationChangeRejected",
+          params: { note: note.value },
           href: "/dashboard",
         });
       }
@@ -637,11 +632,10 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
 
     if (t.profileId) {
       await notify(db, t.profileId, {
-        kind: "verification_rejected",
-        title: "Dossier à compléter",
-        body: `Ton dossier n'a pas été validé : ${note.value}. Tu peux corriger et renvoyer.`,
+        key: "verificationRejected",
+        params: { note: note.value },
         href: "/onboarding/verify",
-        sms: "Tnajem : ton dossier de vérification doit être complété. Détails dans ton espace prof.",
+        sms: true,
       });
     }
 

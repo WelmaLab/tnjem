@@ -6,7 +6,7 @@ import {
   notify,
 } from "@tnajem/db";
 import {
-  vUuid, isMinorBirthYear, classWhen, notificationWhen,
+  vUuid, isMinorBirthYear, classWhen,
   type StudentDashboard,
   isEffectivelyFreeFirst,
   cancellationOutcome,
@@ -290,24 +290,21 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
     /* Notifications AFTER the commit. notify() never throws, and it does SMS I/O:
        running it inside the transaction would hold the seat lock open across a
        network round-trip, pinning one of the pool's connections. */
-    const whenLabel = notificationWhen(cls.scheduledAt); // Tunis time, stored in the body
-
+    const at = new Date(cls.scheduledAt).toISOString(); // rendered in Tunis time, in the reader's language
     await notify(db, uid, {
-      kind: "booking_confirmed",
-      title: "Place réservée ✅",
-      body: `${cls.title} — ${whenLabel}${tut?.fullName ? ` avec ${publicTutorName(tut.fullName)}` : ""}.`, // phase-a lane L2 (A23): "Mohamed B."
+      key: "bookingConfirmed",
+      params: { classTitle: cls.title, at, who: publicTutorName(tut?.fullName) }, // phase-a lane L2 (A23): "Mohamed B."
       href: `/class/${cls.id}`,
       // Names the tutor: rewritten if that account is ever erased.
       aboutProfileId: tut?.profileId ?? null,
-      sms: `Tnajem : ta place pour « ${cls.title} » le ${whenLabel} est réservée. Lien de la séance dans ton espace élève.`,
+      sms: true,
     });
     if (tut?.profileId) {
       await notify(db, tut.profileId, {
-        kind: "new_booking",
-        title: "Nouvelle réservation 🎉",
         /* First name only, like every other place a counterparty is named (Step 8),
            and aboutProfileId so an erasure can rewrite it. */
-        body: `${publicDisplayName(session.profile.fullName) ?? "Un élève"} a réservé « ${cls.title} » (${whenLabel}).`,
+        key: "bookingNew",
+        params: { classTitle: cls.title, at, who: publicDisplayName(session.profile.fullName) },
         href: "/dashboard",
         aboutProfileId: uid,
       });
@@ -477,19 +474,20 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
     if (!released) return { ok: true }; // already cancelled — idempotent
 
     if (tut?.profileId) {
-      const whenLabel = notificationWhen(cls.scheduledAt); // Tunis time, stored in the body
       /* The tutor is told WHEN it happened relative to the deadline, because that
          is the whole difference between a cancellation they can refill and one
          they cannot. It says nothing about a payment: nothing is charged, and a
          notification implying otherwise would be the exact false money claim the
          ledger's payments_enabled column exists to keep straight. */
-      const lateNote = outcome.late
-        ? ` Annulation tardive (moins de ${CANCEL_FREE_WINDOW_HOURS}h avant).`
-        : "";
       await notify(db, tut.profileId, {
-        kind: "booking_cancelled",
-        title: "Annulation",
-        body: `${publicDisplayName(session.profile.fullName) ?? "Un élève"} a annulé sa place pour « ${cls.title} » (${whenLabel}). La place est de nouveau libre.${lateNote}`,
+        key: "bookingCancelledByStudent",
+        params: {
+          classTitle: cls.title,
+          at: new Date(cls.scheduledAt).toISOString(),
+          who: publicDisplayName(session.profile.fullName),
+          late: outcome.late,
+          lateHours: CANCEL_FREE_WINDOW_HOURS,
+        },
         href: "/dashboard",
         aboutProfileId: uid,
       });

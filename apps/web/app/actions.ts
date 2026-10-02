@@ -827,10 +827,12 @@ export async function getTutorReviews(tutorSlug: string): Promise<TutorReviews> 
   return callAnonymous<TutorReviews>(`/tutors/${encodeURIComponent(tutorSlug.trim())}/reviews`);
 }
 
-export async function getNotifications(): Promise<NotificationItem[]> {
+export async function getNotifications(locale?: "fr" | "ar"): Promise<NotificationItem[]> {
   if (demoFallback) return [];
-  // PORTED to apps/api (GET /notifications).
-  return call<NotificationItem[]>("/notifications", undefined, "GET");
+  // PORTED to apps/api (GET /notifications). The API renders each row in `locale`
+  // (the page's language) — a whitelist, never a string pasted into the path.
+  const q = locale === "ar" || locale === "fr" ? `?locale=${locale}` : "";
+  return call<NotificationItem[]>(`/notifications${q}`, undefined, "GET");
 }
 
 /** Marks the caller's unread notifications as read (all of them, or just `ids`). */

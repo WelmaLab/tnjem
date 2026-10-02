@@ -3,7 +3,8 @@ import {
   profiles, studentSubscriptions, tutorOffers, tutors,
   notify, wantsEmail,
 } from "@tnajem/db";
-import { MONTHLY_PAYMENT_NOTE, formatNumericDate, publicDisplayName, publicTutorName } from "@tnajem/shared";
+import { MONTHLY_PAYMENT_NOTE, publicDisplayName, publicTutorName } from "@tnajem/shared";
+import { renderMessage } from "@tnajem/shared/notification-messages";
 import { sendMail } from "@tnajem/shared/mail";
 import { listUnsubscribeHeaders, siteUrl, unsubscribeUrl } from "@tnajem/shared/unsubscribe";
 import type { db as appDb } from "../db";
@@ -30,15 +31,11 @@ const REMINDER = {
   fr: {
     subject: "Ton abonnement se termine bientôt",
     hello: (n: string | null) => (n ? `Bonjour ${n},` : "Bonjour,"),
-    body: (title: string, tutor: string, end: string) =>
-      `Ton abonnement « ${title} » avec ${tutor} se termine le ${end}.\nPour continuer, vois avec ton prof : il le renouvelle en un clic sur Tnajem dès qu'il a reçu ton paiement.`,
     stop: "Ne plus recevoir ces rappels :",
   },
   ar: {
     subject: "الاشتراك متاعك قريب يوفى",
     hello: (n: string | null) => (n ? `عسلامة ${n}،` : "عسلامة،"),
-    body: (title: string, tutor: string, end: string) =>
-      `الاشتراك متاعك « ${title} » مع ${tutor} يوفى نهار ${end}.\nباش تكمّل، تفاهم مع أستاذك : يجدّدو بكليك وحدة على Tnajem كيف يوصلو الخلاص متاعك.`,
     stop: "باش ما عادش توصلك التذكيرات هاذي :",
   },
 } as const;
@@ -82,17 +79,15 @@ export async function runSubscriptionJobs(db: Db, opts: SubscriptionJobOptions =
     const title = offers.get(s.offerId) ?? "";
     const student = people.get(s.studentProfileId);
     await notify(db, s.studentProfileId, {
-      kind: "subscription_expired",
-      title: "Abonnement terminé",
-      body: `Ton abonnement « ${title} »${t ? ` avec ${publicTutorName(t.fullName)}` : ""} est arrivé à son terme. Ton prof peut le renouveler en un clic.`,
+      key: "subscriptionExpiredStudent",
+      params: { who: publicTutorName(t?.fullName), offerTitle: title },
       href: t ? `/${t.slug}` : "/student",
       aboutProfileId: t?.profileId ?? null,
     });
     if (t?.profileId) {
       await notify(db, t.profileId, {
-        kind: "subscription_expired",
-        title: "Abonnement terminé",
-        body: `L'abonnement de ${publicDisplayName(student?.fullName) ?? "ton élève"} (« ${title} ») est arrivé à son terme. Renouvelle-le en un clic quand tu as reçu le paiement.`,
+        key: "subscriptionExpiredTutor",
+        params: { who: publicDisplayName(student?.fullName), offerTitle: title },
         href: "/dashboard/subscriptions",
         aboutProfileId: s.studentProfileId,
       });
@@ -104,20 +99,18 @@ export async function runSubscriptionJobs(db: Db, opts: SubscriptionJobOptions =
     const t = tutorRows.get(s.tutorId);
     const title = offers.get(s.offerId) ?? "";
     const student = people.get(s.studentProfileId);
-    const end = formatNumericDate(s.periodEnd as Date);
-    const tutorName = publicTutorName(t?.fullName) ?? "";
+    const until = new Date(s.periodEnd as Date).toISOString();
+    const forStudent = { who: publicTutorName(t?.fullName), offerTitle: title, until };
     await notify(db, s.studentProfileId, {
-      kind: "subscription_ending",
-      title: "Abonnement : fin dans 3 jours",
-      body: `Ton abonnement « ${title} »${tutorName ? ` avec ${tutorName}` : ""} se termine le ${end}. Pour continuer, vois avec ton prof : il le renouvelle en un clic.`,
+      key: "subscriptionEndingStudent",
+      params: forStudent,
       href: t ? `/${t.slug}` : "/student",
       aboutProfileId: t?.profileId ?? null,
     });
     if (t?.profileId) {
       await notify(db, t.profileId, {
-        kind: "subscription_ending",
-        title: "Abonnement : fin dans 3 jours",
-        body: `L'abonnement de ${publicDisplayName(student?.fullName) ?? "ton élève"} (« ${title} ») se termine le ${end}.`,
+        key: "subscriptionEndingTutor",
+        params: { who: publicDisplayName(student?.fullName), offerTitle: title, until },
         href: "/dashboard/subscriptions",
         aboutProfileId: s.studentProfileId,
       });
@@ -128,7 +121,8 @@ export async function runSubscriptionJobs(db: Db, opts: SubscriptionJobOptions =
       const text = [
         c.hello(publicDisplayName(student.fullName)),
         "",
-        c.body(title, tutorName, end),
+        // The bell's sentence, in the student's language (@tnajem/shared/notification-messages).
+        renderMessage("subscriptionEndingStudent", forStudent, loc).body,
         t ? `${siteUrl()}/${loc}/${t.slug}` : "",
         "",
         MONTHLY_PAYMENT_NOTE[loc],

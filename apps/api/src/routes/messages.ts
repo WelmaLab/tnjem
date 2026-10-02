@@ -357,9 +357,8 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
        after the write rather than inside it. */
     if (me.otherProfileId) {
       await notify(db, me.otherProfileId, {
-        kind: "message",
-        title: "Nouveau message",
-        body: `Tu as un nouveau message à propos de « ${me.classTitle} ».`,
+        key: "messageNew",
+        params: { classTitle: me.classTitle },
         href: `/messages/${me.threadId}`,
       });
     }

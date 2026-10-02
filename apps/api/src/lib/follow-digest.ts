@@ -3,7 +3,8 @@ import {
   classes, consents, followDigests, packs, profiles, tutorFollows, tutors,
   notify, wantsEmail,
 } from "@tnajem/db";
-import { formatNumericDate, isAdult, minorsAllowed, publicDisplayName, publicTutorName, tunisClock } from "@tnajem/shared";
+import { isAdult, minorsAllowed, publicDisplayName, publicTutorName } from "@tnajem/shared";
+import { digestLine, type DigestItem } from "@tnajem/shared/notification-messages";
 import { sendMail, type MailExtras } from "@tnajem/shared/mail";
 import { listUnsubscribeHeaders, siteUrl, unsubscribeUrl } from "@tnajem/shared/unsubscribe";
 import { onSaleClassSql } from "./class-sale";
@@ -63,13 +64,15 @@ type Item = {
   at: Date | null;
 };
 
+/** A class or fiche as a notification parameter: the instant travels as ISO, rendered by the reader. */
+const digestItem = (it: Item): DigestItem =>
+  it.kind === "class" && it.at ? { type: "class", title: it.title, at: it.at.toISOString() } : { type: "pack", title: it.title };
+
 const COPY = {
   fr: {
     subject: "Du nouveau chez tes profs sur Tnajem",
     hello: (n: string | null) => (n ? `Bonjour ${n},` : "Bonjour,"),
     lead: "Du nouveau chez les profs que tu suis sur Tnajem :",
-    cls: (t: string, title: string, date: string, time: string) => `${t} — « ${title} » — ${date} à ${time}`,
-    pack: (t: string, title: string) => `${t} — nouvelle fiche : « ${title} »`,
     why: "Tu reçois cet e-mail parce que tu suis ces profs sur Tnajem (au plus un par jour).",
     stop: "Ne plus recevoir ces e-mails :",
   },
@@ -77,8 +80,6 @@ const COPY = {
     subject: "جديد أساتذتك على Tnajem",
     hello: (n: string | null) => (n ? `عسلامة ${n}،` : "عسلامة،"),
     lead: "فما جديد عند الأساتذة اللي تتبع فيهم على Tnajem :",
-    cls: (t: string, title: string, date: string, time: string) => `${t} — « ${title} » — ${date} على ${time}`,
-    pack: (t: string, title: string) => `${t} — فيشة جديدة : « ${title} »`,
     why: "توصلك الرسالة هاذي خاطر تتبع الأساتذة هاذوما على Tnajem (مرّة في النهار على الأكثر).",
     stop: "باش ما عادش توصلك :",
   },
@@ -176,14 +177,9 @@ export async function runFollowDigest(db: Db, opts: DigestOptions = {}): Promise
 
     for (const list of perTutor.values()) {
       const t = list[0];
-      const name = publicTutorName(t.tutorName) ?? "Ton prof";
-      const lines = list.slice(0, 3).map((it) =>
-        it.kind === "class" && it.at ? `« ${it.title} » le ${formatNumericDate(it.at)} à ${tunisClock(it.at)}` : `nouvelle fiche « ${it.title} »`);
-      const more = list.length > 3 ? ` et ${list.length - 3} autre${list.length - 3 > 1 ? "s" : ""}` : "";
       await notify(db, p.id, {
-        kind: "follow_digest",
-        title: `${name} a publié du nouveau`,
-        body: `${lines.join(" · ")}${more}.`,
+        key: "followDigest",
+        params: { who: publicTutorName(t.tutorName), items: list.slice(0, 3).map(digestItem), more: Math.max(0, list.length - 3) },
         href: list.length === 1 && t.kind === "class" ? `/class/${t.id}` : `/${t.slug}`,
         aboutProfileId: t.tutorProfileId, // names the tutor: rewritten if that account is erased
       });
@@ -200,10 +196,10 @@ export async function runFollowDigest(db: Db, opts: DigestOptions = {}): Promise
         c.lead,
         "",
         ...items.flatMap((it) => {
+          // The same line the bell shows (@tnajem/shared/notification-messages), after the tutor's name.
           const who = publicTutorName(it.tutorName) ?? "";
-          return it.kind === "class" && it.at
-            ? [`• ${c.cls(who, it.title, formatNumericDate(it.at), tunisClock(it.at))}`, `  ${site}/${loc}/class/${it.id}`]
-            : [`• ${c.pack(who, it.title)}`, `  ${site}/${loc}/${it.slug}`];
+          const line = `• ${who ? `${who} — ` : ""}${digestLine(digestItem(it), loc)}`;
+          return it.kind === "class" && it.at ? [line, `  ${site}/${loc}/class/${it.id}`] : [line, `  ${site}/${loc}/${it.slug}`];
         }),
         "",
         "—",

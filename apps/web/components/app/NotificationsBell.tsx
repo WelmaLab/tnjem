@@ -60,6 +60,12 @@ export function NotificationsBell({ unread, onRead }: { unread: number; onRead: 
   const wrapRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
+  // The list is rendered in the page's language: switching FR/ع invalidates it.
+  useEffect(() => {
+    setItems(null);
+    setOpen(false);
+  }, [locale]);
+
   useEffect(() => {
     if (!open) return;
     function onDocDown(e: MouseEvent) {
@@ -83,7 +89,7 @@ export function NotificationsBell({ unread, onRead }: { unread: number; onRead: 
     const next = !open;
     setOpen(next);
     if (!next) return;
-    const fresh = await getNotifications().catch(() => [] as NotificationItem[]);
+    const fresh = await getNotifications(locale).catch(() => [] as NotificationItem[]);
     setItems(fresh);
     if (fresh.some((n) => !n.read)) {
       await markNotificationsRead().catch(() => {});
@@ -127,11 +133,12 @@ export function NotificationsBell({ unread, onRead }: { unread: number; onRead: 
                   <>
                     <span className={`aps-note-dot${n.read ? "" : " is-new"}`} aria-hidden="true" />
                     <span className="min-w-0 flex-1">
-                      {/* Stored text (French today, whatever the reader's language):
-                          dir="auto" keeps its punctuation and « » in place inside the
-                          Arabic panel. */}
-                      <span dir="auto" className="block text-[13.5px] font-bold text-ink">{n.title}</span>
-                      <span dir="auto" className="block text-[13px] text-ink2 leading-[1.5] mt-0.5">{n.body}</span>
+                      {/* Rendered by the API in this page's language. A row stored
+                          before 0040 is still French (lang "fr"): its direction is set
+                          from its language, so its punctuation and « » stay in place
+                          inside the Arabic panel. */}
+                      <span lang={n.lang} dir={n.lang === "ar" ? "rtl" : "ltr"} className="block text-[13.5px] font-bold text-ink">{n.title}</span>
+                      <span lang={n.lang} dir={n.lang === "ar" ? "rtl" : "ltr"} className="block text-[13px] text-ink2 leading-[1.5] mt-0.5">{n.body}</span>
                       <span className="block text-[13px] text-muted mt-1">{timeAgo(n.createdAt, c)}</span>
                     </span>
                   </>

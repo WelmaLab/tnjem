@@ -480,8 +480,11 @@ export type NotificationKind =
 export type NotificationItem = {
   id: string;
   kind: NotificationKind;
+  /** Rendered by the API in the reader's language (@tnajem/shared/notification-messages). */
   title: string;
   body: string;
+  /** The language title/body are actually in: the reader's, or "fr" for a row stored before 0040. */
+  lang: Locale;
   href: string | null;
   read: boolean;
   createdAt: string;           // ISO

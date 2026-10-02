@@ -23,6 +23,7 @@ import { auditAdmin } from "../lib/audit";
 import { logEvent } from "@tnajem/shared/observability";
 import { isUniqueViolation } from "../lib/db-errors"; // phase-a lane L3 (A16)
 import { reviewEligibility } from "@tnajem/shared"; // espace prof v2 · pro (P7): the one review rule
+import { renderNotification } from "@tnajem/shared/notification-messages";
 
 /* reviews · consent · notifications · live-room access.
 
@@ -46,6 +47,8 @@ const consentBody = z.object({
 });
 
 const markReadBody = z.object({ ids: z.array(z.string()).optional() }).optional();
+/* The reader's language: the page's, passed by the bell. Without one, the account's. */
+const notificationsQuery = z.object({ locale: z.enum(["fr", "ar"]).optional() });
 
 export async function miscRoutes(app: FastifyInstance): Promise<void> {
   /* ── POST /reviews ───────────────────────────────────────────────────────── */
@@ -253,10 +256,16 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  /* ── GET /notifications ──────────────────────────────────────────────────── */
-  app.get("/notifications", async (req): Promise<NotificationItem[]> => {
+  /* ── GET /notifications ──────────────────────────────────────────────────────
+     Each row is a message key + parameters (0040), rendered HERE in the reader's
+     language. A row from before 0040 has only its stored French text, which comes
+     back as it is, marked lang "fr", so the bell can set its direction. */
+  app.get("/notifications", async (req, reply): Promise<NotificationItem[] | void> => {
+    const query = notificationsQuery.safeParse(req.query ?? {});
+    if (!query.success) return reply.code(400).send({ error: "bad-request" });
     const session = await getSession(req);
     if (!session) return [];
+    const locale = query.data.locale ?? (session.profile.locale === "ar" ? "ar" : "fr");
 
     const rows = await db
       .select()
@@ -265,15 +274,19 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
       .orderBy(desc(notifications.createdAt))
       .limit(50);
 
-    return rows.map((n) => ({
-      id: n.id,
-      kind: n.kind as NotificationKind,
-      title: n.title,
-      body: n.body,
-      href: n.href ?? null,
-      read: Boolean(n.readAt),
-      createdAt: new Date(n.createdAt).toISOString(),
-    }));
+    return rows.map((n) => {
+      const text = renderNotification({ key: n.msgKey, params: n.msgParams, title: n.title, body: n.body }, locale);
+      return {
+        id: n.id,
+        kind: n.kind as NotificationKind,
+        title: text.title,
+        body: text.body,
+        lang: text.lang,
+        href: n.href ?? null,
+        read: Boolean(n.readAt),
+        createdAt: new Date(n.createdAt).toISOString(),
+      };
+    });
   });
 
   /* ── POST /notifications/read ────────────────────────────────────────────── */

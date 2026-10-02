@@ -162,7 +162,12 @@ function keysOf(src, open) {
 
 let objs = 0;
 let parityKeys = 0;
-for (const f of FILES.filter((p) => /\.tsx?$/.test(p))) {
+/* Copy that is rendered OUTSIDE the web app is held to the same rule: the
+   notification catalog (packages/shared, rendered by the API for the bell, e-mails
+   and SMS) and the API's e-mail copy. An Arabic reader of an e-mail meets a missing
+   key exactly as they would on a page. */
+const PARITY_EXTRA = [join(ROOT, "packages", "shared", "src"), join(ROOT, "apps", "api", "src")].flatMap((d) => walk(d));
+for (const f of [...FILES, ...PARITY_EXTRA].filter((p) => /\.tsx?$/.test(p))) {
   const src = readFileSync(f, "utf8");
   for (const m of src.matchAll(/\bfr\s*:\s*\{/g)) {
     const frOpen = m.index + m[0].length - 1;

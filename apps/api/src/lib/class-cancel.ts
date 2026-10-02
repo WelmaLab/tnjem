@@ -1,5 +1,5 @@
 import { and, eq, sql as raw, bookings, cancellations, classes, notify } from "@tnajem/db";
-import { cancellationOutcome, notificationWhen } from "@tnajem/shared";
+import { cancellationOutcome } from "@tnajem/shared";
 import { paymentsEnabled } from "@tnajem/shared/payments";
 import { db } from "../db";
 import { recomputeTutorStats } from "./stats";
@@ -37,8 +37,8 @@ export async function cancelClassForEveryone(
     actor: "tutor" | "system";
     actorProfileId: string | null;
     reason: string;
-    /** The student notification body, given the class title and its Tunis-time label. */
-    notifyBody: (title: string, whenLabel: string) => string;
+    /** Which message the booked students get (@tnajem/shared/notification-messages). */
+    notifyKey: "classCancelledByTutor" | "classCancelledByPlatform";
   },
 ): Promise<number> {
   /* Read the live bookings BEFORE the transaction, so the notifications after it
@@ -96,12 +96,10 @@ export async function cancelClassForEveryone(
     await recomputeTutorStats(c.tutorId, tx);
   });
 
-  const whenLabel = notificationWhen(c.scheduledAt); // Tunis time, stored in the body
   for (const b of live) {
     await notify(db, b.studentId, {
-      kind: "booking_cancelled",
-      title: "Séance annulée",
-      body: opts.notifyBody(c.title, whenLabel),
+      key: opts.notifyKey,
+      params: { classTitle: c.title, at: new Date(c.scheduledAt).toISOString() },
       href: "/student",
     });
   }

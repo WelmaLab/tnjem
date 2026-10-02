@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, uuid, text, integer, numeric, boolean, timestamp, unique, index } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, uuid, text, integer, numeric, boolean, timestamp, unique, index, jsonb } from "drizzle-orm/pg-core";
 
 /* Tnajem DB schema (local Postgres + Drizzle). Plain Postgres — no Supabase auth.users,
    no RLS. Authorization is enforced in the server data layer (lib/data.ts, app/actions.ts).
@@ -884,10 +884,16 @@ export const notifications = pgTable("notifications", {
      booking_confirmed | booking_cancelled | class_reminder |
      verification_approved | verification_rejected | new_booking | message */
   kind: text("kind").notNull(),
-  title: text("title").notNull(),
-  body: text("body").notNull(),
+  /* 0040: a row is a message key + JSON parameters, rendered in the reader's
+     language (@tnajem/shared/notification-messages). title/body are the French
+     text rows had BEFORE 0040, kept as their fallback; new rows leave them null.
+     CHECK notifications_key_or_text: one or the other. */
+  msgKey: text("msg_key"),
+  msgParams: jsonb("msg_params"),
+  title: text("title"),
+  body: text("body"),
   href: text("href"),
-  /* Whom the body names, when it names someone other than the recipient (0022), so
+  /* Whom the row names, when it names someone other than the recipient (0022), so
      erasing that person can rewrite this row. FK ON DELETE SET NULL in the SQL. */
   aboutProfileId: uuid("about_profile_id"),
   readAt: timestamp("read_at", { withTimezone: true }),

@@ -4,6 +4,7 @@
 import type { Browser, BrowserContext } from "@playwright/test";
 import { sql } from "./db";
 import { mintSession, sessionCookie } from "./session";
+import { renderNotification } from "@tnajem/shared/notification-messages";
 
 export const API = process.env.E2E_API_URL ?? "http://127.0.0.1:4000";
 
@@ -49,10 +50,16 @@ export async function specimenIdPng(browser: Browser, name: string): Promise<Buf
   return png;
 }
 
+/** The notifications' bodies as the bell shows them in French: since 0040 a row is a
+    message key + parameters, rendered when read (@tnajem/shared/notification-messages). */
 export async function notificationBodies(profileId: string, kind: string): Promise<string[]> {
-  const rows = await sql<{ body: string }[]>`
-    select body from notifications where profile_id = ${profileId} and kind = ${kind} order by created_at`;
-  return rows.map((r) => r.body);
+  return (await notificationTexts(profileId, kind)).map((t) => t.body);
+}
+
+export async function notificationTexts(profileId: string, kind: string, locale: "fr" | "ar" = "fr"): Promise<{ title: string; body: string }[]> {
+  const rows = await sql<{ msg_key: string | null; msg_params: unknown; title: string | null; body: string | null }[]>`
+    select msg_key, msg_params, title, body from notifications where profile_id = ${profileId} and kind = ${kind} order by created_at`;
+  return rows.map((r) => renderNotification({ key: r.msg_key, params: r.msg_params, title: r.title, body: r.body }, locale));
 }
 
 export async function auditActions(subjectId: string): Promise<string[]> {

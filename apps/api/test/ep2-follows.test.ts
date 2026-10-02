@@ -5,6 +5,7 @@ import {
   startApp, stopApp, seedProfile, seedTutor, seedClass, login, call, sql, type App,
 } from "./support/fx";
 import { runFollowDigest, type MailSender } from "../src/lib/follow-digest";
+import { renderNotification } from "@tnajem/shared/notification-messages";
 import { db } from "../src/db";
 
 /* Espace prof v2 · Phase 4 — students follow a teacher.
@@ -39,12 +40,15 @@ describe("P4 · follow / unfollow", () => {
     assert.deepEqual((await follow(tutor.slug, cookie)).body, { ok: true, following: true, already: true }, "idempotent");
     assert.equal((await call(app, "GET", `/follows/status?slug=${tutor.slug}`, cookie)).body.following, true);
 
-    const notes = await sql<{ kind: string; body: string; about_profile_id: string }[]>`
-      select kind, body, about_profile_id from notifications where profile_id = ${tutor.profileId}`;
+    const notes = await sql<{ kind: string; msg_key: string; msg_params: Record<string, unknown>; body: string | null; about_profile_id: string }[]>`
+      select kind, msg_key, msg_params, body, about_profile_id from notifications where profile_id = ${tutor.profileId}`;
     assert.equal(notes.length, 1, "one notification for one new follower");
     assert.equal(notes[0].kind, "new_follower");
-    assert.match(notes[0].body, /^Amine /);
-    assert.doesNotMatch(notes[0].body, /Karoui/, "never the last name");
+    assert.equal(notes[0].msg_key, "followNew");
+    assert.equal(notes[0].body, null, "a key and parameters are stored, never rendered text");
+    const shown = renderNotification({ key: notes[0].msg_key, params: notes[0].msg_params, title: null, body: null }, "fr");
+    assert.match(shown.body, /^Amine /);
+    assert.doesNotMatch(JSON.stringify(notes[0].msg_params), /Karoui/, "never the last name");
     assert.equal(notes[0].about_profile_id, student.id, "so an erasure can rewrite it");
   });
 
@@ -157,12 +161,13 @@ describe("P4 · the followers digest", () => {
 
     const { sent, send } = capture();
     await runFollowDigest(db, { send });
-    const notes = await sql<{ kind: string; title: string; body: string; href: string }[]>`
-      select kind, title, body, href from notifications where profile_id = ${student.id} and kind = 'follow_digest'`;
+    const notes = await sql<{ kind: string; msg_key: string; msg_params: unknown; href: string }[]>`
+      select kind, msg_key, msg_params, href from notifications where profile_id = ${student.id} and kind = 'follow_digest'`;
     assert.equal(notes.length, 1);
-    assert.match(notes[0].title, /^Yassine K\. a publié/);
-    assert.match(notes[0].body, new RegExp(fresh.title));
-    assert.doesNotMatch(notes[0].body, new RegExp(old.title), "a class from before the follow is not news");
+    const shown = renderNotification({ key: notes[0].msg_key, params: notes[0].msg_params, title: null, body: null }, "fr");
+    assert.match(shown.title, /^Yassine K\. a publié/);
+    assert.match(shown.body, new RegExp(fresh.title));
+    assert.doesNotMatch(shown.body, new RegExp(old.title), "a class from before the follow is not news");
     assert.equal(notes[0].href, `/class/${fresh.id}`);
 
     const mine = sent.filter((m) => m.to === student.email);

@@ -3,7 +3,9 @@ import { eq } from "drizzle-orm";
 import { profiles, notifications } from "./schema";
 import { smsEnabled, sendSms } from "@tnajem/shared/sms";
 import { logEvent } from "@tnajem/shared/observability";
-import type { NotificationKind } from "@tnajem/shared";
+import {
+  NOTIFICATION_KIND_OF, renderMessage, type NotificationKey, type NotificationParams,
+} from "@tnajem/shared/notification-messages";
 
 /* Lives in @tnajem/db, not in either app, because BOTH need it during the Step 4
    transition: reserveSeat and cancelBooking already run in apps/api, while
@@ -30,41 +32,52 @@ export type NotifyDb = PostgresJsDatabase<any>;
    Hard rule: notify() NEVER throws into its caller. A failed notification must
    not roll back a booking or a verification decision — we log and move on. */
 
-export type NotifyInput = {
-  kind: NotificationKind;
-  title: string;
-  body: string;
+/* A notification is a message KEY and its PARAMETERS (@tnajem/shared/
+   notification-messages), never rendered text: the bell renders it in the reader's
+   language, an SMS in the recipient's. The kind (what the UI files it under) follows
+   from the key. */
+export type NotifyInput<K extends NotificationKey = NotificationKey> = {
+  key: K;
+  params: NotificationParams[K];
   href?: string | null;
-  /** The profile the body NAMES, when that is not the recipient — so erasing that
-      person can rewrite this row (packages/db/src/erasure.ts). */
+  /** The profile the parameters NAME (`who`), when that is not the recipient — so
+      erasing that person can rewrite this row (packages/db/src/erasure.ts). */
   aboutProfileId?: string | null;
-  sms?: string; // when set + provider configured → also texted to the profile's phone
+  /** Also text it, in the recipient's language, when an SMS provider is configured
+      and the message has an SMS form. */
+  sms?: boolean;
 };
 
-export async function notify(
+export async function notify<K extends NotificationKey>(
   db: NotifyDb,
   profileId: string,
-  input: NotifyInput,
+  input: NotifyInput<K>,
 ): Promise<{ ok: boolean }> {
   if (!profileId) return { ok: false };
+  const kind = NOTIFICATION_KIND_OF[input.key];
+  if ((input.params as { who?: unknown }).who && !input.aboutProfileId) {
+    // A name with no about_profile_id is a name erasure can never take back out.
+    logEvent("warn", "notify_name_without_about", { kind });
+  }
   try {
     await db.insert(notifications).values({
       profileId,
-      kind: input.kind,
-      title: input.title,
-      body: input.body,
+      kind,
+      msgKey: input.key,
+      msgParams: input.params,
       href: input.href ?? null,
       aboutProfileId: input.aboutProfileId ?? null,
     });
 
     if (input.sms && smsEnabled()) {
-      const [p] = await db.select({ phone: profiles.phone }).from(profiles).where(eq(profiles.id, profileId)).limit(1);
-      if (p?.phone) await sendSms(p.phone, input.sms); // sendSms already swallows its own errors
+      const [p] = await db.select({ phone: profiles.phone, locale: profiles.locale }).from(profiles).where(eq(profiles.id, profileId)).limit(1);
+      const text = renderMessage(input.key, input.params, p?.locale === "ar" ? "ar" : "fr").sms;
+      if (p?.phone && text) await sendSms(p.phone, text); // sendSms already swallows its own errors
     }
     return { ok: true };
   } catch (e) {
     // The kind and the error code: never the recipient, never the driver message.
-    logEvent("error", "notify_failed", { kind: input.kind, detail: (e as { code?: string }).code ?? (e as Error).name });
+    logEvent("error", "notify_failed", { kind, detail: (e as { code?: string }).code ?? (e as Error).name });
     return { ok: false };
   }
 }

@@ -172,7 +172,7 @@ export async function adminAccountRoutes(app: FastifyInstance): Promise<void> {
         actor: "system",
         actorProfileId: session.profile.id,
         reason: "account-blocked",
-        notifyBody: (title, when) => `« ${title} » (${when}) n'aura pas lieu. Ta place est libérée, tu ne dois rien.`,
+        notifyKey: "classCancelledByPlatform",
       });
       cancelledClasses++;
     }

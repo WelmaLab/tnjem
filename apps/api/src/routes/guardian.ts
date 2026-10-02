@@ -227,9 +227,8 @@ export async function guardianRoutes(app: FastifyInstance): Promise<void> {
         .limit(1);
       if (t?.profileId) {
         await notify(db, t.profileId, {
-          kind: "booking_cancelled",
-          title: "Place libérée",
-          body: `Une place s'est libérée pour « ${t.title} ». Elle est de nouveau disponible.`,
+          key: "seatFreed",
+          params: { classTitle: t.title },
           href: "/dashboard",
         });
       }

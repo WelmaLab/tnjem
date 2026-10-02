@@ -91,10 +91,9 @@ export async function followRoutes(app: FastifyInstance): Promise<void> {
         .limit(1);
       if (!pending) {
         await notify(db, t.profileId, {
-          kind: "new_follower",
-          title: "Nouvel abonné",
+          key: "followNew",
           // First name only (Step 8); aboutProfileId so an erasure can rewrite it.
-          body: `${publicDisplayName(session.profile.fullName) ?? "Un élève"} te suit : il sera prévenu de tes nouvelles séances et fiches.`,
+          params: { who: publicDisplayName(session.profile.fullName) },
           href: "/dashboard/students",
           aboutProfileId: uid,
         });

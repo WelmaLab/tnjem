@@ -20,7 +20,8 @@
     "./class-input": "./src/class-input.ts",
     "./password-check": "./src/password-check.ts",
     "./unsubscribe": "./src/unsubscribe.ts",
-    "./growth-input": "./src/growth-input.ts"
+    "./growth-input": "./src/growth-input.ts",
+    "./notification-messages": "./src/notification-messages.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

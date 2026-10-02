@@ -1,5 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { renderMessage } from "@tnajem/shared/notification-messages";
 import {
   APP_TIME_ZONE,
   classWhen,
@@ -7,7 +8,6 @@ import {
   toWallInput,
   wallTimeToInstant,
   tunisWallTimeFromNow,
-  notificationWhen,
   formatShortDateTime,
   formatLongDate,
   formatNumericDate,
@@ -90,7 +90,10 @@ describe(`Tunis time (this process runs in ${processZone})`, () => {
   });
 
   test("notification and page dates are Tunis dates", () => {
-    assert.match(notificationWhen("2026-09-20T17:00:00.000Z"), /20 sept\.?.*18:00/);
+    // A notification stores the instant and renders it in Tunis, in the reader's language (0040).
+    const at = "2026-09-20T17:00:00.000Z";
+    assert.match(renderMessage("classMoved", { classTitle: "X", at }, "fr").body, /20\/09\/2026 à 18:00/);
+    assert.match(renderMessage("classMoved", { classTitle: "X", at }, "ar").body, /20\/09\/2026.*على.*18:00/);
     assert.match(formatLongDate("2026-09-30T23:30:00.000Z", "fr"), /^01 octobre 2026$/);
     assert.equal(formatNumericDate("2026-09-30T23:30:00.000Z"), "01/10/2026");
   });

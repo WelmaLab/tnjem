@@ -7,7 +7,7 @@ import {
 } from "@tnajem/db";
 import {
   vText, vOptionalText, vFutureDate, vInt, vPrice, vOptionalUrl, isUuid,
-  classWhen, notificationWhen,
+  classWhen,
   type ClassItem, type DashboardResult, type DashboardBooking,
   isEffectivelyFreeFirst,
   canOpenAnotherClass,
@@ -353,7 +353,7 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
       actor: "tutor",
       actorProfileId: session.profile.id,
       reason: reason.value ?? "cancelled-by-tutor",
-      notifyBody: (title, when) => `« ${title} » (${when}) est annulée par le prof. Tu ne dois rien.`,
+      notifyKey: "classCancelledByTutor",
     });
 
     return { ok: true, cancelled, revalidate: { tutors: [c.slug] } };
@@ -417,14 +417,12 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
         ),
       );
 
-    const whenLabel = notificationWhen(when.value); // Tunis time, stored in the body
     for (const b of live) {
       /* The notification SAYS they can cancel free. A student who cannot make the
          new time needs to know that before they go looking for the deadline. */
       await notify(db, b.studentId, {
-        kind: "class_reminder",
-        title: "Séance déplacée",
-        body: `« ${c.title} » est déplacée au ${whenLabel}. Si ça ne te convient pas, tu peux annuler sans frais.`,
+        key: "classMoved",
+        params: { classTitle: c.title, at: new Date(when.value).toISOString() },
         href: "/student",
       });
     }

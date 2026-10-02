@@ -6,7 +6,7 @@ import { loginAs } from "./support/session";
 import { recoverOtp, resetRateLimits } from "./support/otp";
 import { fillOtp } from "./support/otp-ui";
 import { E2E_PASSWORD } from "./support/password-ui";
-import { API } from "./support/journey";
+import { API, notificationTexts } from "./support/journey";
 import { AUTH_SECRET, BASE_URL } from "./support/env";
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -185,11 +185,12 @@ test("the nightly digest tells a follower about a new class; the e-mail's link s
 
   const res = await fetch(`${API}/cron/purge`, { method: "POST", headers: { authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` } });
   expect(res.status).toBe(200);
-  const rows = await sql<{ title: string; body: string; href: string }[]>`
-    select title, body, href from notifications where profile_id = ${student.id} and kind = 'follow_digest'`;
+  const rows = await sql<{ href: string }[]>`
+    select href from notifications where profile_id = ${student.id} and kind = 'follow_digest'`;
   expect(rows).toHaveLength(1);
-  expect(rows[0].title).toBe("Leila D. a publié du nouveau");
-  expect(rows[0].body).toContain(`« ${klass.title} »`);
+  const [text] = await notificationTexts(student.id, "follow_digest");
+  expect(text.title).toBe("Leila D. a publié du nouveau");
+  expect(text.body).toContain(`« ${klass.title} »`);
   expect(rows[0].href).toBe(`/class/${klass.id}`);
   // At most once a day: a second run sends nothing more.
   await fetch(`${API}/cron/purge`, { method: "POST", headers: { authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` } });

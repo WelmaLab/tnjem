@@ -6,7 +6,7 @@ import {
   notify,
 } from "@tnajem/db";
 import {
-  OFFER_MAX_PER_TUTOR, formatNumericDate, isUuid, publicDisplayName, publicTutorName, vSlug,
+  OFFER_MAX_PER_TUTOR, isUuid, publicDisplayName, publicTutorName, vSlug,
   type MySubscription, type SubscriptionStatus, type TutorOfferRow, type TutorSubscriptionRow,
 } from "@tnajem/shared";
 import { checkInput, offerInputSchema, offerPatchSchema, subscriptionRequestSchema } from "@tnajem/shared/growth-input";
@@ -253,9 +253,8 @@ export async function offerRoutes(app: FastifyInstance): Promise<void> {
       .returning();
     if (!row) return { ok: false, error: "not-requested" };
     await notify(db, row.studentProfileId, {
-      kind: "subscription_confirmed",
-      title: "Abonnement confirmé",
-      body: `${tutorShown(o.tutor)} a confirmé ton abonnement « ${o.offerTitle} » jusqu'au ${formatNumericDate(row.periodEnd as Date)}.`,
+      key: "subscriptionConfirmed",
+      params: { who: tutorShown(o.tutor), offerTitle: o.offerTitle, until: new Date(row.periodEnd as Date).toISOString() },
       href: `/${o.tutor.slug}`,
       aboutProfileId: o.tutor.profileId,
     });
@@ -284,9 +283,8 @@ export async function offerRoutes(app: FastifyInstance): Promise<void> {
     }
     if (!row) return { ok: false, error: "not-renewable" };
     await notify(db, row.studentProfileId, {
-      kind: "subscription_renewed",
-      title: "Abonnement renouvelé",
-      body: `${tutorShown(o.tutor)} a renouvelé ton abonnement « ${o.offerTitle} » jusqu'au ${formatNumericDate(row.periodEnd as Date)}.`,
+      key: "subscriptionRenewed",
+      params: { who: tutorShown(o.tutor), offerTitle: o.offerTitle, until: new Date(row.periodEnd as Date).toISOString() },
       href: `/${o.tutor.slug}`,
       aboutProfileId: o.tutor.profileId,
     });
@@ -302,9 +300,8 @@ export async function offerRoutes(app: FastifyInstance): Promise<void> {
       .returning();
     if (!row) return { ok: false, error: "not-active" };
     await notify(db, row.studentProfileId, {
-      kind: "subscription_paused",
-      title: "Abonnement en pause",
-      body: `${tutorShown(o.tutor)} a mis ton abonnement « ${o.offerTitle} » en pause.`,
+      key: "subscriptionPaused",
+      params: { who: tutorShown(o.tutor), offerTitle: o.offerTitle },
       href: `/${o.tutor.slug}`,
       aboutProfileId: o.tutor.profileId,
     });
@@ -322,9 +319,8 @@ export async function offerRoutes(app: FastifyInstance): Promise<void> {
     if (!row) return { ok: false, error: "not-paused" };
     if (row.status === "active") {
       await notify(db, row.studentProfileId, {
-        kind: "subscription_resumed",
-        title: "Abonnement repris",
-        body: `${tutorShown(o.tutor)} a repris ton abonnement « ${o.offerTitle} ».`,
+        key: "subscriptionResumed",
+        params: { who: tutorShown(o.tutor), offerTitle: o.offerTitle },
         href: `/${o.tutor.slug}`,
         aboutProfileId: o.tutor.profileId,
       });
@@ -345,17 +341,15 @@ export async function offerRoutes(app: FastifyInstance): Promise<void> {
     if (!row) return { ok: true, already: true }; // idempotent
     if (by === "student" && o.tutor.profileId) {
       await notify(db, o.tutor.profileId, {
-        kind: "subscription_cancelled",
-        title: "Abonnement annulé",
-        body: `${publicDisplayName(o.session.profile.fullName) ?? "Un élève"} a annulé son abonnement « ${o.offerTitle} ».`,
+        key: "subscriptionCancelledByStudent",
+        params: { who: publicDisplayName(o.session.profile.fullName), offerTitle: o.offerTitle },
         href: "/dashboard/subscriptions",
         aboutProfileId: o.session.profile.id,
       });
     } else if (by === "tutor") {
       await notify(db, row.studentProfileId, {
-        kind: "subscription_cancelled",
-        title: "Abonnement annulé",
-        body: `${tutorShown(o.tutor)} a annulé ton abonnement « ${o.offerTitle} ».`,
+        key: "subscriptionCancelledByTutor",
+        params: { who: tutorShown(o.tutor), offerTitle: o.offerTitle },
         href: `/${o.tutor.slug}`,
         aboutProfileId: o.tutor.profileId,
       });
@@ -433,10 +427,9 @@ export async function offerRoutes(app: FastifyInstance): Promise<void> {
 
     if (o.tutor.profileId) {
       await notify(db, o.tutor.profileId, {
-        kind: "subscription_requested",
-        title: "Demande d'abonnement",
+        key: "subscriptionRequested",
         // First name only, aboutProfileId so an erasure can rewrite it.
-        body: `${publicDisplayName(session.profile.fullName) ?? "Un élève"} demande l'abonnement « ${o.offer.title} » (${Number(created.priceTnd)} TND / mois). Confirme-le quand tu as reçu le paiement.`,
+        params: { who: publicDisplayName(session.profile.fullName), offerTitle: o.offer.title, priceTnd: Number(created.priceTnd) },
         href: "/dashboard/subscriptions",
         aboutProfileId: uid,
       });

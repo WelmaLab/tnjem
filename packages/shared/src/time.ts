@@ -173,5 +173,3 @@ export function formatNumericDate(instant: Date | string | number): string {
   return `${pad(w.day)}/${pad(w.month)}/${w.year}`;
 }
 
-/** The date label baked into notification and SMS text (stored, French). */
-export const notificationWhen = (instant: Date | string | number) => formatShortDateTime(instant, "fr");

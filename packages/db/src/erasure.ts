@@ -211,6 +211,13 @@ export async function eraseAccount(
           sql`position(${fullName} in ${notifications.body}) > 0`,
         ));
     }
+    /* Rows written since 0040 name the person in the `who` PARAMETER, not in text:
+       drop it and mark it erased, which every language renders as its own
+       "Un compte supprimé" (@tnajem/shared/notification-messages). */
+    await tx
+      .update(notifications)
+      .set({ msgParams: sql`(coalesce(${notifications.msgParams}, '{}'::jsonb) - 'who') || '{"whoErased": true}'::jsonb` })
+      .where(and(eq(notifications.aboutProfileId, profileId), ne(notifications.profileId, profileId), isNotNull(notifications.msgKey)));
     await tx.update(notifications).set({ aboutProfileId: null }).where(eq(notifications.aboutProfileId, profileId));
     await tx.delete(notifications).where(eq(notifications.profileId, profileId));
 
