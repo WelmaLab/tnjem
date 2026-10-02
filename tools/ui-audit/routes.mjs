@@ -271,6 +271,11 @@ export const ROUTES = [
   // espace prof v2 · growth (P5)
   { path: "/dashboard/subscriptions", name: "dashboard-subscriptions", auth: true },
   { path: "/dashboard/promotions", name: "dashboard-promotions", auth: true },
+  /* espace prof v2 · phase 6: Réglages (the tutor's /account redirects here), each tab. */
+  { path: "/dashboard/settings", name: "dashboard-settings", auth: true },
+  { path: "/dashboard/settings?tab=vitrine", name: "dashboard-settings-vitrine", auth: true },
+  { path: "/dashboard/settings?tab=notifications", name: "dashboard-settings-notifications", auth: true },
+  { path: "/dashboard/settings?tab=securite", name: "dashboard-settings-securite", auth: true },
   /* The public « Ce prof arrive bientôt »: the harness tutor's own slug, seen anonymously. */
   { path: "/audit-harness", name: "coming-soon" },
 ];

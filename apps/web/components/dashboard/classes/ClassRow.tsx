@@ -98,7 +98,7 @@ function PhaseTag({ k, c }: { k: DashboardClass; c: Copy }) {
 }
 
 export function ClassRow({ k, onChanged, notify }: { k: DashboardClass; onChanged: () => void; notify: (msg: string) => void }) {
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const c = copy[locale];
   const [dialog, setDialog] = useState<"none" | "cancel" | "move">("none");
   const [busy, setBusy] = useState(false);
@@ -161,7 +161,8 @@ export function ClassRow({ k, onChanged, notify }: { k: DashboardClass; onChange
         </Link>
         <div className="mc-meta">
           <time dateTime={k.starts_at}>{k.day} {monthLabel(k.month, locale)} · {k.time}</time>
-          {k.duration_min ? <span>{k.duration_min} min</span> : null}
+          {/* espace prof v2 · phase 6: the unit is translated (AR read « min 90 »). */}
+          {k.duration_min ? <span>{k.duration_min} {t.common.min}</span> : null}
           <span className="hp-num">{c.seats(taken, k.seats)}</span>
           <span className="hp-num">{k.price_tnd} TND</span>
           <PhaseTag k={k} c={c} />

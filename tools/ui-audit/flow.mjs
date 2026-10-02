@@ -182,16 +182,25 @@ async function walk(browser, locale, width) {
   await shot(page, locale, width, "verify-picked");
   note("thumbnail rendered for the picked image");
 
-  // ── 9. Submit → pending ─────────────────────────────────────────────────
-  await page.locator("main button[type='submit']").first().click();
-  await must(page, "main h1", "the pending panel");
+  // ── 9. The three steps (espace prof v2 · phase 6): Continuer → Passer → declare → send ──
+  await page.locator("[data-e2e=verify-next]").click();
+  await must(page, "[data-e2e=verify-step-2]:not([hidden])", "step 2 (Ton parcours)");
+  await page.locator("[data-e2e=verify-skip]").click();
+  await must(page, "[data-e2e=verify-step-3]:not([hidden])", "step 3 (Déclaration)");
+  await page.locator("[data-e2e=verify-step-3] input[type='checkbox']").check();
+  await shot(page, locale, width, "verify-declaration");
+  await page.locator("[data-e2e=verify-submit]").click();
+  await must(page, "[data-e2e=verify-status-pending]", "the pending status page");
   await page.waitForTimeout(400);
   await shot(page, locale, width, "verify-pending");
+  /* The founder's spec (ESPACE_PROF_V2.md, phase 6) states the review time on this
+     page: « En cours · 24–48 h ». It used to be forbidden here; it is now required,
+     so it is checked for rather than against. */
   const pending = await page.locator("main").innerText();
-  if (/24.?48/.test(pending)) {
-    throw new Error("FLOW: the pending screen still promises a 24–48h turnaround.");
+  if (!/24.?48/.test(pending)) {
+    throw new Error("FLOW: the pending status page does not say « En cours · 24–48 h ».");
   }
-  note("submitted → pending, with no 24–48h promise");
+  note("submitted → pending status page (« En cours · 24–48 h »)");
 
   await ctx.close();
   return { steps, consoleErrors };

@@ -54,14 +54,14 @@ test.describe("the frame", () => {
     await expect(side.locator("[aria-current=page]")).toHaveCount(1);
     // Draft: verification is still to do → the badge.
     await expect(side.locator("[data-e2e=nav-badge-verify]")).toHaveText("1");
-    await expect(side.locator("[data-e2e=nav-settings]")).toHaveAttribute("href", "/fr/account");
+    await expect(side.locator("[data-e2e=nav-settings]")).toHaveAttribute("href", "/fr/dashboard/settings"); // phase 6
 
     // The avatar card: first name, "Prof · Pilote" (no grant, payments off), and its menu.
     await expect(page.locator("[data-e2e=shell-me]")).toContainText("Walid");
     await expect(page.locator("[data-e2e=shell-plan]")).toHaveText("Prof · Pilote");
     await page.locator("[data-e2e=shell-me]").click();
     const menu = page.locator("[data-e2e=shell-me-menu]");
-    await expect(menu.getByRole("link", { name: "Réglages" })).toHaveAttribute("href", "/fr/account");
+    await expect(menu.getByRole("link", { name: "Réglages" })).toHaveAttribute("href", "/fr/dashboard/settings"); // phase 6
     await expect(menu.getByRole("button", { name: "Se déconnecter" })).toBeVisible();
 
     // The current item follows the page, sub-pages light their parent.
@@ -112,7 +112,7 @@ test.describe("the frame", () => {
     await ctx.close();
   });
 
-  test("the shell is the TUTOR's: a student keeps the public layout on /messages and /account", async ({ browser }) => {
+  test("the shell is the TUTOR's: a student keeps the public layout on /messages and /account; a tutor's /account is Réglages", async ({ browser }) => {
     const student = await seedProfile({ role: "student", birthYear: 1995, fullName: "Sarra Mejri" });
     const ctx = await browser.newContext();
     await loginAs(ctx, student.id);
@@ -132,9 +132,13 @@ test.describe("the frame", () => {
       await expect(tpage.locator("[data-e2e=app-shell]"), path).toBeVisible();
       await expect(tpage.locator(".site-header"), path).toHaveCount(0);
     }
-    // The legal links the footer carried now live in Réglages (/account until phase 6).
-    await expect(tpage.locator("[data-e2e=account-legal] a[href='/fr/terms']")).toBeVisible();
-    await expect(tpage.locator("[data-e2e=account-legal] a[href='/fr/privacy']")).toBeVisible();
+    // Phase 6: a tutor's /account is « Réglages » (the old URL keeps working).
+    await expect(tpage).toHaveURL(/\/fr\/dashboard\/settings$/);
+    // The legal links the footer carried live in Réglages › Sécurité, under « Ce qui est effacé ».
+    await tpage.goto("/fr/dashboard/settings?tab=securite");
+    await tpage.locator("[data-e2e=what-is-erased] summary").click();
+    await expect(tpage.locator("[data-e2e=settings-legal] a[href='/fr/terms']")).toBeVisible();
+    await expect(tpage.locator("[data-e2e=settings-legal] a[href='/fr/privacy']")).toBeVisible();
     await tctx.close();
   });
 });
@@ -259,7 +263,7 @@ test.describe("home", () => {
     await page.locator("[data-e2e=setup-toggle]").click();
     await expect(page.locator("[data-e2e^=setup-step-]")).toHaveCount(5);
     await expect(page.locator("[data-e2e=setup-step-store]")).toHaveAttribute("data-state", "done");
-    await expect(page.locator("[data-e2e=setup-step-photo]").getByRole("link", { name: "Ajouter ma photo" })).toHaveAttribute("href", "/fr/account#photo");
+    await expect(page.locator("[data-e2e=setup-step-photo]").getByRole("link", { name: "Ajouter ma photo" })).toHaveAttribute("href", "/fr/dashboard/settings?tab=vitrine#photo");
 
     // « Ma vitrine »: the link, « Pas encore en ligne », the private preview — and the copy is a share (C2).
     const card = page.locator("[data-e2e=storefront-card]");
@@ -376,7 +380,7 @@ test.describe("Mes classes · Mes élèves · Ma vitrine · Mon offre", () => {
     await page.goto("/fr/dashboard/plan");
     await expect(page.locator("main h1")).toHaveText("Mon offre");
     await expect(page.locator("[data-e2e=plan-card]")).toContainText("Pilote");
-    await expect(page.locator("[data-e2e=plan-card] a[href='/fr/tarifs']")).toBeVisible();
+    await expect(page.locator("main a[href='/fr/tarifs']")).toBeVisible(); // phase 6: « Détails des offres », under the summary
 
     await page.goto("/fr/dashboard/students");
     await expect(page.locator("[data-e2e=shell-empty]")).toContainText("Personne n'a encore réservé");

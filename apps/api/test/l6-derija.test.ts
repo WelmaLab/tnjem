@@ -43,7 +43,8 @@ const SWEEP: [file: string, pairs: [msa: string, derija: string][]][] = [
     ["ما كنتش محجوز في هذه الحصة.", "ما كنتش محجوز في الحصة هاذي."],
     ["هذه الحصة ما زالت ما صارتش.", "الحصة هاذي ما زالت ما صارتش."],
   ]],
-  ["app/[locale]/dashboard/new-pack/page.tsx", [["أمشي لـ « التثبّت »", "امشي لـ « التثبّت »"]]],
+  // espace prof v2 · phase 6: the new-pack form moved into its own component.
+  ["components/dashboard/new-pack/NewPackForm.tsx", [["أمشي لـ « التثبّت »", "امشي لـ « التثبّت »"]]],
   ["components/WrongRoleNotice.tsx", [["حسابك ما عندوش نفاذ لهذه الصفحة.", "حسابك ما ينجّمش يدخل للصفحة هاذي."]]],
   ["app/[locale]/layout.tsx", [["لقّي أستاذ في المباشر،", "لقّي أستاذ دايركت،"]]],
   ["app/[locale]/page.tsx", [["من أول كليك للدرس المباشر،", "من أول كليك للحصة الدايركت،"]]],

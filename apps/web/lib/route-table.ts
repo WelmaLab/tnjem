@@ -30,6 +30,7 @@ export const ROUTE_PATTERNS: readonly string[] = [
   "dashboard/payout",
   "dashboard/plan", // espace prof v2 · shell
   "dashboard/promotions", // espace prof v2 · growth (P5)
+  "dashboard/settings", // espace prof v2 · shell (phase 6)
   "dashboard/storefront", // espace prof v2 · shell
   "dashboard/storefront/preview", // espace prof v2 · shell
   "dashboard/students", // espace prof v2 · shell

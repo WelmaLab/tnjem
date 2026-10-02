@@ -166,14 +166,16 @@ test.describe("the share sheet", () => {
 
     await expect.poll(async () => (await sql<{ n: number }[]>`select count(*)::int n from classes where tutor_id = ${tutor.id}`)[0].n, { timeout: 15_000 }).toBe(1);
     const [{ id }] = await sql<{ id: string }[]>`select id from classes where tutor_id = ${tutor.id}`;
-    await expect(page.locator("[data-e2e=published-share]")).toContainText("Ta séance est publiée.");
+    /* espace prof v2 · phase 6: the new-class form's own « published » panel carries the
+       class link and its « Partager » (same behaviour: the sheet opens on its own). */
+    await expect(page.locator("[data-e2e=class-published]")).toContainText("Ta classe est publiée");
     const sheet = page.locator("[data-e2e=share-sheet]");
     await expect(sheet).toBeVisible();
     await expect(sheet.locator("[data-e2e=share-link]")).toHaveValue(new RegExp(`/class/${id}\\?utm_source=copy$`));
     // Closed, it can be opened again from the line that stays.
     await page.keyboard.press("Escape");
     await expect(sheet).toBeHidden();
-    await page.locator("[data-e2e=published-share] [data-e2e=share-open-class]").click();
+    await page.locator("[data-e2e=published-share] [data-e2e=share-open-class]").click(); // the link line of that panel
     await expect(page.locator("[data-e2e=share-sheet]").first()).toBeVisible();
     await ctx.close();
   });

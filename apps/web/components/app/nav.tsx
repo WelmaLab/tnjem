@@ -120,8 +120,8 @@ export const APP_NAV: NavGroup[] = [
     label: { fr: "Compte", ar: "الحساب" },
     items: [
       { key: "plan", href: "/dashboard/plan", label: { fr: "Mon offre", ar: "العرض متاعي" }, icon: Star },
-      // shell · phase 6 moves Réglages to /dashboard/settings; /account redirects tutors there.
-      { key: "settings", href: "/account", label: { fr: "Réglages", ar: "الإعدادات" }, icon: Gear },
+      // Réglages (4 tabs: ?tab=compte|vitrine|notifications|securite); /account redirects tutors here.
+      { key: "settings", href: "/dashboard/settings", label: { fr: "Réglages", ar: "الإعدادات" }, icon: Gear },
     ],
   },
 ];

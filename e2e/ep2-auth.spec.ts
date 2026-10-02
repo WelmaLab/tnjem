@@ -18,7 +18,8 @@ import { E2E_PASSWORD, signUpThroughUi, loginWithPasswordUi } from "./support/pa
      • « Mot de passe oublié » — a code, a new password, every other session ends;
      • an address that already has an account → /auth, prefilled, with the notice;
      • the one-time « Crée un mot de passe (recommandé) » after a code sign-in;
-     • Réglages › Sécurité on /account: sessions, change the password.
+     • Réglages › Sécurité (/account for a student; /dashboard/settings?tab=securite
+       for a tutor since phase 6): sessions, change the password.
 
    ADDED, never edited into an existing spec. */
 
@@ -233,17 +234,20 @@ test("signUpThroughUi (the helper other specs use) lands a student, with a passw
   expect(await hashOf(address)).toMatch(/^\$argon2id\$/);
 });
 
-test("Réglages › Sécurité on /account: the sessions as stored, and changing the password signs the others out", async ({ browser }) => {
+test("Réglages › Sécurité: the sessions as stored, and changing the password signs the others out", async ({ browser }) => {
   const me = await seedProfile({ role: "tutor", birthYear: 1985 });
   await seedPassword(me.id, E2E_PASSWORD);
   const other = await mintSession(me.id);
   const ctx = await browser.newContext({ reducedMotion: "reduce" });
   await ctx.addCookies([sessionCookie(await mintSession(me.id))]);
   const page = await ctx.newPage();
-  await page.goto("/fr/account", { waitUntil: "networkidle" });
+  /* espace prof v2 · phase 6: a tutor's /account is Réglages (/dashboard/settings);
+     the panel is its « Sécurité » tab, which names it — so no second heading. */
+  await page.goto("/fr/dashboard/settings?tab=securite", { waitUntil: "networkidle" });
 
   const panel = page.locator('[data-e2e="security-panel"]');
-  await expect(panel.getByRole("heading", { name: "Sécurité" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("tab", { name: "Sécurité" })).toHaveAttribute("aria-selected", "true");
+  await expect(panel.locator('[data-e2e="sessions-count"]')).toBeVisible({ timeout: 20_000 });
   await expect(panel.locator('[data-e2e="sessions-count"]')).toHaveText("Connecté sur 2 appareils");
   await expect(panel.locator('[data-e2e="sessions-list"] li')).toHaveCount(2);
   await expect(panel.locator('[data-e2e="sessions-list"]')).toContainText("Cet appareil");

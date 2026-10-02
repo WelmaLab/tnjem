@@ -53,8 +53,9 @@ test.describe("A4 — the new-pack page never tells a tutor to send files by Wha
       expect(text).not.toMatch(/واتساب|إيميل|ايميل/);
       // No "upload isn't connected yet": Mes documents uploads, and the page says where.
       expect(text).not.toContain("pas encore branché");
-      /* .linklike: the « where your files go » link. Since espace prof v2 the sticky
-         action bar's « Annuler » also leads back to Mes fiches. */
+      /* .linklike: the « where your files go » link (« …plus tard dans Mes fiches »;
+         since phase 6 the file is uploaded on this page too). The sticky action bar's
+         « Annuler » also leads back to Mes fiches. */
       await expect(page.locator('main a.linklike[href$="/dashboard/materials"]')).toBeVisible();
       await ctx.close();
     });

@@ -23,7 +23,9 @@ import { bilingual } from "@/lib/i18n";
 const copy = bilingual({
   fr: {
     title: "Mes élèves",
-    sub: "Ceux qui ont réservé une séance avec toi, suivent ta page ou sont abonnés.", // espace prof v2 · growth (P4, P5): followers and subscribers too
+    /* espace prof v2 · phase 6: « Abonné » meant two things (the « Abonné ✓ » of a
+       FOLLOWER, and a monthly SUBSCRIBER). Each relation now says which. */
+    sub: "Ceux qui ont réservé une séance avec toi, suivent ta page ou ont un abonnement mensuel.", // espace prof v2 · growth (P4, P5): followers and subscribers too
     note: "Tu vois le prénom de tes élèves, jamais leurs coordonnées : vous échangez par la messagerie de chaque séance.",
     count: (n: number) => (n === 1 ? "1 élève" : `${n} élèves`),
     emptyTitle: "Personne n'a encore réservé",
@@ -32,7 +34,7 @@ const copy = bilingual({
     since: (d: string) => `depuis le ${d}`,
     history: "Historique",
     anon: "Élève",
-    rel: { booked: "A réservé", follower: "Suit ta page", subscriber: "Abonné" } as Record<TutorStudentRelation, string>,
+    rel: { booked: "A réservé", follower: "Suit ta page", subscriber: "Abonnement mensuel" } as Record<TutorStudentRelation, string>,
     st: { upcoming: "Séance à venir", past: "Ancien élève", cancelled: "Réservation annulée", none: "Pas de séance" } as Record<TutorStudentStatus, string>,
     bk: { reserved: "Réservé", paid: "Payé", attended: "Présent", cancelled: "Annulé" } as Record<string, string>,
     free: "1ʳᵉ séance offerte",
@@ -40,7 +42,7 @@ const copy = bilingual({
   },
   ar: {
     title: "تلامذتي",
-    sub: "اللي حجزو حصة معاك، يتبّعو صفحتك ولا مشتركين.",
+    sub: "اللي حجزو حصة معاك، يتبّعو صفحتك ولا عندهم اشتراك شهري.",
     note: "تشوف الاسم الأول متاع تلامذتك، عمرك ما تشوف معلومات الاتصال: تتراسلو عبر رسائل كل حصة.",
     count: (n: number) => `${n} تلميذ`,
     emptyTitle: "ما زال حتّى حد ما حجز",
@@ -49,7 +51,7 @@ const copy = bilingual({
     since: (d: string) => `من ${d}`,
     history: "التاريخ",
     anon: "تلميذ",
-    rel: { booked: "حجز", follower: "يتبّع صفحتك", subscriber: "مشترك" } as Record<TutorStudentRelation, string>,
+    rel: { booked: "حجز", follower: "يتبّع صفحتك", subscriber: "اشتراك شهري" } as Record<TutorStudentRelation, string>,
     st: { upcoming: "عندو حصة جاية", past: "تلميذ قديم", cancelled: "الحجز تلغى", none: "ما عندو حتى حصة" } as Record<TutorStudentStatus, string>,
     bk: { reserved: "محجوز", paid: "خالص", attended: "حاضر", cancelled: "ملغي" } as Record<string, string>,
     free: "الحصة الأولى فابور",

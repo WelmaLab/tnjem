@@ -5,47 +5,75 @@ import { useLocale } from "@/components/LocaleProvider";
 import { getDashboard } from "@/app/actions";
 import { AppPage, ErrorState, PageSkeleton } from "@/components/app/AppShell";
 import { WrongRoleNotice } from "@/components/WrongRoleNotice";
-import { PaymentStory } from "@/components/PaymentStory";
-import { formatLongDate, type DashboardResult } from "@tnajem/shared";
+import { COMMISSION_PCT, PLANS, formatLongDate, planByCode, tnd, type DashboardResult, type Plan } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 
-/* espace prof v2 · shell — « Mon offre » (/dashboard/plan), the THIN phase-1 page:
-   the tutor's current plan and what it lets them do, and the way to the public
-   offers. Phase 6 finishes it per image 4 (the compact summary of the plans).
+/* espace prof v2 · « Mon offre » (/dashboard/plan), image 4: the tutor's CURRENT
+   offer (the pilot, today, for everyone) and a compact summary of the plans that
+   come after it. /tarifs stays the public page with the detail.
+
+   EVERY NUMBER IS THE CATALOGUE'S (PLANS, packages/shared/src/plans.ts): the price,
+   the class limit the API enforces, the Explore boost. The student bands are the
+   same hints /tarifs gives ("convient à …"), not a rule anything counts.
 
    READ-ONLY, and that is the honest shape: there is no checkout, so a button here
-   would lead nowhere or imply a purchase that cannot happen. The usage line is the
-   number POST /classes enforces, so a tutor meets a limit here, calmly, rather
-   than at the end of a form. */
+   would lead nowhere or imply a purchase that cannot happen. */
 
 const copy = bilingual({
   fr: {
     title: "Mon offre",
-    sub: "Ce que ton offre te permet, et ce qui est facturé (rien, pendant le pilote).",
     pilot: "Pilote",
     pilotTitle: "Offre complète, gratuite",
-    pilotBody: "Pendant le pilote, tous les profs ont l'offre complète : séances illimitées, et rien n'est facturé. On te préviendra avant que ça change.",
-    grantedBody: "Offre activée par l'équipe Tnajem. Rien ne t'est facturé.",
-    unlimited: "Séances publiées : illimitées",
-    usage: (used: number, max: number) => `Séances publiées : ${used} sur ${max}`,
-    usageNote: "On compte les séances à venir. Une séance annulée ou déjà passée libère la place.",
+    pilotLine: "Séances illimitées · aucune commission · on te prévient avant tout changement",
+    grantedTitle: (name: string) => `Offre ${name}`,
+    grantedLine: "Activée par l'équipe Tnajem. Rien ne t'est facturé.",
     until: (d: string) => `Jusqu'au ${d}.`,
-    seeTarifs: "Voir les offres",
+    perMonth: "/mois",
+    usage: (used: number, max: number) => `Séances publiées : ${used} sur ${max} (les séances à venir comptent).`,
+    after: "Après le pilote",
+    names: { gratuit: "Gratuit", essentiel: "Essentiel", pro: "Pro", prestige: "Prestige", pilot: "Pilote" } as Record<string, string>,
+    bands: { gratuit: "1–14 élèves", essentiel: "15–20 élèves", pro: "21–35 élèves", prestige: "36 élèves et plus" } as Record<string, string>,
+    oneAtATime: "1 séance à la fois",
+    nAtATime: (n: number) => `${n} séances à la fois`,
+    unlimited: "Séances illimitées",
+    boost1: "mise en avant",
+    boost2: "placement prioritaire",
+    commission: `+${COMMISSION_PCT} % par élève payant, quand les paiements en ligne ouvriront`,
+    details: "Détails des offres",
+    current: "Ton offre",
   },
   ar: {
     title: "العرض متاعي",
-    sub: "شنوّة يسمحلك العرض متاعك، وشنوّة يتخلّص (حتى شي، في فترة التجربة).",
     pilot: "تجربة",
     pilotTitle: "عرض كامل، بلاش",
-    pilotBody: "في فترة التجربة، الأساتذة الكل عندهم العرض الكامل : حصص بلا حدّ، وما فمّا حتى فاتورة. باش نعلموك قبل ما يتبدّل الحال.",
-    grantedBody: "العرض فعّلو فريق Tnajem. ما تتفوترش حتى مليم.",
-    unlimited: "الحصص المنشورة : بلا حدّ",
-    usage: (used: number, max: number) => `الحصص المنشورة : ${used} من ${max}`,
-    usageNote: "نحسبو الحصص الجايّة برك. حصة تلغات ولا فاتت ترجّعلك البلاصة.",
+    pilotLine: "حصص بلا حدّ · حتى عمولة · نعلموك قبل أي تبديل",
+    grantedTitle: (name: string) => `عرض ${name}`,
+    grantedLine: "فعّلو فريق Tnajem. ما تتفوترش حتى مليم.",
     until: (d: string) => `حتى لـ ${d}.`,
-    seeTarifs: "شوف العروض",
+    perMonth: "/في الشهر",
+    usage: (used: number, max: number) => `الحصص المنشورة : ${used} من ${max} (نحسبو الحصص الجاية).`,
+    after: "بعد التجربة",
+    names: { gratuit: "فابور", essentiel: "الأساسي", pro: "برو", prestige: "بريستيج", pilot: "تجربة" } as Record<string, string>,
+    bands: { gratuit: "1–14 تلميذ", essentiel: "15–20 تلميذ", pro: "21–35 تلميذ", prestige: "36 تلميذ وأكثر" } as Record<string, string>,
+    oneAtATime: "حصة وحدة في نفس الوقت",
+    nAtATime: (n: number) => `${n} حصص في نفس الوقت`,
+    unlimited: "حصص بلا حدّ",
+    boost1: "تبان في المقدّمة",
+    boost2: "مركز أول",
+    commission: `+${COMMISSION_PCT} % على كل تلميذ خلّص، كي يتحلّ الخلاص أونلاين`,
+    details: "تفاصيل العروض",
+    current: "العرض متاعك",
   },
 });
+
+type Copy = (typeof copy)["fr"] | (typeof copy)["ar"];
+
+/** "5 séances à la fois · mise en avant" — from the plan's own numbers. */
+function planLine(p: Plan, c: Copy): string {
+  const classes = p.maxClasses === null ? c.unlimited : p.maxClasses === 1 ? c.oneAtATime : c.nAtATime(p.maxClasses);
+  const boost = p.exploreBoost >= 2 ? c.boost2 : p.exploreBoost === 1 ? c.boost1 : null;
+  return boost ? `${classes} + ${boost}` : classes;
+}
 
 export function PlanView() {
   const { locale } = useLocale();
@@ -70,29 +98,58 @@ export function PlanView() {
   else {
     const p = result.plan;
     const until = p.expiresAt ? formatLongDate(p.expiresAt, locale) : null;
+    const listed = PLANS.filter((x) => x.listed);
+    const currentCode = p.isPilot ? null : p.code;
+    const granted = planByCode(p.code);
     body = (
-      <section className="u-card u-card-pad plan-card" aria-labelledby="pl-t" data-e2e="plan-card">
-        <span className="tag tag-neutral">{p.isPilot ? c.pilot : p.code}</span>
-        <h2 id="pl-t" className="plan-title">{p.isPilot ? c.pilotTitle : p.code}</h2>
-        <p className="hp-muted">{p.isPilot ? c.pilotBody : c.grantedBody}</p>
-        {until && <p className="hp-muted mt-1">{c.until(until)}</p>}
-        <p className="plan-usage">{p.maxClasses === null ? c.unlimited : c.usage(p.openClasses, p.maxClasses)}</p>
-        {p.maxClasses !== null && <p className="hp-muted">{c.usageNote}</p>}
-        <div className="mt-4">
-          <Link href="/tarifs" className="btn btn-ghost btn-sm">{c.seeTarifs}</Link>
-        </div>
-      </section>
+      <>
+        <section className="u-card ofr-now" aria-labelledby="ofr-now-t" data-e2e="plan-card">
+          <div className="min-w-0 flex-1">
+            <span className="tag tag-neutral">{p.isPilot ? c.pilot : c.names[p.code] ?? p.code}</span>
+            <h2 id="ofr-now-t" className="ofr-now-t">{p.isPilot ? c.pilotTitle : c.grantedTitle(c.names[p.code] ?? p.code)}</h2>
+            <p className="ofr-now-b">{p.isPilot ? c.pilotLine : c.grantedLine}</p>
+            {until && <p className="ofr-now-b">{c.until(until)}</p>}
+            {p.maxClasses !== null && <p className="ofr-now-b">{c.usage(p.openClasses, p.maxClasses)}</p>}
+          </div>
+          {/* Nothing is billed during the pilot, nor on a granted plan: 0 is the true amount. */}
+          <div className="ofr-now-price">
+            <span className="ofr-price hp-num">0 TND</span>
+            <span className="ofr-per">{c.perMonth}</span>
+          </div>
+        </section>
+
+        <h2 className="hp-card-t mt-5 mb-3">{c.after}</h2>
+        <ul className="ofr-grid" data-e2e="plan-summary">
+          {listed.map((x) => (
+            <li
+              key={x.code}
+              className={`u-card ofr-mini${x.code === "pro" ? " is-hi" : ""}${x.code === currentCode ? " is-current" : ""}`}
+              data-e2e={`plan-${x.code}`}
+            >
+              <div className="ofr-mini-name">
+                {c.names[x.code]}
+                {x.code === currentCode && granted ? <span className="tag tag-neutral">{c.current}</span> : null}
+              </div>
+              <div className="ofr-mini-band">{c.bands[x.code]}</div>
+              <div className="ofr-mini-price">
+                <span className="ofr-price-sm hp-num">{tnd(x.monthlyMillimes)}</span>
+                <span className="ofr-per">TND{c.perMonth}</span>
+              </div>
+              <div className="ofr-mini-line">{planLine(x, c)}</div>
+            </li>
+          ))}
+        </ul>
+        <p className="ofr-foot">
+          {c.commission}
+          <span aria-hidden="true"> · </span>
+          <Link href="/tarifs" className="linklike linklike-inline">{c.details}</Link>
+        </p>
+      </>
     );
   }
 
   return (
-    <AppPage
-      title={c.title}
-      subtitle={c.sub}
-      /* The one payment sentence (D4), behind its « Bientôt » while payments are off. */
-      note={<PaymentStory locale={locale} audience="tutor" enabled={Boolean(result && !("wrongRole" in result) && result.paymentsEnabled)} />}
-      width="narrow"
-    >
+    <AppPage title={c.title} width="default">
       {body}
     </AppPage>
   );

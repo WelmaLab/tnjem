@@ -53,8 +53,8 @@ test.describe("A18.6 — the free-first box is disabled while the option is off"
     await expect(box).toHaveAttribute("aria-disabled", "true");
     const link = page.locator("[data-e2e=free-first-off] a");
     await expect(link).toHaveText("Active d'abord l'option dans tes réglages");
-    // espace prof v2 · shell: the option moved from the dashboard to /account (Réglages).
-    await expect(link).toHaveAttribute("href", "/fr/account#free-first");
+    // espace prof v2 · phase 6: the option lives in Réglages › Vitrine.
+    await expect(link).toHaveAttribute("href", "/fr/dashboard/settings?tab=vitrine#free-first");
     await box.click({ force: true });
     await expect(box).toHaveAttribute("aria-checked", "false");
     await ctx.close();
@@ -240,16 +240,20 @@ test.describe("A18.14 — a signed-in report names the reporter's role", () => {
 });
 
 test.describe("A18.16 — the form's limits are the server's limits", () => {
-  test("title 120, duration 240, seats 200 on the form (FOUNDER defaults)", async ({ browser }) => {
+  test("title 120, duration chips within 240, seats 200 on the form (FOUNDER defaults)", async ({ browser }) => {
     const me = await seedProfile({ role: "tutor", birthYear: 1985 });
     await seedTutor({ profileId: me.id, status: "verified" });
     const ctx = await contextAs(browser, me.id);
     const page = await ctx.newPage();
     await page.goto("/fr/dashboard/new-class", { waitUntil: "networkidle" });
     await expect(page.getByPlaceholder(/Intégrales/)).toHaveAttribute("maxlength", "120");
-    const numbers = page.locator('form input[type="number"]');
-    await expect(numbers.nth(0)).toHaveAttribute("max", "240"); // duration
-    await expect(numbers.nth(2)).toHaveAttribute("max", "200"); // seats (after price)
+    /* espace prof v2 · phase 6 (image 2): the duration is a chip — 60 / 90 / 120, all
+       under the server's 240 — and the seats a number capped at the server's 200. */
+    await expect(page.locator("[data-e2e=class-duration] input[type=radio]")).toHaveCount(3);
+    for (const v of ["60", "90", "120"]) {
+      await expect(page.locator(`[data-e2e=class-duration] input[value="${v}"]`)).toHaveCount(1);
+    }
+    await expect(page.locator("[data-e2e=class-seats]")).toHaveAttribute("max", "200");
     await ctx.close();
   });
 });

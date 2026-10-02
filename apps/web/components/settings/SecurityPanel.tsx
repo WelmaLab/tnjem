@@ -71,6 +71,7 @@ const COPY = {
     lastSeen: (d: string) => `dernière activité le ${d}`,
     logout: "Se déconnecter",
     logoutAll: "Déconnecter partout",
+    moreSessions: (n: number) => (n === 1 ? "+ 1 autre appareil" : `+ ${n} autres appareils`),
     logoutAllHint: "Un téléphone perdu ou prêté ? « Déconnecter partout » arrête toutes tes connexions, celle-ci comprise.",
     loadFailed: "Impossible de charger ces informations.",
     retry: "Réessayer",
@@ -111,6 +112,7 @@ const COPY = {
     lastSeen: (d: string) => `آخر نشاط نهار ${d}`,
     logout: "اخرج",
     logoutAll: "اخرج من الأجهزة الكل",
+    moreSessions: (n: number) => (n === 1 ? "+ جهاز آخر" : `+ ${n} أجهزة أخرى`),
     logoutAllHint: "تليفون ضاع ولا سلّفتو؟ « اخرج من الأجهزة الكل » يسكّر الدخول في الأجهزة الكل، حتى هذا.",
     loadFailed: "ما نجّمناش نحمّلو المعلومات هاذي.",
     retry: "عاود جرّب",
@@ -245,6 +247,14 @@ export function SecurityPanel({ heading = true }: { heading?: boolean } = {}) {
   }
 
   const sessions = state?.sessions ?? [];
+  /* espace prof v2 · phase 6 (shell): the list is capped — this device first, then the
+     most recently active, 5 in all — and the rest is one line. The count above and
+     « Déconnecter partout » still cover every session. */
+  const SHOWN = 5;
+  const shown = [...sessions]
+    .sort((a, b) => Number(b.current) - Number(a.current) || b.lastSeenAt.localeCompare(a.lastSeenAt))
+    .slice(0, SHOWN);
+  const hidden = sessions.length - shown.length;
 
   return (
     <section className="sec-panel" aria-labelledby={heading ? headingId : undefined} aria-label={heading ? undefined : c.heading} data-e2e="security-panel">
@@ -395,7 +405,7 @@ export function SecurityPanel({ heading = true }: { heading?: boolean } = {}) {
             </div>
             {sessions.length > 0 && (
               <ul className="sec-sessions" data-e2e="sessions-list">
-                {sessions.map((s, i) => (
+                {shown.map((s, i) => (
                   <li key={`${s.createdAt}-${i}`} className="sec-session">
                     <span className={s.current ? "sec-pill sec-pill-current" : "sec-pill"}>{s.current ? c.thisDevice : c.otherDevice}</span>
                     <span className="sec-meta">
@@ -405,6 +415,7 @@ export function SecurityPanel({ heading = true }: { heading?: boolean } = {}) {
                 ))}
               </ul>
             )}
+            {hidden > 0 && <p className="sec-meta sec-more" data-e2e="sessions-more">{c.moreSessions(hidden)}</p>}
             <p className="sec-hint">{c.logoutAllHint}</p>
           </Card>
         </>

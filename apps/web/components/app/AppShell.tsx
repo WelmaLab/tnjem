@@ -9,7 +9,7 @@
      app/[locale]/dashboard/layout.tsx    every /dashboard/* page, present and future
      app/[locale]/onboarding/layout.tsx   /onboarding (edit my page), /onboarding/verify
      app/[locale]/messages/layout.tsx     /messages, /messages/[id]   (shared with students)
-     app/[locale]/account/layout.tsx      /account                    (shared with students)
+     (/account is the student's page; its layout sends a tutor to /dashboard/settings — phase 6)
    Each layout reads the session server-side; a tutor gets the shell, anyone else
    (student, guardian, guest) gets the page exactly as before. /onboarding/upgrade
    is only ever shown to STUDENTS (a tutor is redirected from it), so it keeps the
@@ -204,7 +204,7 @@ function AvatarCard({ shell, c }: { shell: TutorShell | null; c: Copy }) {
       {open && (
         <ul id="aps-me-menu" className="aps-pop aps-me-menu" data-e2e="shell-me-menu">
           <li>
-            <Link prefetch={false} href="/account" className="aps-menu-item" onClick={() => setOpen(false)}>
+            <Link prefetch={false} href="/dashboard/settings" className="aps-menu-item" onClick={() => setOpen(false)}>
               <Gear />
               {c.settings}
             </Link>

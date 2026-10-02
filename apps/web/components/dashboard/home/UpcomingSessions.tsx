@@ -38,7 +38,7 @@ export function nextClasses(classes: DashboardClass[], n = 3): DashboardClass[] 
 }
 
 export function UpcomingSessions({ classes, everHadClass }: { classes: DashboardClass[]; everHadClass: boolean }) {
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const c = copy[locale];
   const next = nextClasses(classes);
   return (
@@ -69,7 +69,8 @@ export function UpcomingSessions({ classes, everHadClass }: { classes: Dashboard
                   <UserText as="span" className="hp-row-t">{k.title}</UserText>
                   <span className="hp-row-m">
                     <time dateTime={k.starts_at}>{k.day} {monthLabel(k.month, locale)} · {k.time}</time>
-                    {k.duration_min ? ` · ${k.duration_min} min` : ""}
+                    {/* phase 6: translated unit — AR showed « min 90 » */}
+                    {k.duration_min ? ` · ${k.duration_min} ${t.common.min}` : ""}
                     {" · "}
                     <span className="hp-num">{c.seats(Math.max(0, k.seats - k.seats_left), k.seats)}</span>
                   </span>

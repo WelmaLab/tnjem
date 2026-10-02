@@ -232,6 +232,23 @@ const PAIRS = [
   ["Growth", "--rose700", "--paper", "normal", "promotion form error (.pv-err)", "dashboard/promotions/PromotionsView.tsx"],
   ["Growth", "--rose", "--paper", "normal", "admin promotions load error (.text-rose)", "components/admin/TutorPromotions.tsx"],
 
+  // ── espace prof v2 · shell (phase 6): Réglages, Mon offre, new-class/new-pack, Vérification ──
+  ["Phase 6", "--muted", "--paper", "ui", ".aps-switch off track vs its card", "globals.css .aps-switch-track"],
+  ["Phase 6", "--blue", "--paper", "ui", ".aps-switch on track vs its card", "globals.css .aps-switch-track"],
+  ["Phase 6", W, "--muted", "ui", ".aps-switch knob on the off track", "globals.css .aps-switch-thumb"],
+  ["Phase 6", W, "--blue", "ui", ".aps-switch knob on the on track", "globals.css .aps-switch-thumb"],
+  ["Phase 6", "--blue", "--blue50", "normal", ".nc-chip picked (level, duration, languages)", "globals.css .nc-chip"],
+  ["Phase 6", "--ink", "--blue50", "normal", ".nc-ff on / .nc-dup-item:hover / .vf-card:hover title", "globals.css .nc-ff"],
+  ["Phase 6", "--ink2", "--blue50", "normal", ".np-drop:hover text", "globals.css .np-drop"],
+  ["Phase 6", "--ink", "--green50", "normal", ".vf-card filled title", "globals.css .vf-card"],
+  ["Phase 6", "--ink2", "--green50", "normal", ".vf-card filled file name", "globals.css .vf-card .dz-name"],
+  ["Phase 6", "--green-ink", "--green50", "normal", ".vf-step done · .vf-card filled hint · .vf-status-ic verified", "globals.css .vf-step"],
+  ["Phase 6", "--blue700", "--blue50", "normal", ".vf-step current", "globals.css .vf-step"],
+  ["Phase 6", "--ink", "--rose50", "normal", ".vf-reason (the team's note)", "globals.css .vf-reason"],
+  ["Phase 6", "--rose700", "--rose50", "normal", ".vf-alert · .vf-reason b · .st-danger-btn:hover", "globals.css .vf-alert"],
+  ["Phase 6", "--rose", "--paper", "normal", ".st-danger-btn · .vf-err · .vf-remove", "globals.css .st-danger-btn"],
+  ["Phase 6", "--ochre-ink", "--ochre-tint", "ui", ".vf-status-ic pending clock", "globals.css .vf-status-ic"],
+
   // ── non-text UI (1.4.11) — ADVISORY, see NOTE ──
   ["UI (advisory)", "--blue", "--cream", "ui", ":focus-visible ring", "globals.css:49"],
   ["UI (advisory)", "--blue", "--paper", "ui", ":focus-visible ring", "globals.css:49"],

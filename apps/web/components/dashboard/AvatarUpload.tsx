@@ -80,11 +80,14 @@ export function AvatarUpload({
   initials,
   status,
   onChanged,
+  inStack = false,
 }: {
   slug: string;
   initials: string;
   status: "pending" | "approved" | "rejected" | null;
   onChanged: () => void;
+  /** espace prof v2 · phase 6: inside a gap-spaced stack (Réglages › Vitrine), no bottom margin of its own. */
+  inStack?: boolean;
 }) {
   const { locale } = useLocale();
   const c = copy[locale];
@@ -136,7 +139,7 @@ export function AvatarUpload({
   const src = status ? `/api/avatar/${slug}/md` : null;
 
   return (
-    <div className="panel panel-pad mb-[clamp(14px,2vw,22px)]">
+    <div className={inStack ? "panel panel-pad" : "panel panel-pad mb-[clamp(14px,2vw,22px)]"}>
       <h2 className="font-display text-[16px] font-bold mb-1">{c.title}</h2>
       <p className="text-[13px] text-muted leading-[1.6] mb-3">{c.body}</p>
 

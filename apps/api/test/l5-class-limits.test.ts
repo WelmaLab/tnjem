@@ -64,7 +64,8 @@ describe("A18.16 — one set of limits, on both sides", () => {
       { titleMax: 120, durationMax: 240, seatsMax: 200 },
       "FOUNDER defaults",
     );
-    const form = readFileSync(resolve(here, "../../web/app/[locale]/dashboard/new-class/page.tsx"), "utf8");
+    // espace prof v2 · phase 6: the form moved out of the page into its own component.
+    const form = readFileSync(resolve(here, "../../web/components/dashboard/new-class/NewClassForm.tsx"), "utf8");
     assert.match(form, /from "@tnajem\/shared\/class-input"/, "the form imports the shared schema");
     const route = readFileSync(resolve(here, "../src/routes/classes.ts"), "utf8");
     assert.match(route, /from "@tnajem\/shared\/class-input"/, "POST /classes imports the shared schema");

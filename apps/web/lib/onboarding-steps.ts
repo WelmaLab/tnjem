@@ -217,7 +217,7 @@ export function buildTutorSteps(
       cta:
         p.photo === "approved" || p.photo === "pending" || !p.hasStorefront
           ? undefined
-          : { label: p.photo === "rejected" ? c.stPhotoCtaRejected : c.stPhotoCta, href: "/account#photo" },
+          : { label: p.photo === "rejected" ? c.stPhotoCtaRejected : c.stPhotoCta, href: "/dashboard/settings?tab=vitrine#photo" },
     },
     {
       key: "class",

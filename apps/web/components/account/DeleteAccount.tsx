@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useLocale } from "@/components/LocaleProvider";
 import { Spinner } from "@/components/ui";
 import {
@@ -9,6 +9,7 @@ import {
   type DeletionState,
 } from "@/app/actions";
 import { bilingual } from "@/lib/i18n";
+import { ConfirmDialog } from "@/components/app/ConfirmDialog"; // espace prof v2 · shell (Réglages › Sécurité)
 import { DELETION_GRACE_DAYS, formatLongDate } from "@tnajem/shared";
 
 /* CLOSING YOUR ACCOUNT (Step 15).
@@ -59,6 +60,10 @@ const copy = bilingual({
       "Tu as encore une séance programmée. Annule-la d'abord — tes élèves doivent être prévenus.",
     errGeneric: "Ça n'a pas marché. Réessaie.",
     loading: "Chargement…",
+    // espace prof v2 · shell — the folded version in Réglages › Sécurité (image 4).
+    grace: `${DELETION_GRACE_DAYS} jours pour changer d'avis.`,
+    whatIsErased: "Ce qui est effacé",
+    askShort: "Supprimer…",
   },
   ar: {
     title: "امسح حسابي",
@@ -86,10 +91,16 @@ const copy = bilingual({
       "ما زال عندك حصة مبرمجة. ألغيها الأول — تلامذتك لازمهم يتعلمو.",
     errGeneric: "ما مشاتش. عاود حاول.",
     loading: "قاعد يحمّل…",
+    grace: `${DELETION_GRACE_DAYS} يوم باش تبدّل رايك.`,
+    whatIsErased: "شنوّة يتمسح",
+    askShort: "امسح…",
   },
 });
 
-export function DeleteAccount() {
+/* variant "compact" (espace prof v2, Réglages › Sécurité, image 4): one line, the
+   detail and the legal links folded behind « Ce qui est effacé ▸ », and the
+   confirmation in a dialog. "full" is the student's /account, unchanged. */
+export function DeleteAccount({ variant = "full", legal }: { variant?: "full" | "compact"; legal?: ReactNode } = {}) {
   const { locale } = useLocale();
   const c = copy[locale];
   const [state, setState] = useState<DeletionState | null>(null);
@@ -154,6 +165,45 @@ export function DeleteAccount() {
           <p role="alert" className="text-[13px] mt-2" style={{ color: "var(--rose)" }}>{err}</p>
         )}
       </div>
+    );
+  }
+
+  if (variant === "compact") {
+    return (
+      <section className="st-danger" aria-labelledby="st-danger-t" data-e2e="delete-account">
+        <div className="st-danger-row">
+          <div className="min-w-0 flex-1">
+            <h3 id="st-danger-t" className="st-danger-t">{c.title}</h3>
+            <p className="text-[13px] text-muted leading-[1.6]">{c.grace}</p>
+          </div>
+          <button type="button" className="btn btn-ghost btn-sm st-danger-btn" onClick={() => setConfirming(true)} disabled={busy}>
+            {c.askShort}
+          </button>
+        </div>
+        <details className="st-fold" data-e2e="what-is-erased">
+          <summary>{c.whatIsErased}</summary>
+          <p className="text-[13px] text-muted leading-[1.6] mt-2">{c.body}</p>
+          <p className="text-[13px] text-muted leading-[1.6] mt-2">{c.whatGoes}</p>
+          <p className="text-[13px] text-muted leading-[1.6] mt-2">{c.whatStays}</p>
+          {legal}
+        </details>
+        <ConfirmDialog
+          open={confirming}
+          title={c.confirmTitle}
+          confirmLabel={busy ? c.working : c.confirmCta}
+          cancelLabel={c.keep}
+          onConfirm={doRequest}
+          onClose={() => setConfirming(false)}
+          busy={busy}
+        >
+          <p>{c.confirmBody}</p>
+        </ConfirmDialog>
+        {err && (
+          <p role="alert" className="text-[13px] mt-2.5 leading-[1.6]" style={{ color: "var(--rose)" }}>
+            {err}
+          </p>
+        )}
+      </section>
     );
   }
 

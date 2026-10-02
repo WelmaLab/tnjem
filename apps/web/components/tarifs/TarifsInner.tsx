@@ -81,10 +81,13 @@ const copy = bilingual({
     plansRule: classLimitRule("fr"),
     plusComm: "+ 10 % sur chaque élève payant",
     plusCommNote: "Uniquement sur les paiements traités par Tnajem.", // phase-a lane L3 (A22)
-    notBilled: "Pas encore facturé",
     recommended: "Recommandé",
     perMonth: "/ mois",
     planCta: "Commencer gratuitement",
+    // espace prof v2 · phase 6: one CTA per plan, saying the plan's state.
+    planCtaPilot: "Inclus pendant le pilote",
+    planCtaPaid: (name: string) => `Choisir ${name}`,
+    planCtaAria: (name: string) => `${name} — inclus pendant le pilote : crée ta page`,
     /* Derived-number formatting. The VALUES come from the shared catalogue; only
        the words are copy. */
     priceUnit: (n: number) => `${nf(n)} TND`,
@@ -201,10 +204,12 @@ const copy = bilingual({
     plansRule: classLimitRule("ar"),
     plusComm: "+ 10 % على كل تلميذ خلّص",
     plusCommNote: "كان على الخلاص اللي يعدّي من Tnajem.", // phase-a lane L3 (A22)
-    notBilled: "ما زال ما يتفوترش",
     recommended: "ننصحو بيها",
     perMonth: "/ في الشهر",
     planCta: "ابدا فابور",
+    planCtaPilot: "موجود في فترة التجربة",
+    planCtaPaid: (name: string) => `اختار ${name}`,
+    planCtaAria: (name: string) => `${name} — موجود في فترة التجربة : اعمل صفحتك`,
     priceUnit: (n: number) => `${nf(n)} دينار`,
     yearLine: (n: number) => `${n} دينار / في العام`,
     /* Arabic has a dual. "شهرين" is two months; anything else takes a number. */
@@ -318,12 +323,10 @@ html[dir="rtl"] .tf-price{font-family:var(--fa);letter-spacing:normal}
    neutral (paper + line, was an ochre wash); "Bientôt"/"Pas encore facturé" are
    .tag-soon; the Pro card keeps the one ochre button. */
 .tf-who{font-size:13px;font-weight:700;color:var(--ink2)}
-/* The "+ 10 %" block. Sits directly under the price so the two costs are read
-   as one number, not as a price with a footnote. */
-.tf-plus{margin-block-start:10px;padding:9px 11px;border-radius:var(--r-s);
-  background:var(--paper);border:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
-.tf-plus b{font-size:13px;font-weight:700;color:var(--ink2)}
-.tf-plus span{font-size:13px;line-height:1.5;color:var(--ink2)}
+/* espace prof v2 · phase 6: the commission and its « Bientôt », once above the grid. */
+.tf-once{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;margin-block-end:16px;padding:10px 14px;
+  border-radius:var(--r-s);background:var(--paper);border:1px solid var(--line);width:fit-content;max-width:100%}
+.tf-once b{font-size:14px;font-weight:700;color:var(--ink2)}
 .tf-feats{list-style:none;display:flex;flex-direction:column;gap:9px;margin-block-start:16px}
 .tf-feats li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;line-height:1.5;color:var(--ink2);min-width:0}
 .tf-feats .ic{width:17px;height:17px;flex:none;color:var(--green-ink);margin-block-start:2px}
@@ -463,32 +466,8 @@ function PlanCard({
         {free > 0 ? <b>{c.monthsFree(free)}</b> : null}
       </div>
 
-      {/* §2.2: a price is never shown without the commission that comes with it.
-          A tutor who reads only the card and meets the 10 % later has been misled
-          by the layout, even though both numbers exist elsewhere on the page.
-          EVERY card, Gratuit included — the 10 % is charged per paying student on
-          all plans, so a free plan showing "0 TND" alone would be the same lie in
-          its most tempting form. */}
-      {/* The "+ 10 %" line STAYS on every card, Gratuit included: a price is never
-          shown without the commission that comes with it, or a tutor who reads
-          only the card meets the second charge later and is right to feel misled.
-
-          The 26-word NOTE that used to sit under it does not stay. It was typeset
-          verbatim in all four cards — roughly 200 duplicated words inside one grid
-          row, and at 320px the largest single block in every card, in a
-          warning-temperature fill, directly beneath the price. A human writes that
-          once, under the grid. It now is. */}
-      <div className="tf-plus">
-        <b>{c.plusComm}</b>
-      </div>
-
-      {/* Only on plans that would actually cost something — "pas encore facturé"
-          on the 0 TND plan would be noise. */}
-      {plan.billed && !paymentsEnabled && (
-        <div className="mt-2.5">
-          <Tag kind="soon">{c.notBilled}</Tag>
-        </div>
-      )}
+      {/* espace prof v2 · phase 6 (spec §6): the « + 10 % par élève payant » and the
+          « Bientôt » are said ONCE, above the grid, instead of inside every card. */}
 
       <ul className="tf-feats">
         {/* THE CLASS LIMIT, first and derived. This is the entitlement the API
@@ -540,11 +519,16 @@ function PlanCard({
         {/* The one filled CTA in the grid. The page's other primary buttons sit
             above and below the grid, so until now its own calls to action
             competed with the thing it was selling. */}
+        {/* ONE CTA per plan, saying where the plan stands: while payments are off,
+            every plan is included in the pilot (nothing is sold); once they open,
+            the free plan starts free and the others are chosen. */}
         <Link
           href="/signup/prof"
           className={`btn ${highlighted ? "btn-primary" : "btn-ghost"} w-full`}
+          aria-label={paymentsEnabled ? undefined : c.planCtaAria(plan.name)}
+          data-e2e="plan-cta"
         >
-          {c.planCta}
+          {!paymentsEnabled ? c.planCtaPilot : isFree ? c.planCta : c.planCtaPaid(plan.name)}
         </Link>
       </CardFooter>
     </Card>
@@ -602,6 +586,13 @@ export function TarifsInner({ paymentsEnabled }: { paymentsEnabled: boolean }) {
               server actually enforces now travels WITH the cards, where the
               misunderstanding would otherwise start. */}
           <p className="web-lead mb-6 max-w-[680px]">{c.plansLead}</p>
+          {/* Said once for the whole grid (espace prof v2 · phase 6): the commission
+              that comes with every price, and — while payments are off — that none
+              of it is billed yet. */}
+          <div className="tf-once" data-e2e="tarifs-once">
+            <b>{c.plusComm}</b>
+            {!paymentsEnabled && <Tag kind="soon">{c.soonChip}</Tag>}
+          </div>
           <div className="grid-auto">
             {/* Staggered, 70ms apart — the one place on this page where a
                 sequence exists, so the one place motion carries meaning rather

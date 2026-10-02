@@ -6,6 +6,7 @@ import { Info } from "@/components/icons";
 import { bilingual } from "@/lib/i18n";
 import { isLocale, DEFAULT_LOCALE, type AppLocale } from "@/lib/locale";
 import { confirmUnsubscribe, lookupUnsubscribe } from "@/app/actions-growth";
+import { pageGuard } from "@/lib/page-guard";
 
 /* THE UNSUBSCRIBE CONFIRM PAGE — Espace prof v2 · Phase 4 · contract C5.
 
@@ -30,6 +31,9 @@ const copy = bilingual({
     manage: "Tes autres e-mails ne changent pas.",
     account: "Mon compte",
     home: "Retour à l'accueil",
+    // espace prof v2 · phase 6: only a signed-in TUTOR has the e-mail switches (Réglages › Notifications).
+    tutorPrefs: "Tous tes e-mails se règlent dans",
+    tutorPrefsLink: "Réglages › Notifications",
   },
   ar: {
     title: "الإيمايلات متاعك من Tnajem",
@@ -43,6 +47,8 @@ const copy = bilingual({
     manage: "الإيمايلات الأخرى متاعك ما تتبدّلش.",
     account: "حسابي",
     home: "ارجع للصفحة الرئيسية",
+    tutorPrefs: "الإيمايلات الكل متاعك تتبدّل من",
+    tutorPrefsLink: "الإعدادات › الإشعارات",
   },
 });
 
@@ -63,6 +69,11 @@ export default async function UnsubscribePage(props: Props) {
     const res = await confirmUnsubscribe(t);
     redirect(`/${locale}/email/unsubscribe?${res.ok ? "done=1" : `token=${encodeURIComponent(t)}`}`);
   }
+
+  /* A student or a guest has no settings screen for e-mails, so the line below is
+     shown to a signed-in tutor only — the page never promises what it cannot keep. */
+  const guard = await pageGuard().catch(() => null);
+  const isTutor = guard?.kind === "user" && guard.profile.role === "tutor";
 
   const state = done === "1" ? { kind: "done" as const } : token ? await lookupUnsubscribe(token).catch(() => ({ ok: false as const, error: "unavailable" })) : { ok: false as const, error: "invalid-token" };
 
@@ -97,6 +108,11 @@ export default async function UnsubscribePage(props: Props) {
             <p className="eu-manage">
               {c.manage} <Link href="/account">{c.account}</Link> · <Link href="/">{c.home}</Link>
             </p>
+            {isTutor && (
+              <p className="eu-manage" data-e2e="unsubscribe-tutor-prefs">
+                {c.tutorPrefs} <Link href="/dashboard/settings?tab=notifications">{c.tutorPrefsLink}</Link>.
+              </p>
+            )}
           </div>
         </div>
       </section>
