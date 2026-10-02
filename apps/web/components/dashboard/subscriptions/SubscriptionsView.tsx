@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useLocale } from "@/components/LocaleProvider";
-import { AppPage, Blocker, EmptyState, ErrorState, PageSkeleton, useShell } from "@/components/app/AppShell";
+import { AppPage, Blocker, EmptyState, ErrorState, FormMode, PageSkeleton, useShell } from "@/components/app/AppShell";
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 import { ShareButton } from "@/components/share/ShareButton";
 import { Field } from "@/components/ui";
@@ -332,6 +332,8 @@ export function SubscriptionsView() {
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDraft(null)}>{c.cancel}</button>
                 <button type="submit" className="btn btn-outline btn-sm" disabled={busy} data-e2e="offer-save">{draft.id ? c.save : c.create}</button>
               </div>
+              {/* live-fixes-1 · A2: while the offer form is open, no tab bar and no « + » on a phone. */}
+              <FormMode />
             </form>
           )}
 

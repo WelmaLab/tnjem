@@ -694,11 +694,47 @@ html[dir="rtl"] * { letter-spacing: normal !important }
    a utility class still wins, like everywhere else in this file.
    Breakpoint: 900px — the sidebar above, the bottom tab bar + « + » below. */
 @layer components {
+  /* ── live-fixes-1 · A: the frame's measurements, in one place. Everything that is
+     pinned (the top bar, the tab bar, the « + », the action bar) is sized from these,
+     and so is the room the page keeps clear of it — nothing below is a guess. ── */
+  :root{
+    --aps-side-w:232px;   /* the sidebar (≥ 900px) */
+    --aps-top-h:60px;     /* the top bar, without its 1px border */
+    --aps-tab-h:58px;     /* a phone tab; the tab bar is this + a 1px border + the safe area */
+    --aps-fab:48px;       /* the « + », docked in the tab bar: inside its height, ≥ 44px */
+    --aps-bar-pad:10px;   /* the action bar's padding */
+    --aps-clear:16px;     /* what stays free above anything pinned to the bottom */
+    --aps-page-w:1080px;  /* A5: THE width of the prof space */
+    --aps-form-w:760px;   /* A5: a single-column form's column, inside it */
+  }
+  /* What is pinned to the bottom of the screen, plus --aps-clear: the page keeps this much room
+     at its end (.aps-main), and the document scrolls a field above it (scroll-padding), so a
+     field that is scrolled or tabbed to never lands under a bar (A1, A3).
+       phone, a normal page   the tab bar (the « + » is docked in it) + the safe area
+       a form page (A2)       no tab bar: the action bar's MEASURED height
+                              (--aps-bar-h, set by <ActionBar>; it holds the safe area),
+                              or nothing for a form with no bar of its own
+       computer               the action bar, if any; else the frame's own margin */
+  html:has(.aps){
+    --aps-bottom:calc(var(--aps-tab-h) + 1px + var(--aps-clear) + env(safe-area-inset-bottom));
+    scroll-padding-block-start:calc(var(--aps-top-h) + 1px + 8px);
+    scroll-padding-block-end:var(--aps-bottom);
+  }
+  html:has(.aps [data-aps-form]){--aps-bottom:calc(var(--aps-clear) + env(safe-area-inset-bottom))}
+  html:has(.aps .aps-actionbar){
+    /* Before the bar is measured (the first paint): its tokens, for one row of 44px buttons. */
+    --aps-bottom:calc(var(--aps-bar-h, calc(2 * var(--aps-bar-pad) + 45px + env(safe-area-inset-bottom))) + var(--aps-clear));
+  }
+  @media (min-width:900px){
+    html:has(.aps),html:has(.aps [data-aps-form]){--aps-bottom:clamp(24px,3vw,40px)}
+    html:has(.aps .aps-actionbar){--aps-bottom:calc(var(--aps-bar-h, calc(2 * var(--aps-bar-pad) + 45px)) + var(--aps-clear))}
+  }
+
   /* ── the frame ── */
   .aps{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr);background:var(--bg)}
   .aps-side{display:none}
   .aps-body{min-width:0;display:flex;flex-direction:column;min-height:100vh}
-  .aps-top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:10px;min-height:60px;
+  .aps-top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:10px;min-height:var(--aps-top-h);
     padding-inline:clamp(12px,3vw,28px);background:var(--paper);border-block-end:1px solid var(--line)}
   .aps-top-brand{display:inline-flex;align-items:center;min-height:44px;flex:none}
   .aps-crumbs{display:none;min-width:0;flex:1}
@@ -718,18 +754,22 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .aps-count{position:absolute;inset-block-start:2px;inset-inline-end:2px;min-width:20px;height:20px;padding-inline:5px;
     border-radius:999px;background:var(--rose);color:#fff;font-size:13px;font-weight:700;line-height:20px;text-align:center;
     box-shadow:0 0 0 2px var(--paper)}
-  .aps-main{flex:1;min-width:0;padding:clamp(16px,3vw,32px);padding-block-end:calc(96px + env(safe-area-inset-bottom))}
+  .aps-main{flex:1;min-width:0;padding:clamp(16px,3vw,32px);padding-block-end:var(--aps-bottom)}
   /* Pages that still wrap themselves in <SiteShell><section class="web-section"><div class="container">:
      inside the shell the frame already pads the page. */
   .aps-main .web-section{padding-block:0}
   .aps-main .web-section > .container{max-width:none;padding-inline:0}
+  /* live-fixes-1 · A5: …and such a page (Modifier ma page, a conversation) sits in the same frame
+     as an <AppPage>: 1080px, and a narrow container is a 760px column at its inline start. */
+  .aps-main > .web-section > .container{max-width:var(--aps-page-w)}
+  .aps-main > .web-section > .container-narrow{padding-inline-end:max(0px,calc(min(100%,var(--aps-page-w)) - var(--aps-form-w)))}
 
   /* ── the sidebar (≥ 900px) ── */
-  .aps-brand{display:flex;align-items:center;min-height:44px;padding:18px 18px 14px}
+  .aps-brand{display:flex;align-items:center;min-height:44px;padding:14px 18px 10px}
   .aps-nav{display:flex;flex-direction:column;gap:2px;padding-inline:12px}
   .aps-nav ul{list-style:none;display:flex;flex-direction:column;gap:2px}
-  .aps-group{margin-block-start:14px}
-  .aps-group-t{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 12px 6px}
+  .aps-group{margin-block-start:10px}
+  .aps-group-t{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 12px;line-height:1.35}
   .aps-link{display:flex;align-items:center;gap:11px;min-height:44px;padding:9px 12px;border-radius:12px;
     font-size:14.5px;font-weight:600;color:var(--ink2)}
   .aps-link .ic{width:19px;height:19px;color:var(--muted)}
@@ -769,21 +809,25 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .aps-menu-item:hover,.aps-menu-item:focus-visible{background:var(--blue50);color:var(--blue)}
   .aps-menu-item:hover .ic{color:var(--blue)}
 
-  /* ── phones (< 900px): bottom tab bar, « + », « Profil » sheet ── */
-  .aps-tabs{position:fixed;inset-inline:0;inset-block-end:0;z-index:45;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  /* ── phones (< 900px): bottom tab bar with the « + » in its middle, « Profil » sheet ── */
+  .aps-tabs{position:fixed;inset-inline:0;inset-block-end:0;z-index:45;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));
     background:var(--paper);border-block-start:1px solid var(--line);padding-block-end:env(safe-area-inset-bottom);
     padding-inline:env(safe-area-inset-left) env(safe-area-inset-right)}
-  .aps-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:58px;padding:6px 2px;
+  .aps-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:var(--aps-tab-h);padding:6px 2px;
     border:0;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;min-width:0}
   .aps-tab span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .aps-tab .ic{width:22px;height:22px}
   .aps-tab[aria-current="page"]{color:var(--blue)}
-  .aps-fab-wrap{position:fixed;inset-inline-end:16px;inset-block-end:calc(72px + env(safe-area-inset-bottom));z-index:46}
-  .aps-fab{display:grid;place-items:center;width:56px;height:56px;border-radius:18px;border:0;background:var(--blue);color:#fff;
+  /* live-fixes-1 · A3: the « + » is the tab bar's raised middle slot — a filled cobalt key with
+     its shadow, inside the bar's own height, so it never sits over the page. Its menu opens
+     upward, centred on it (the negative margin is half the menu's width, in either direction). */
+  .aps-fab-wrap{position:relative;display:grid;place-items:center;min-width:0;min-height:var(--aps-tab-h)}
+  .aps-fab{display:grid;place-items:center;width:var(--aps-fab);height:var(--aps-fab);border-radius:16px;border:0;background:var(--blue);color:#fff;
     box-shadow:var(--sh);cursor:pointer}
-  .aps-fab .ic{width:26px;height:26px;stroke-width:2.2}
+  .aps-fab:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+  .aps-fab .ic{width:24px;height:24px;stroke-width:2.2}
   .aps-fab[aria-expanded="true"] .ic{transform:rotate(45deg)}
-  .aps-fab-menu{inset-block-end:calc(100% + 8px);inset-inline-end:0;min-width:220px}
+  .aps-fab-menu{inset-block-end:calc(100% + 8px);inset-inline-start:50%;width:220px;margin-inline-start:-110px}
   .aps-sheet{margin:auto 0 0;width:100%;max-width:100%;max-height:88vh;border:0;padding:0;background:var(--paper);
     border-radius:20px 20px 0 0;box-shadow:var(--sh-l);color:var(--ink)}
   .aps-sheet::backdrop{background:rgba(16,31,51,.45)}
@@ -794,20 +838,42 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .aps-hide-mobile{display:none}
 
   @media (min-width:900px){
-    .aps{grid-template-columns:232px minmax(0,1fr)}
-    .aps-side{display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;
+    .aps{grid-template-columns:var(--aps-side-w) minmax(0,1fr)}
+    /* live-fixes-1 · A4: exactly the screen's height and stuck to its top, however long the page;
+       the column itself never scrolls — only the nav list does, when the screen is too short for
+       it, so the avatar card at the bottom is always on screen. */
+    .aps-side{display:flex;flex-direction:column;position:sticky;top:0;height:100vh;height:100dvh;overflow:hidden;
       background:var(--paper);border-inline-end:1px solid var(--line)}
+    .aps-side .aps-brand{flex:none}
+    .aps-side .aps-nav{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-block-end:8px}
+    .aps-side .aps-me{flex:none}
     .aps-top-brand{display:none}
     .aps-crumbs{display:block}
-    .aps-tabs,.aps-fab-wrap{display:none}
-    .aps-main{padding-block-end:clamp(24px,3vw,40px)}
+    .aps-tabs{display:none}
     .aps-hide-mobile{display:flex}
   }
+  /* A4: a laptop screen (674px with the browser's bars, the founder's): the same sidebar, tighter —
+     the brand, the group titles and the avatar card give up their air, never the 44px rows — so
+     the whole nav fits from ~640px tall. */
+  @media (min-width:900px) and (max-height:800px){
+    .aps-side .aps-brand{padding-block:7px 3px}
+    .aps-side .aps-nav,.aps-side .aps-nav ul{gap:0}
+    .aps-side .aps-nav{padding-block-end:0}
+    .aps-side .aps-group{margin-block-start:3px}
+    .aps-side .aps-group-t{padding-block:0;line-height:16px}
+    .aps-side .aps-link{padding-block:0}
+    .aps-side .aps-me{padding-block:4px}
+    .aps-side .aps-me-btn{min-height:44px;padding-block:2px}
+    .aps-side .aps-me-av{width:34px;height:34px}
+  }
 
-  /* ── the page (AppPage) ── */
-  .aps-page{width:100%;max-width:1080px;margin-inline:auto}
-  .aps-page-narrow{max-width:760px}
-  .aps-page-wide{max-width:none}
+  /* ── the page (AppPage) ──
+     live-fixes-1 · A5: ONE frame for every page of the space, so a title never moves from one
+     page to the next. A single-column form ("narrow") is a 760px column at the inline start of
+     that frame — the room left at its end is padding, which follows the frame's real width.
+     "wide" is an old alias of the default: nothing in the space is uncapped any more. */
+  .aps-page{width:100%;max-width:var(--aps-page-w);margin-inline:auto}
+  .aps-page-narrow{padding-inline-end:max(0px,calc(min(100%,var(--aps-page-w)) - var(--aps-form-w)))}
   .aps-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 16px;flex-wrap:wrap;margin-block-end:clamp(14px,2vw,20px)}
   .aps-head-txt{flex:1 1 260px;min-width:0}
   .aps-h1{font-family:var(--fd);font-size:clamp(22px,2.6vw,28px);font-weight:700;letter-spacing:-.5px;line-height:1.15;color:var(--ink)}
@@ -821,13 +887,26 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .aps-blocker-txt b{color:var(--ink)}
   .aps-blocker-cta{flex:none;margin-inline-start:auto}
   .aps-note-info{margin-block-end:14px}
-  /* Rule 5: sticky at the bottom of the viewport, above the phone tab bar. */
-  .aps-actionbar{position:sticky;inset-block-end:calc(66px + env(safe-area-inset-bottom));z-index:20;display:flex;align-items:center;
-    justify-content:space-between;gap:10px 14px;flex-wrap:wrap;margin-block-start:16px;padding:10px 14px;border-radius:16px;
+  /* Rule 5: the action bar. Outside the shell (the public fallback of <AppPage>) a sticky card. */
+  .aps-actionbar{position:sticky;inset-block-end:12px;z-index:20;margin-block-start:16px;padding:var(--aps-bar-pad) 14px;border-radius:16px;
     background:var(--paper);border:1px solid var(--line);box-shadow:var(--sh-s)}
+  .aps-actionbar-in{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap}
   .aps-actionbar-status{min-width:0;flex:1 1 160px;font-size:13px;color:var(--muted)}
   .aps-actionbar-btns{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-inline-start:auto}
-  @media (min-width:900px){.aps-actionbar{inset-block-end:12px}}
+  /* live-fixes-1 · A1/A2 — in the shell, PINNED to the bottom edge (image 2): the full width on a
+     phone (where it is the only bar: form mode), the content column beside the sidebar on a
+     computer. Its row lines up with the page's frame — or the form's column. It never covers a
+     field: the page keeps its measured height + 16px free at the end, and scrolls a field above it
+     (--aps-bottom). z 40: over the content, under the top bar (50), toasts (60) and popovers (70). */
+  .aps .aps-actionbar{position:fixed;inset-inline:0;inset-block-end:0;z-index:40;margin:0;border-radius:0;border-width:1px 0 0;
+    padding:var(--aps-bar-pad) clamp(16px,3vw,32px) calc(var(--aps-bar-pad) + env(safe-area-inset-bottom));
+    box-shadow:0 -6px 20px rgba(16,31,51,.07)}
+  .aps .aps-actionbar-in{max-width:var(--aps-page-w);margin-inline:auto}
+  .aps .aps-page-narrow .aps-actionbar-in{padding-inline-end:max(0px,calc(min(100%,var(--aps-page-w)) - var(--aps-form-w)))}
+  @media (min-width:900px){.aps .aps-actionbar{inset-inline-start:var(--aps-side-w)}}
+  /* A2: form mode — a form page shows ONE bar on a phone, its own. The tab bar, « + » included,
+     steps aside whenever the page holds an <ActionBar> or a <FormMode /> marker (AppPage.tsx). */
+  .aps:has([data-aps-form]) .aps-tabs{display:none}
   .aps-section{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--sh-s);
     padding:clamp(16px,2.2vw,22px);margin-block-end:14px;min-width:0}
   .aps-section-t{display:flex;align-items:center;gap:10px;font-family:var(--fd);font-size:16px;font-weight:700;margin-block-end:14px}
@@ -1062,9 +1141,8 @@ html[dir="rtl"] * { letter-spacing: normal !important }
 
   /* ── phase 6 · Nouvelle classe (image 2): sections + the student's preview ── */
   .nc-form{min-width:0}
-  /* A form page's sticky bar holds its own primary action at the inline end — exactly
-     where the phone « + » floats. The bar wins; « + » is for the other pages. */
-  .aps:has(.aps-actionbar) .aps-fab-wrap{display:none}
+  /* (A form page's bar holds its own primary action, so the phone's tab bar and « + » step
+     aside — live-fixes-1 generalised this into form mode, see .aps-actionbar.) */
   .nc-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
   @media (min-width:1100px){.nc-grid{grid-template-columns:minmax(0,1fr) 320px}}
   .nc-main{min-width:0}

@@ -204,7 +204,9 @@ test.describe("phone (390 wide)", () => {
       expect(box).toBeGreaterThanOrEqual(44);
     }
 
-    // The « + » opens « Nouvelle classe / Nouvelle fiche ».
+    // The « + » opens « Nouvelle classe / Nouvelle fiche ». live-fixes-1 · A3: it is docked in
+    // the tab bar (its middle slot), never floating over the page.
+    await expect(tabs.locator("[data-e2e=shell-fab]")).toBeVisible();
     await page.locator("[data-e2e=shell-fab]").click();
     const fab = page.locator("[data-e2e=shell-fab-menu]");
     await expect(fab.getByRole("link", { name: "Nouvelle classe" })).toHaveAttribute("href", "/fr/dashboard/new-class");

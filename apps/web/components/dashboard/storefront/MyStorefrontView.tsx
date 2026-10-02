@@ -126,7 +126,7 @@ export function MyStorefrontView() {
       subtitle={c.sub}
       blockers={d && d.has_storefront ? blockerOf(d, c) : null}
       note={d?.status === "pending" ? c.pendingNote : undefined}
-      width="narrow"
+      width="default"
     >
       <div className="sv-stack">{body}</div>
     </AppPage>

@@ -195,7 +195,7 @@ export default function ThreadPage() {
     return (
       <SiteShell>
         <section className="web-section">
-          <div className="container container-narrow max-w-[760px]">
+          <div className="container container-narrow">
             <div className="panel panel-pad grid place-items-center min-h-[200px]">
               <Spinner />
               <span className="sr-only">{c.loading}</span>
@@ -210,7 +210,7 @@ export default function ThreadPage() {
     return (
       <SiteShell>
         <section className="web-section">
-          <div className="container container-narrow max-w-[760px]">
+          <div className="container container-narrow">
             <div className="panel panel-pad text-center">
               <p className="text-[14px] mb-3.5">{c.gone}</p>
               <Link href="/messages" className="btn btn-primary btn-sm">{c.backCta}</Link>
@@ -233,7 +233,7 @@ export default function ThreadPage() {
   return (
     <SiteShell>
       <section className="web-section">
-        <div className="container container-narrow max-w-[760px]">
+        <div className="container container-narrow">
           {/* A 44px tap target that takes the same room as before: -14px on top, 44px tall,
               -2px below (was 16px of text + a 12px margin). */}
           <Link href="/messages" className="text-[13px] text-muted inline-flex items-center gap-1.5 min-h-[44px] -mt-[14px] -mb-[2px]">

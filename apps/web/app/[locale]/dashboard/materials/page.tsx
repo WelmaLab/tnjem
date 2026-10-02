@@ -245,7 +245,7 @@ export default function MaterialsPage() {
           {c.newPack}
         </Link>
       }
-      width="narrow"
+      width="default"
     >
           {flash && (
             <div

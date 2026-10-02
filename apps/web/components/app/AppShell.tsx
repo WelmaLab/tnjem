@@ -37,10 +37,23 @@
        crumbs={[{ label: c.messages, href: "/messages" }, { label: title }]}
                                              optional: override the breadcrumbs nav.tsx derives
        actionBar={<ActionBar status={c.saved}><button…/></ActionBar>}
-                                             rule 5: sticky at the bottom, above the phone tab bar
-       width="default" | "narrow" | "wide">
+                                             rule 5: pinned to the bottom edge (or render <ActionBar>
+                                             anywhere in the page, e.g. inside its <form>)
+       width="default" | "narrow"           one frame for the whole space (1080px): "default" for a
+                                             page, "narrow" for a single-column form (a 760px column
+                                             at the inline start, so the title never moves);
+                                             "wide" is an old alias of "default"
+       form>                                form mode without an action bar (below)
        …content…
      </AppPage>
+
+     FORM MODE (live-fixes-1 · A2): a page that is a form shows ONE bar on a phone — its
+     action bar — and no tab bar (the « + » lives in it). An <ActionBar> turns it on by
+     itself; a form with no action bar mounts <FormMode /> while it is on screen (or the
+     page passes `form`). Pure CSS (:has([data-aps-form]) in app/globals.css), so it is
+     right on the first paint. Whatever is pinned to the bottom (the tab bar, or the
+     measured action bar) is kept clear: the page ends 16px above it, and a field scrolled
+     or tabbed to lands above it (scroll-padding on the document).
 
      <FormSection n={1} title={c.s1}>…</FormSection>        rule 5: numbered form sections
      <PageSkeleton rows={3} /> · <EmptyState …/> · <ErrorState onRetry />
@@ -58,7 +71,7 @@
      {/* ep2:follow-slot *\/}  the public « Ce prof arrive bientôt » page (growth's Suivre)
      {/* ep2:stats-slot *\/}   Ma vitrine (growth's Vues · Clics · Abonnés)
    ══════════════════════════════════════════════════════════════════════════════ */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Link } from "@/components/Link";
 import { Logo } from "@/components/Logo";
@@ -71,9 +84,9 @@ import { publicDisplayName, type TutorShell } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 import { ShellContext, type Crumb, type ShellContextValue } from "./ShellContext";
 import { NotificationsBell } from "./NotificationsBell";
-import { APP_NAV, CREATE_ACTIONS, MOBILE_TABS, activeItemKey, crumbsFor, navItem, type NavItem } from "./nav";
+import { APP_NAV, CREATE_ACTIONS, CREATE_TAB_AT, MOBILE_TABS, activeItemKey, crumbsFor, navItem, type NavItem } from "./nav";
 
-export { AppPage, Blocker, ActionBar, FormSection, PageSkeleton, EmptyState, ErrorState } from "./AppPage";
+export { AppPage, Blocker, ActionBar, FormMode, FormSection, PageSkeleton, EmptyState, ErrorState } from "./AppPage";
 export type { AppPageProps } from "./AppPage";
 export { useShell, useInAppShell, type Crumb } from "./ShellContext";
 
@@ -293,7 +306,10 @@ function ProfileSheet({ shell, activeKey, open, onClose, c }: { shell: TutorShel
   );
 }
 
-/* ── the floating « + » (phones) ─────────────────────────────────────────────── */
+/* ── the « + » (phones): the raised middle slot of the tab bar ───────────────────
+   live-fixes-1 · A3: it used to float above the tab bar, over the page — and a button
+   floating over scrolling content covers whatever scrolls under it (« Copier le lien »
+   on the Arabic home, as the page opened). Docked in the bar, it never covers anything. */
 function CreateFab({ c }: { c: Copy }) {
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
@@ -442,21 +458,23 @@ export function AppShell({ shell, children }: { shell: TutorShell | null; childr
         </div>
 
         <nav className="aps-tabs" aria-label={c.quick} data-e2e="shell-tabs">
-          {MOBILE_TABS.map((tab) => {
+          {MOBILE_TABS.map((tab, i) => {
             const item = navItem(tab.key);
             if (!item) return null;
             const Icon = item.icon;
             return (
-              <Link prefetch={false}
-                key={tab.key}
-                href={item.href}
-                className="aps-tab"
-                aria-current={activeKey === tab.key ? "page" : undefined}
-                data-e2e={`tab-${tab.key}`}
-              >
-                <Icon />
-                <span>{tab.label[locale]}</span>
-              </Link>
+              <Fragment key={tab.key}>
+                {i === CREATE_TAB_AT && <CreateFab c={c} />}
+                <Link prefetch={false}
+                  href={item.href}
+                  className="aps-tab"
+                  aria-current={activeKey === tab.key ? "page" : undefined}
+                  data-e2e={`tab-${tab.key}`}
+                >
+                  <Icon />
+                  <span>{tab.label[locale]}</span>
+                </Link>
+              </Fragment>
             );
           })}
           <button
@@ -471,7 +489,6 @@ export function AppShell({ shell, children }: { shell: TutorShell | null; childr
             <span>{c.profile}</span>
           </button>
         </nav>
-        <CreateFab c={c} />
         <ProfileSheet shell={shell} activeKey={activeKey} open={sheet} onClose={() => setSheet(false)} c={c} />
       </div>
     </ShellContext.Provider>

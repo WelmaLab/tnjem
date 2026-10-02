@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLocale } from "@/components/LocaleProvider";
-import { AppPage, Blocker, EmptyState, ErrorState, PageSkeleton, useShell } from "@/components/app/AppShell";
+import { AppPage, Blocker, EmptyState, ErrorState, FormMode, PageSkeleton, useShell } from "@/components/app/AppShell";
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 import { DatePicker } from "@/components/app/DatePicker";
 import { ShareButton } from "@/components/share/ShareButton";
@@ -417,6 +417,8 @@ export function PromotionsView() {
         <p>{c.endB}</p>
       </ConfirmDialog>
       {toast}
+      {/* live-fixes-1 · A2: the promotion form IS this page — on a phone, no tab bar and no « + ». */}
+      <FormMode />
       <style dangerouslySetInnerHTML={{ __html: PR_CSS }} />
     </AppPage>
   );

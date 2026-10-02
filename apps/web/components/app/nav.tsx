@@ -10,8 +10,9 @@
                       (Nouvelle classe under Mes classes…) — they light that item up
                       and get its breadcrumb.
      MOBILE_TABS      the four links of the bottom tab bar (< 900px); « Profil » is
-                      the fifth tab and opens the sheet.
-     CREATE_ACTIONS   what the floating « + » offers on a phone.
+                      the last tab and opens the sheet.
+     CREATE_ACTIONS   what the « + » offers on a phone — the raised middle slot of the
+                      tab bar (CREATE_TAB_AT), never floating over the page.
 
    ADDING A PAGE (other teams): append ONE entry — an item to a group's `items`
    when it belongs in the sidebar, else a row to APP_SUBPAGES. Labels are
@@ -150,7 +151,11 @@ export const MOBILE_TABS: { key: string; label: Bilingual }[] = [
   { key: "storefront", label: { fr: "Vitrine", ar: "الواجهة" } },
 ];
 
-/** The floating « + » on a phone. */
+/** live-fixes-1 · A3 — where the « + » sits in the tab bar: before MOBILE_TABS[CREATE_TAB_AT],
+    so Accueil · Classes · [+] · Élèves · Vitrine · Profil (mirrored in Arabic). */
+export const CREATE_TAB_AT = 2;
+
+/** The « + » on a phone (the tab bar's middle slot). */
 export const CREATE_ACTIONS: { href: string; label: Bilingual; icon: NavItem["icon"] }[] = [
   { href: "/dashboard/new-class", label: { fr: "Nouvelle classe", ar: "حصة جديدة" }, icon: Plus },
   { href: "/dashboard/new-pack", label: { fr: "Nouvelle fiche", ar: "ملخّص جديد" }, icon: Plus },

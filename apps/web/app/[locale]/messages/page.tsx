@@ -135,7 +135,7 @@ export default function MessagesPage() {
      the privacy line as the page's one info note. A student keeps the page below. */
   if (inShell) {
     return (
-      <AppPage title={c.title} subtitle={c.sub} note={c.privacy} width="narrow">
+      <AppPage title={c.title} subtitle={c.sub} note={c.privacy} width="default">
         {list}
       </AppPage>
     );

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Link } from "@/components/Link";
 import { SiteShell } from "@/components/SiteShell";
 import { useLocale } from "@/components/LocaleProvider";
@@ -39,16 +39,24 @@ export type AppPageProps = {
   note?: ReactNode;
   /** Replace the breadcrumbs nav.tsx derives for this path (e.g. a conversation's title). */
   crumbs?: Crumb[];
-  /** Rule 5 — the sticky action bar at the bottom of a form page. Use <ActionBar>. */
+  /** Rule 5 — the action bar pinned to the bottom of a form page. Use <ActionBar> (here or anywhere in the page). */
   actionBar?: ReactNode;
-  /** Content width: "default" (≈1080px), "narrow" (≈760px, single-column reading) or "wide" (no cap). */
+  /** live-fixes-1 · A5 — the prof space has ONE width (--aps-page-w, 1080px) and every page's title
+      starts at the same place:
+        "default"  a page — lists, overviews, two-column forms (form + live preview): 1080px;
+        "narrow"   a single-column form (Vérification, Réglages…): the same frame, its column
+                   760px (--aps-form-w) at the inline start;
+        "wide"     kept so older callers compile — since A5 it is the same as "default". */
   width?: "default" | "narrow" | "wide";
+  /** live-fixes-1 · A2 — form mode: on a phone the tab bar and the « + » step aside (see <FormMode>).
+      An <ActionBar> already implies it. */
+  form?: boolean;
   children: ReactNode;
 };
 
 const WIDTH = { default: "aps-page", narrow: "aps-page aps-page-narrow", wide: "aps-page aps-page-wide" } as const;
 
-export function AppPage({ title, subtitle, actions, blockers, note, crumbs, actionBar, width = "default", children }: AppPageProps) {
+export function AppPage({ title, subtitle, actions, blockers, note, crumbs, actionBar, width = "default", form = false, children }: AppPageProps) {
   const ctx = useShell();
   const setCrumbs = ctx?.setCrumbs;
   const crumbKey = crumbs ? JSON.stringify(crumbs) : null;
@@ -77,6 +85,7 @@ export function AppPage({ title, subtitle, actions, blockers, note, crumbs, acti
       ) : null}
       {children}
       {actionBar}
+      {form ? <FormMode /> : null}
     </div>
   );
 
@@ -129,15 +138,50 @@ export function Blocker({
   );
 }
 
-/** Rule 5 — the sticky action bar of a form page. `status` sits at the inline start ("Brouillon enregistré"). */
+/** Rule 5 — the action bar of a form page. `status` sits at the inline start ("Brouillon enregistré").
+
+    live-fixes-1 · A1/A2: inside the shell it is PINNED to the bottom edge — the whole width on a
+    phone, the content column beside the sidebar on a computer — and mounting one puts the page in
+    form mode (no tab bar, no « + » on a phone). Its height is measured, not guessed: it varies
+    (the status line wraps above the buttons on a phone) and the page must keep exactly that much
+    room, plus 16px, below its last field, and scroll a focused field above it (--aps-bar-h,
+    read by the shell's CSS in app/globals.css). Render it anywhere in the page — inside the
+    <form> when its button submits it. */
 export function ActionBar({ status, children }: { status?: ReactNode; children: ReactNode }) {
   const { locale } = useLocale();
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    // The border box: it already holds the safe-area inset the bar pads itself with on a phone.
+    const measure = () => root.style.setProperty("--aps-bar-h", `${Math.ceil(el.getBoundingClientRect().height)}px`);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty("--aps-bar-h");
+    };
+  }, []);
   return (
-    <div className="aps-actionbar" role="region" aria-label={copy[locale].actions}>
-      <div className="aps-actionbar-status">{status}</div>
-      <div className="aps-actionbar-btns">{children}</div>
+    <div ref={ref} className="aps-actionbar" role="region" aria-label={copy[locale].actions} data-aps-form="">
+      <div className="aps-actionbar-in">
+        <div className="aps-actionbar-status">{status}</div>
+        <div className="aps-actionbar-btns">{children}</div>
+      </div>
     </div>
   );
+}
+
+/** live-fixes-1 · A2 — FORM MODE. A page that is a form (or a form that opens inside a page,
+    like « Nouvelle offre ») mounts this while the form is on screen: on a phone the bottom tab
+    bar and the floating « + » step aside, so the screen keeps one bar at most — the page's own
+    <ActionBar>, which implies form mode by itself. It is a hidden marker the shell's CSS reads
+    with :has(), so it is right from the first paint, server-rendered, with no state to sync.
+    `<AppPage form>` is the same thing for a whole page. */
+export function FormMode() {
+  return <span hidden data-aps-form="" />;
 }
 
 /** Rule 5 — a numbered form section (image 2: « 1 L'essentiel »). */
