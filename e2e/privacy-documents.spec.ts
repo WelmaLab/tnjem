@@ -19,7 +19,10 @@ test.describe("privacy: the published documents match the code", () => {
   test("/fr/privacy quotes the enforced periods and describes deletion, access and cookies as built", async ({ page }) => {
     const t = await text(page, "/fr/privacy");
     // espace prof v2 · auth: PRIVACY_POLICY_VERSION moved to 2026-10-01 with passwords (was 2026-09-24, Phase A).
-    expect(t).toContain("Version du 01 octobre 2026");
+    // espace prof v2 · pro (P7): → 2026-10-02, the booking / reminder / review e-mails and what the e-mail provider receives.
+    expect(t).toContain("Version du 02 octobre 2026");
+    expect(t).toContain("rappels 24 h et 1 h avant");
+    expect(t, "the e-mail provider no longer gets only the login code").not.toContain("il reçoit ton adresse et le code, rien d'autre");
     expect(t).toContain(`${ID_DOCUMENT_RETENTION_DAYS} jours après la décision`);
     expect(t).toContain(`Nous te laissons ${DELETION_GRACE_DAYS} jours pour changer d'avis`);
     expect(t).toContain("ton compte est anonymisé");

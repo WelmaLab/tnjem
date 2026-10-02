@@ -14,6 +14,7 @@
 export const ROUTE_PATTERNS: readonly string[] = [
   "",
   "account",
+  "aide", // espace prof v2 · pro (P7)
   "admin/accounts",
   "admin/moderation",
   "admin/plans",

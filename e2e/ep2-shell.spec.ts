@@ -49,7 +49,9 @@ test.describe("the frame", () => {
     await expect(side.locator(".aps-link-t")).toHaveText([
       "Accueil", "Mes classes", "Mes fiches", "Mes élèves", "Abonnements",
       "Ma vitrine", "Promotions", "Vérification", "Mon offre", "Réglages",
+      "Aide", // espace prof v2 · pro (P7, C9): the help page, in the nav config
     ]);
+    await expect(side.locator("[data-e2e=nav-help]")).toHaveAttribute("href", "/fr/aide");
     await expect(side.locator("[data-e2e=nav-home]")).toHaveAttribute("aria-current", "page");
     await expect(side.locator("[aria-current=page]")).toHaveCount(1);
     // Draft: verification is still to do → the badge.
@@ -216,6 +218,8 @@ test.describe("phone (390 wide)", () => {
     await expect(sheet).toBeVisible();
     await expect(sheet.getByRole("link", { name: /Vérification/ })).toBeVisible();
     await expect(sheet.getByRole("link", { name: "Mon offre" })).toBeVisible();
+    // espace prof v2 · pro (P7): « Aide » comes from the nav config — once, not twice.
+    await expect(sheet.getByRole("link", { name: "Aide" })).toHaveCount(1);
     await expect(sheet.getByRole("button", { name: "Se déconnecter" })).toBeVisible();
     await sheet.getByRole("link", { name: "Mes fiches" }).click();
     await expect(page).toHaveURL(/\/fr\/dashboard\/materials$/);

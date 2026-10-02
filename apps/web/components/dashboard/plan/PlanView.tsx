@@ -60,7 +60,7 @@ const copy = bilingual({
     unlimited: "حصص بلا حدّ",
     boost1: "تبان في المقدّمة",
     boost2: "مركز أول",
-    commission: `+${COMMISSION_PCT} % على كل تلميذ خلّص، كي يتحلّ الخلاص أونلاين`,
+    commission: `\u2066+${COMMISSION_PCT} %\u2069 على كل تلميذ خلّص، كي يتحلّ الخلاص أونلاين`,
     details: "تفاصيل العروض",
     current: "العرض متاعك",
   },

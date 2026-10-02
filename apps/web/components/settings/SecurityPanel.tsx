@@ -27,6 +27,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Button, Card } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
 import { useToast } from "@/components/useToast";
+import { ConfirmDialog } from "@/components/app/ConfirmDialog"; // espace prof v2 · pro (P7)
 import { Lock, Users } from "@/components/icons";
 import { logout, logoutEverywhere } from "@/app/actions";
 import { changePassword, getSecurityState, requestPasswordCode, setPassword, type SecurityState } from "@/app/actions-auth";
@@ -71,6 +72,10 @@ const COPY = {
     lastSeen: (d: string) => `dernière activité le ${d}`,
     logout: "Se déconnecter",
     logoutAll: "Déconnecter partout",
+    // espace prof v2 · pro (P7): asked first — it ends every session, this one included.
+    logoutAllT: "Te déconnecter de tous tes appareils ?",
+    logoutAllB: "Toutes tes connexions s'arrêtent, celle-ci comprise. Tu devras te reconnecter partout.",
+    logoutAllNo: "Annuler",
     moreSessions: (n: number) => (n === 1 ? "+ 1 autre appareil" : `+ ${n} autres appareils`),
     logoutAllHint: "Un téléphone perdu ou prêté ? « Déconnecter partout » arrête toutes tes connexions, celle-ci comprise.",
     loadFailed: "Impossible de charger ces informations.",
@@ -112,6 +117,9 @@ const COPY = {
     lastSeen: (d: string) => `آخر نشاط نهار ${d}`,
     logout: "اخرج",
     logoutAll: "اخرج من الأجهزة الكل",
+    logoutAllT: "تخرج من الأجهزة الكل ؟",
+    logoutAllB: "الدخول يتسكّر في الأجهزة الكل، حتى هذا. يلزمك تعاود تدخل في كل جهاز.",
+    logoutAllNo: "رجوع",
     moreSessions: (n: number) => (n === 1 ? "+ جهاز آخر" : `+ ${n} أجهزة أخرى`),
     logoutAllHint: "تليفون ضاع ولا سلّفتو؟ « اخرج من الأجهزة الكل » يسكّر الدخول في الأجهزة الكل، حتى هذا.",
     loadFailed: "ما نجّمناش نحمّلو المعلومات هاذي.",
@@ -151,6 +159,9 @@ export function SecurityPanel({ heading = true }: { heading?: boolean } = {}) {
   const [devCode, setDevCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // espace prof v2 · pro (P7): « Déconnecter partout » asks first (ConfirmDialog).
+  const [askLogoutAll, setAskLogoutAll] = useState(false);
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
   const [fieldError, setFieldError] = useState<{ field: "current" | "fresh" | "code"; message: string } | null>(null);
   const currentRef = useRef<HTMLInputElement>(null);
   const freshRef = useRef<HTMLInputElement>(null);
@@ -241,6 +252,7 @@ export function SecurityPanel({ heading = true }: { heading?: boolean } = {}) {
     window.location.href = `/${locale}`;
   }
   async function handleLogoutEverywhere() {
+    setLoggingOutAll(true);
     await logoutEverywhere();
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = `/${locale}`;
@@ -400,7 +412,7 @@ export function SecurityPanel({ heading = true }: { heading?: boolean } = {}) {
               </div>
               <div className="sec-actions">
                 <Button variant="outline" sm onClick={() => void handleLogout()}>{c.logout}</Button>
-                <Button variant="outline" sm onClick={() => void handleLogoutEverywhere()}>{c.logoutAll}</Button>
+                <Button variant="outline" sm onClick={() => setAskLogoutAll(true)}>{c.logoutAll}</Button>
               </div>
             </div>
             {sessions.length > 0 && (
@@ -420,6 +432,17 @@ export function SecurityPanel({ heading = true }: { heading?: boolean } = {}) {
           </Card>
         </>
       )}
+      <ConfirmDialog
+        open={askLogoutAll}
+        title={c.logoutAllT}
+        confirmLabel={c.logoutAll}
+        cancelLabel={c.logoutAllNo}
+        busy={loggingOutAll}
+        onConfirm={() => void handleLogoutEverywhere()}
+        onClose={() => setAskLogoutAll(false)}
+      >
+        {c.logoutAllB}
+      </ConfirmDialog>
       {toast}
     </section>
   );

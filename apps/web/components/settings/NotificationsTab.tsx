@@ -18,21 +18,24 @@ const KEYS = ["bookings", "messages", "reminders", "followers"] as const;
 type Key = (typeof KEYS)[number];
 type Prefs = Extract<NotificationPrefsResult, { ok: true }>["prefs"];
 
-/* TRUTH (the founder's rule): every switch is stored and every Tnajem e-mail must
-   ask it (packages/db/src/notification-prefs.ts::wantsEmail) — but today none of the
-   four kinds is e-mailed to a TUTOR (the followers digest and the subscription
-   reminder go to students; booking, message and class-reminder e-mails are not built
-   yet). So the rows say what each switch governs, and the note says it plainly. */
+/* TRUTH (the founder's rule): every switch is stored and every Tnajem e-mail asks
+   it (packages/db/src/notification-prefs.ts::wantsEmail). What reaches a TUTOR today
+   (espace prof v2 · pro P7 — apps/api/src/lib/booking-mail.ts and reminders.ts):
+     « Réservations » → a new booking in their class (with the .ics), a student's
+                        cancellation, the confirmation when they cancel a class;
+     « Rappels »      → 24 h and 1 h before each of their classes with a booking.
+   « Messages » and « Abonnés » send a tutor no e-mail yet (message e-mails are not
+   built; the followers digest goes to students) — the rows and the note say so. */
 const copy = bilingual({
   fr: {
     title: "E-mails",
     lead: "Choisis les e-mails que tu veux recevoir. Les notifications dans Tnajem (la cloche) restent toutes.",
-    notYet: "Pour l'instant, Tnajem n'envoie encore aucun de ces e-mails à un prof : ton choix est enregistré et s'appliquera dès qu'ils existeront.",
+    notYet: "« Réservations » et « Rappels » t'envoient déjà des e-mails. « Messages » et « Abonnés » n'en envoient pas encore à un prof : ton choix est enregistré et s'appliquera s'ils arrivent.",
     rows: {
-      bookings: ["Réservations", "Les réservations et les annulations dans tes séances."],
-      messages: ["Messages", "Les nouveaux messages dans la conversation d'une séance."],
-      reminders: ["Rappels", "Les rappels avant tes séances."],
-      followers: ["Abonnés", "Ce qui concerne le suivi des pages (« Suivre »)."],
+      bookings: ["Réservations", "Un e-mail à chaque réservation et à chaque annulation dans tes séances, et quand tu annules une séance (avec le fichier pour ton calendrier)."],
+      messages: ["Messages", "Les nouveaux messages dans la conversation d'une séance. Pas encore envoyés par e-mail : ils sont dans la cloche."],
+      reminders: ["Rappels", "Un e-mail 24 h puis 1 h avant chacune de tes séances qui a au moins un élève inscrit."],
+      followers: ["Abonnés", "Le suivi de ta page (« Suivre »). Pas encore d'e-mail pour un prof : tes nouveaux abonnés sont dans la cloche."],
     } as Record<Key, [string, string]>,
     saved: "Préférence enregistrée.",
     failed: "Ça n'a pas marché. Le réglage n'a pas changé.",
@@ -40,12 +43,12 @@ const copy = bilingual({
   ar: {
     title: "الإيمايلات",
     lead: "اختار الإيمايلات اللي تحب توصلك. التنبيهات في Tnajem (الجرس) يقعدو الكل.",
-    notYet: "لتوّا، Tnajem ما تبعث حتى إيمايل من هاذوما للأستاذ: الاختيار متاعك تسجّل ويتطبّق أوّل ما يوليو موجودين.",
+    notYet: "« الحجوزات » و« التذكيرات » يبعثولك إيمايلات من توّا. « الرسائل » و« المتابعين » ما يبعثو حتى إيمايل للأستاذ لتوّا : الاختيار متاعك تسجّل ويتطبّق كان يوليو موجودين.",
     rows: {
-      bookings: ["الحجوزات", "الحجوزات والإلغاءات في حصصك."],
-      messages: ["الرسائل", "الرسائل الجديدة في محادثة حصة."],
-      reminders: ["التذكيرات", "التذكيرات قبل حصصك."],
-      followers: ["المتابعين", "اللي يخصّ متابعة الصفحات (« تابِع »)."],
+      bookings: ["الحجوزات", "إيمايل مع كل حجز وكل إلغاء في حصصك، وكي تلغي إنت حصة (مع الملف متاع الأجندة)."],
+      messages: ["الرسائل", "الرسائل الجديدة في محادثة حصة. ما تتبعثش بالإيمايل لتوّا : تلقاها في الجرس."],
+      reminders: ["التذكيرات", "إيمايل 24 ساعة ومن بعد ساعة قبل كل حصة من حصصك فيها على الأقل تلميذ مسجّل."],
+      followers: ["المتابعين", "متابعة صفحتك (« تابِع »). ما فماش إيمايل للأستاذ لتوّا : المتابعين الجدد تلقاهم في الجرس."],
     } as Record<Key, [string, string]>,
     saved: "الإعداد تسجّل.",
     failed: "ما مشاتش. الإعداد ما تبدّلش.",

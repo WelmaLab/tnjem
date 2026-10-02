@@ -279,13 +279,8 @@ function ProfileSheet({ shell, activeKey, open, onClose, c }: { shell: TutorShel
         <nav aria-label={c.space} className="aps-nav aps-sheet-nav">
           <NavList shell={shell} activeKey={activeKey} onNavigate={onClose} idPrefix="aps-sheet" />
         </nav>
+        {/* « Aide » is in the nav list above (nav.tsx, COMPTE group — pro P7). */}
         <ul className="aps-sheet-extra">
-          <li>
-            <Link prefetch={false} href="/aide" className="aps-menu-item" onClick={onClose}>
-              <Help />
-              {c.help}
-            </Link>
-          </li>
           <li>
             <button type="button" className="aps-menu-item" onClick={signOut}>
               <LogOut />

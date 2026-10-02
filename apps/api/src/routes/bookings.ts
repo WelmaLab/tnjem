@@ -28,6 +28,7 @@ import { isUniqueViolation } from "../lib/db-errors";
 import { freeFirstStillAvailable } from "../lib/free-first-entitlement"; // phase-a/integrate (A6)
 import { coveringSubscription } from "../lib/subscription-seat"; // espace prof v2 · growth (P5, C7)
 import { claimPromotionUse, quoteItem, releasePromotionUse } from "../lib/promotions"; // espace prof v2 · growth (P5)
+import { dispatchMail, mailBookingCancelled, mailBookingConfirmedFor } from "../lib/booking-mail"; // espace prof v2 · pro (P7)
 
 /* bookings — reserveSeat, cancelBooking, getStudentDashboard.
 
@@ -311,6 +312,8 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
         aboutProfileId: uid,
       });
     }
+    // espace prof v2 · pro (P7): the confirmation emails (+ .ics) to both sides — after the commit, not awaited.
+    dispatchMail("booking-confirmed", () => mailBookingConfirmedFor(cls.id, uid));
 
     /* seats_left just moved and the storefront caches it for 60s — a class the
        cache still shows as "3 places" is how a student reaches the checkout of a
@@ -491,6 +494,18 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
         aboutProfileId: uid,
       });
     }
+    /* espace prof v2 · pro (P7): the student's confirmation (with a METHOD:CANCEL .ics
+       that removes the calendar entry) and the tutor's notice — the same outcome the
+       ledger row just recorded. */
+    dispatchMail("booking-cancelled", () =>
+      mailBookingCancelled(bookingId.value, {
+        late: outcome.late,
+        waived: movedAfterBooking,
+        wasFree: Boolean(bk.isFree),
+        wasCovered: Boolean(bk.subscriptionId),
+        retainedTnd: outcome.retainedTnd,
+      }),
+    );
 
     /* The outcome goes back to the UI so the confirmation can be SPECIFIC — "you
        cancelled in time" vs "this was a late cancellation, 40% is recorded" —

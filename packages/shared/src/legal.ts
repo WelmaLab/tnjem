@@ -60,8 +60,11 @@ export const CONSENT_TEXT = "Consentement du parent/tuteur pour un compte de moi
     pilot, conversations that close, moderation, first name + initial, …), so a
     consent recorded from now on points at the text it was actually given under.
     espace prof v2 · auth (phase 2): 2026-09-24 → 2026-10-01 — passwords (an argon2id
-    hash is stored; the lockout; the hash is erased with the account). */
-export const PRIVACY_POLICY_VERSION = "2026-10-01";
+    hash is stored; the lockout; the hash is erased with the account).
+    espace prof v2 · pro (phase 7): 2026-10-01 → 2026-10-02 — §3 the e-mail address is
+    also used for booking, reminder and review e-mails (and growth's followers digest
+    and subscription reminder); §6 the e-mail provider receives those e-mails' content. */
+export const PRIVACY_POLICY_VERSION = "2026-10-02";
 
 /** LEGAL-REVIEW: version of /terms, recorded against every account created under it
     (profiles.terms_version). Re-acceptance of a new version is not built.

@@ -2,8 +2,10 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "@/components/Link";
 import { useLocale } from "@/components/LocaleProvider";
-import { Button, Spinner } from "@/components/ui";
-import { AppPage } from "@/components/app/AppShell"; // espace prof v2 · shell
+import { Button } from "@/components/ui";
+import { AppPage, EmptyState, ErrorState, PageSkeleton } from "@/components/app/AppShell"; // espace prof v2 · shell
+import { ConfirmDialog } from "@/components/app/ConfirmDialog"; // espace prof v2 · pro (P7)
+import { useToast } from "@/components/useToast"; // espace prof v2 · pro (P7)
 import { Book, Video, Plus } from "@/components/icons";
 import { UserText } from "@/components/UserText";
 import { getMyMaterials, createMaterial, deleteMaterial } from "@/app/actions";
@@ -61,6 +63,13 @@ const copy = bilingual({
     removing: "…",
     open: "Ouvrir",
     loading: "Chargement…",
+    // espace prof v2 · pro (P7): the confirmation before removing, and the toast after.
+    removeTitle: (t: string) => `Retirer « ${t} » ?`,
+    removeBody: "Plus personne n'y aura accès, tes élèves non plus. Ça ne se défait pas.",
+    removeYes: "Retirer",
+    keep: "Garder",
+    okRemoved: "Retiré de ta bibliothèque.",
+    emptyBody: "Ajoute une fiche, un corrigé ou une vidéo avec le formulaire ci-dessus.",
 
     okAdded: "Ajouté. C'est visible selon le réglage choisi.",
     errTitle: "Donne un titre (3 caractères au moins).",
@@ -108,6 +117,12 @@ const copy = bilingual({
     removing: "…",
     open: "حلّ",
     loading: "قاعد يحمّل…",
+    removeTitle: (t: string) => `تنحّي « ${t} » ؟`,
+    removeBody: "حتى حد ما عاد يوصلو، حتى تلامذتك. ما تنجّمش ترجّعو.",
+    removeYes: "نحّي",
+    keep: "خلّيه",
+    okRemoved: "تنحّى من مكتبتك.",
+    emptyBody: "زيد ملخّص، إصلاح ولا فيديو بالفورمولار اللي فوق.",
 
     okAdded: "تزاد. يبان حسب الإعداد اللي اخترت.",
     errTitle: "أعطي عنوان (3 حروف على الأقلّ).",
@@ -131,10 +146,19 @@ export default function MaterialsPage() {
   const [removing, setRemoving] = useState<string | null>(null);
   const [flash, setFlash] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
+  // espace prof v2 · pro (P7): a failed load is an error, not an empty library; removing asks first.
+  const [failed, setFailed] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState<MaterialItem | null>(null);
+  const { toast, showToast } = useToast();
 
   const load = useCallback(async () => {
-    const m = await getMyMaterials().catch(() => []);
-    setItems(m ?? []);
+    setFailed(false);
+    try {
+      const m = await getMyMaterials();
+      setItems(m ?? []);
+    } catch {
+      setFailed(true);
+    }
   }, []);
   useEffect(() => { void load(); }, [load]);
 
@@ -195,7 +219,7 @@ export default function MaterialsPage() {
     setBusy(false);
 
     if (!res?.ok) { setFlash({ kind: "err", text: messageFor(res?.error) }); return; }
-    setFlash({ kind: "ok", text: c.okAdded });
+    showToast(c.okAdded); // espace prof v2 · pro (P7): success is a toast, errors stay inline
     formRef.current?.reset();
     setClassId(""); // phase-a lane L5 (A18.9)
     await load();
@@ -205,7 +229,9 @@ export default function MaterialsPage() {
     setRemoving(id);
     const res = await deleteMaterial({ id }).catch(() => null);
     setRemoving(null);
+    setConfirmRemove(null);
     if (!res?.ok) { setFlash({ kind: "err", text: c.errGeneric }); return; }
+    showToast(c.okRemoved);
     await load();
   }
 
@@ -311,13 +337,12 @@ export default function MaterialsPage() {
 
           <div className="panel panel-pad">
             <h2 className="font-display text-[16px] font-bold mb-3">{c.listTitle}</h2>
-            {!items ? (
-              <div className="grid place-items-center min-h-[120px]">
-                <Spinner />
-                <span className="sr-only">{c.loading}</span>
-              </div>
+            {failed ? (
+              <ErrorState onRetry={() => void load()} />
+            ) : !items ? (
+              <PageSkeleton rows={2} />
             ) : items.length === 0 ? (
-              <p className="text-[13px] text-muted">{c.empty}</p>
+              <EmptyState icon={<Book />} title={c.empty}>{c.emptyBody}</EmptyState>
             ) : (
               <ul className="flex flex-col" role="list">
                 {items.map((m) => (
@@ -330,7 +355,7 @@ export default function MaterialsPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <UserText as="div" className="text-[14px] font-semibold">{m.title}</UserText>
-                      <div className="text-[12px] text-muted mt-0.5">
+                      <div className="text-[13px] text-muted mt-0.5">
                         {m.visibility === "public" ? c.visPublic
                           : m.visibility === "students"
                             /* phase-a lane L5 (A18.9): attached → "Élèves de cette séance · <titre>". */
@@ -351,9 +376,10 @@ export default function MaterialsPage() {
                       )}
                       <button
                         type="button"
-                        onClick={() => handleRemove(m.id)}
+                        onClick={() => setConfirmRemove(m)}
                         disabled={removing === m.id}
                         className="btn btn-ghost btn-sm"
+                        data-e2e="material-remove"
                       >
                         {removing === m.id ? c.removing : c.remove}
                       </button>
@@ -386,6 +412,20 @@ export default function MaterialsPage() {
               </ul>
             )}
           </section>
+
+          {/* espace prof v2 · pro (P7): a removal is final for the tutor — ask first. */}
+          <ConfirmDialog
+            open={confirmRemove !== null}
+            title={confirmRemove ? c.removeTitle(confirmRemove.title) : ""}
+            confirmLabel={c.removeYes}
+            cancelLabel={c.keep}
+            busy={removing !== null}
+            onConfirm={() => confirmRemove && void handleRemove(confirmRemove.id)}
+            onClose={() => setConfirmRemove(null)}
+          >
+            {c.removeBody}
+          </ConfirmDialog>
+          {toast}
     </AppPage>
   );
 }

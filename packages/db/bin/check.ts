@@ -148,7 +148,8 @@ async function expectedSchema() {
       tables.add(m[1]);
     }
     for (const stmt of text.matchAll(/alter\s+table\s+(?:only\s+)?"?(?:public\.)?"?([a-z_]+)"?([^;]*);/gi)) {
-      for (const c of stmt[2].matchAll(/add\s+column\s+if\s+not\s+exists\s+"?([a-z_]+)"?/gi)) {
+      // Digits allowed after the first letter: "reminder_24h_sent_at" (0039) is a legal name.
+      for (const c of stmt[2].matchAll(/add\s+column\s+if\s+not\s+exists\s+"?([a-z_][a-z0-9_]*)"?/gi)) {
         columns.add(`${stmt[1]}.${c[1]}`);
       }
     }

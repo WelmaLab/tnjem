@@ -293,6 +293,9 @@ export const classes = pgTable("classes", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   // phase-a lane L5 (A18.7): optional, one @tnajem/shared LEVEL_CODES code (0027_levels.sql).
   level: text("level"),
+  // espace prof v2 · pro (0039): the tutor's reminders, one per class (apps/api/src/lib/reminders.ts).
+  tutorReminder24hSentAt: timestamp("tutor_reminder_24h_sent_at", { withTimezone: true }),
+  tutorReminder1hSentAt: timestamp("tutor_reminder_1h_sent_at", { withTimezone: true }),
 }, (t) => ({
   /* THE storefront query: getStorefront() does `where tutor_id = ?` on every
      viral page hit; getDashboard does the same; getExploreTutors aggregates
@@ -332,6 +335,11 @@ export const bookings = pgTable("bookings", {
   subscriptionId: uuid("subscription_id").references((): AnyPgColumn => studentSubscriptions.id, { onDelete: "set null" }),
   priceTnd: numeric("price_tnd", { precision: 7, scale: 2 }),
   promotionId: uuid("promotion_id").references((): AnyPgColumn => promotions.id, { onDelete: "set null" }),
+  /* espace prof v2 · pro (0039): "sent" markers, which double as the cron's claim.
+     A marker older than the booking or the class's last move is stale (see the SQL). */
+  reminder24hSentAt: timestamp("reminder_24h_sent_at", { withTimezone: true }),
+  reminder1hSentAt: timestamp("reminder_1h_sent_at", { withTimezone: true }),
+  reviewPromptSentAt: timestamp("review_prompt_sent_at", { withTimezone: true }),
 }, (t) => ({
   /* Correctness first: one booking per (class, student). reserveSeat() relies on
      this to be idempotent — it catches the insert conflict and returns

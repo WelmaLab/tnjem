@@ -59,6 +59,7 @@ const ROUTES: { subpath: string; priority: number; changeFrequency: MetadataRout
   { subpath: "/pour-les-profs", priority: 0.9, changeFrequency: "weekly" },
   { subpath: "/explore", priority: 0.9, changeFrequency: "daily" },
   { subpath: "/tarifs", priority: 0.8, changeFrequency: "monthly" },
+  { subpath: "/aide", priority: 0.5, changeFrequency: "monthly" }, // espace prof v2 · pro (P7)
   { subpath: "/terms", priority: 0.3, changeFrequency: "yearly" },
   { subpath: "/privacy", priority: 0.3, changeFrequency: "yearly" },
 ];

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "@/components/Link";
 import { useLocale } from "@/components/LocaleProvider";
 import { Avatar, Button, Chip, Spinner } from "@/components/ui";
-import { Play, Video, Star, Clock } from "@/components/icons";
+import { Play, Video, Star, Clock, Calendar } from "@/components/icons";
 import { getStudentDashboard, getMe, cancelBooking, createReview } from "@/app/actions";
 import type { StudentClass, StudentDashboard } from "@tnajem/shared";
 /* The 48h window and the 40% rate come from the ONE place that defines them.
@@ -46,6 +46,7 @@ const copy = bilingual({
     alreadyStarted: "Le cours a déjà commencé, on ne peut plus l'annuler en ligne. Écris à ton prof.",
     cancelErr: "L'annulation n'a pas marché. Réessaie.",
     messageTutor: "Écrire à",
+    addCalendar: "Ajouter au calendrier", // espace prof v2 · pro (P7)
     cancelled: "Réservation annulée. La place est de nouveau libre.",
     free: "Gratuit",
     rate: "Noter mon prof",
@@ -85,9 +86,9 @@ const copy = bilingual({
     cancelNo: "نحافظ على مكاني",
     cancelRule: `الإلغاء مجاني حتى ${CANCEL_FREE_WINDOW_HOURS} ساعة قبل الحصة.`,
     cancelLocked: "الحصة بدات — الإلغاء أونلاين مسكّر. اعلم أستاذك وهو يتفاهم معاك.",
-    cancelLateWarn: `الحصة في أقل من ${CANCEL_FREE_WINDOW_HOURS} ساعة. تنجّم برك تلغي، ومكانك يرجع متوفّر على طول — ${Math.round(LATE_CANCEL_RETAINED_PCT * 100)} % من ثمن البلاصة يتسجّل كمستحق لأستاذك. ما يتخصم حتى مليم في فترة التجربة.`,
+    cancelLateWarn: `الحصة في أقل من ${CANCEL_FREE_WINDOW_HOURS} ساعة. تنجّم برك تلغي، ومكانك يرجع متوفّر على طول — \u2066${Math.round(LATE_CANCEL_RETAINED_PCT * 100)} %\u2069 من ثمن البلاصة يتسجّل كمستحق لأستاذك. ما يتخصم حتى مليم في فترة التجربة.`,
     // phase-a lane L3 (A21)
-    cancelLateWarnAmount: (tnd: string) => `الحصة في أقل من ${CANCEL_FREE_WINDOW_HOURS} ساعة. تنجّم برك تلغي، ومكانك يرجع متوفّر على طول — ${tnd} د.ت (${Math.round(LATE_CANCEL_RETAINED_PCT * 100)} % من ثمن البلاصة) يتسجّلو كمستحق لأستاذك في سجلّ الإلغاءات. ما يتخصم حتى مليم في فترة التجربة.`,
+    cancelLateWarnAmount: (tnd: string) => `الحصة في أقل من ${CANCEL_FREE_WINDOW_HOURS} ساعة. تنجّم برك تلغي، ومكانك يرجع متوفّر على طول — ${tnd} د.ت (\u2066${Math.round(LATE_CANCEL_RETAINED_PCT * 100)} %\u2069 من ثمن البلاصة) يتسجّلو كمستحق لأستاذك في سجلّ الإلغاءات. ما يتخصم حتى مليم في فترة التجربة.`,
     cancelLateWarnNothing: `الحصة في أقل من ${CANCEL_FREE_WINDOW_HOURS} ساعة. تنجّم تلغي، ومكانك يرجع متوفّر على طول، وما يتحسب عليك حتى شي على هالبلاصة.`,
     cancelledLateAmount: (tnd: string) => `الحجز تلغى، والمكان ولّى متوفّر. كان في أقل من ${CANCEL_FREE_WINDOW_HOURS} ساعة: ${tnd} د.ت يتسجّلو كمستحق لأستاذك في سجلّ الإلغاءات. ما يتخصم حتى مليم في فترة التجربة.`,
     cancelledLateCharged: (tnd: string) => `الحجز تلغى، والمكان ولّى متوفّر. كان في أقل من ${CANCEL_FREE_WINDOW_HOURS} ساعة: ${tnd} د.ت يتحسبو لأستاذك.`,
@@ -95,6 +96,7 @@ const copy = bilingual({
     alreadyStarted: "الحصة بدات قبل، ما عادش تنجم تلغي أونلاين. اكتب لأستاذك.",
     cancelErr: "الإلغاء ما مشاش. عاود حاول.",
     messageTutor: "راسل",
+    addCalendar: "زيدها للأجندة", // espace prof v2 · pro (P7)
     cancelled: "الحجز تلغى. المكان ولّى متوفّر.",
     free: "مجاني",
     rate: "نقّم أستاذي",
@@ -379,6 +381,21 @@ function UpcomingCard({ item, hero, onChanged }: { item: StudentClass; hero: boo
           }}
           ariaLabel={`${c.messageTutor} ${item.tutorName}`}
         />
+
+        {/* espace prof v2 · pro (P7): the same .ics the confirmation email attaches. A
+            plain <a>, not <Link>: /api/calendar is not a localized page. */}
+        <a
+          href={`/api/calendar/${encodeURIComponent(item.bookingId)}?l=${locale}`}
+          download
+          data-e2e="add-to-calendar"
+          className="inline-flex items-center gap-1.5"
+          style={{
+            border: "1px solid rgba(255,255,255,.28)", background: "transparent", color: "var(--on-dark)",
+            fontWeight: 700, fontSize: 13, padding: "12px 16px", borderRadius: 999, minHeight: 44,
+          }}
+        >
+          <Calendar /> {c.addCalendar}
+        </a>
 
         {cancellable && !confirming && (
           <button

@@ -22,7 +22,7 @@ import { recomputeTutorStats } from "../lib/stats";
 import { auditAdmin } from "../lib/audit";
 import { logEvent } from "@tnajem/shared/observability";
 import { isUniqueViolation } from "../lib/db-errors"; // phase-a lane L3 (A16)
-import { classEndMs } from "@tnajem/shared/live"; // phase-a lane L3 (A16)
+import { reviewEligibility } from "@tnajem/shared"; // espace prof v2 · pro (P7): the one review rule
 
 /* reviews · consent · notifications · live-room access.
 
@@ -82,17 +82,17 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
       .from(bookings)
       .where(and(eq(bookings.classId, cls.id), eq(bookings.studentId, uid)))
       .limit(1);
-    if (!bk || bk.status === "cancelled") return { ok: false, error: "not-booked" };
-
-    // No reviewing a class that has not happened yet.
-    if (new Date(cls.scheduledAt).getTime() > Date.now()) {
-      return { ok: false, error: "class-not-started" };
-    }
-    /* phase-a lane L3 (A16): nor one still in progress. Reviews opened one minute
-       into the class; they open at start + duration, the real end. */
-    if (classEndMs(cls) > Date.now()) {
-      return { ok: false, error: "class-not-ended" };
-    }
+    /* Booked and not cancelled, on a class that was not called off, has started
+       and — phase-a lane L3 (A16) — has ENDED (start + duration, not one minute
+       in). espace prof v2 · pro (P7): one shared rule, because the review-prompt
+       cron (lib/reminders.ts) asks exactly the students this lets through. */
+    const gate = reviewEligibility({
+      bookingStatus: bk ? (bk.status ?? "reserved") : null,
+      classStatus: cls.status,
+      scheduledAt: cls.scheduledAt,
+      durationMin: cls.durationMin,
+    });
+    if (!gate.ok) return { ok: false, error: gate.error };
 
     /* ZERO CONTACT EXCHANGE (Step 8) — MASKED here, not rejected.
 

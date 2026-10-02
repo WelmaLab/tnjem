@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { callAnonymous } from "@/lib/api";
 import { isLocale, DEFAULT_LOCALE, type AppLocale } from "@/lib/locale";
 import { formatNumericDate, isUuid, tunisClock, type ClassItem } from "@tnajem/shared";
+import { courseJsonLd, priceWithPromotion, type TutorPricing } from "@tnajem/shared"; // espace prof v2 · pro (P7)
+import { JsonLd } from "@/components/JsonLd";
 import { ClassDetail } from "./ClassDetail";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.com";
 
 /* The class page's route and share card — Espace prof v2 · Phase 3.
 
@@ -74,7 +78,43 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   };
 }
 
+/* espace prof v2 · pro (P7): Course + CourseInstance JSON-LD, server-rendered from
+   the same ANONYMOUS reads (no cookie, no header — ISR survives), built by
+   @tnajem/shared/structured-data.ts: nothing for a cancelled class, an offer only
+   while it is on sale, at the price quoted today (the best PUBLIC promotion, C6),
+   no rating. A failed read renders the page without markup rather than failing. */
+async function courseMarkup(locale: AppLocale, id: string) {
+  if (!isUuid(id)) return null;
+  const cls = await callAnonymous<ClassItem | null>(`/classes/${encodeURIComponent(id)}`, 60).catch(() => null);
+  if (!cls) return null;
+  const pricing = cls.tutor_slug
+    ? await callAnonymous<TutorPricing | null>(`/tutors/${encodeURIComponent(cls.tutor_slug)}/pricing`, 60).catch(() => null)
+    : null;
+  const quoted = priceWithPromotion({ kind: "class", id: cls.id, priceTnd: cls.price_tnd }, pricing?.promotions ?? []).finalTnd;
+  return courseJsonLd({
+    siteUrl: SITE_URL,
+    locale,
+    classId: cls.id,
+    title: cls.title,
+    description: cls.description,
+    startsAt: cls.starts_at,
+    durationMin: cls.duration_min,
+    status: cls.status,
+    priceTnd: cls.price_tnd,
+    quotedPriceTnd: quoted,
+    seatsLeft: cls.seats_left,
+    tutor: { name: cls.tutor_name ?? "", slug: cls.tutor_slug },
+  });
+}
+
 export default async function ClassPage(props: Props) {
-  const { id } = await props.params;
-  return <ClassDetail id={id} />;
+  const { locale: raw, id } = await props.params;
+  const locale: AppLocale = isLocale(raw) ? raw : DEFAULT_LOCALE;
+  const course = await courseMarkup(locale, id);
+  return (
+    <>
+      {course && <JsonLd data={course} />}
+      <ClassDetail id={id} />
+    </>
+  );
 }

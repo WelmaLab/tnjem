@@ -132,8 +132,10 @@ test.describe("Réglages (/dashboard/settings, image 4)", () => {
     await page.goto("/fr/dashboard/settings?tab=notifications");
     const panel = page.locator("[data-e2e=settings-notifications]");
     await expect(panel.getByRole("switch")).toHaveCount(4);
-    // Truth: no such e-mail reaches a tutor yet, and the tab says so.
-    await expect(page.locator("[data-e2e=prefs-not-yet]")).toContainText("aucun de ces e-mails");
+    /* Truth: the tab says which switches already send a tutor e-mail (Réservations,
+       Rappels — espace prof v2 · pro P7) and which do not yet (Messages, Abonnés). */
+    await expect(page.locator("[data-e2e=prefs-not-yet]")).toContainText("« Réservations » et « Rappels » t'envoient déjà des e-mails");
+    await expect(page.locator("[data-e2e=prefs-not-yet]")).toContainText("« Messages » et « Abonnés » n'en envoient pas encore à un prof");
     for (const k of ["bookings", "messages", "reminders", "followers"]) {
       await expect(page.locator(`[data-e2e=pref-${k}] [role=switch]`)).toHaveAttribute("aria-checked", "true");
     }

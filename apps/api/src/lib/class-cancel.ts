@@ -4,6 +4,7 @@ import { paymentsEnabled } from "@tnajem/shared/payments";
 import { db } from "../db";
 import { recomputeTutorStats } from "./stats";
 import { releasePromotionUse } from "./promotions"; // espace prof v2 · growth (P5)
+import { dispatchMail, mailClassCancelled } from "./booking-mail"; // espace prof v2 · pro (P7)
 
 /* CANCEL A CLASS FOR EVERYONE WHO BOOKED IT — the one implementation.
 
@@ -104,5 +105,8 @@ export async function cancelClassForEveryone(
       href: "/student",
     });
   }
+  /* espace prof v2 · pro (P7): every booked student by email too, each with a
+     METHOD:CANCEL .ics for their own entry; the tutor only when they did it. */
+  dispatchMail("class-cancelled", () => mailClassCancelled(c.id, live.map((b) => b.id), { tutorDidIt: opts.actor === "tutor" }));
   return live.length;
 }

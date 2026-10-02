@@ -754,6 +754,34 @@ instead — a purge that cannot see the files would count every document "alread
 **Verify it actually ran** — check the log/journal after the first night. A purge cron
 that silently fails is indistinguishable from one you never wrote.
 
+### 7.1 Class reminders and review prompts — `/cron/reminders`, every 10 minutes
+
+A **second, separate** job (espace prof v2 · phase 7): the 24 h and 1 h reminders
+before each class (to the student, and one per class to the tutor) and the
+"comment s'est passée la séance ?" email 2 h after a class the student attended.
+It only sends email — nothing is deleted — so it runs often, not nightly.
+
+Same contract as `/cron/purge`: `GET|POST`, `CRON_SECRET` bearer compared in constant
+time, **503 if `CRON_SECRET` is unset**, counts only in the body
+(`student24h`, `student1h`, `tutor24h`, `tutor1h`, `reviewPrompts`, `skipped`,
+`failed`, `failedJobs`), **500** when a sweep failed. Each email is claimed through
+its "sent" marker (`0039_booking_reminders.sql`) before it goes out, so overlapping
+or repeated runs never send twice; a failed send is retried by the next run while it
+is still due. With no mail provider configured (`MAIL_*` unset) the run sends and
+claims nothing (`"mail": false`).
+
+Links in these emails point at `NEXT_PUBLIC_SITE_URL` (the API reads the same
+variable as the web app — set it in the API's environment too).
+
+On the box (§A), next to the purge line:
+```
+*/10 * * * * curl -fsS -X POST http://127.0.0.1:4000/cron/reminders \
+  -H "Authorization: Bearer $CRON_SECRET" >> /var/log/tnajem-reminders.log 2>&1
+```
+Under docker compose the `reminders` service runs it every 10 minutes for you.
+Every 10 minutes is the coarsest interval that keeps the "1 h before" email within
+about an hour of the start; running it more often is harmless.
+
 ---
 
 ## 8. Backups and restore — **a backup nobody has restored is not a backup** ⚠️

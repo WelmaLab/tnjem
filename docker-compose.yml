@@ -111,6 +111,8 @@ services:
       MAIL_PASS: ${MAIL_PASS:-}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Tnajem}
+      # The links in booking and reminder emails (espace prof v2 · phase 7).
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
     volumes:
       # Identity documents. A NAMED VOLUME, not a bind mount and not the image:
       # every ID scan vanishes on redeploy otherwise, and /privacy promises they
@@ -142,6 +144,26 @@ services:
           code=$$(curl -s -o /tmp/purge.json -w '%{http_code}' -X POST -H "Authorization: Bearer $$CRON_SECRET" http://api:4000/cron/purge)
           echo "retention purge: HTTP $$code $$(cat /tmp/purge.json)"
           sleep 86400
+        done
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # CLASS REMINDERS + REVIEW PROMPTS (espace prof v2 · phase 7). Every 10 minutes,
+  # through the API (POST /cron/reminders, bearer CRON_SECRET). Idempotent: each
+  # email is claimed by its "sent" marker before it is sent (DEPLOY.md §7.1).
+  reminders:
+    image: curlimages/curl:8.16.0
+    environment:
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET is required — openssl rand -hex 32}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while :; do
+          code=$$(curl -s -o /tmp/reminders.json -w '%{http_code}' -X POST -H "Authorization: Bearer $$CRON_SECRET" http://api:4000/cron/reminders)
+          echo "reminders: HTTP $$code $$(cat /tmp/reminders.json)"
+          sleep 600
         done
     depends_on:
       api:

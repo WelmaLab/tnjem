@@ -22,7 +22,7 @@
 import type { ReactElement } from "react";
 import type { TutorShell } from "@tnajem/shared";
 import {
-  Home, Video, Book, Users, Repeat, Store, Percent, Shield, Star, Gear, Plus,
+  Home, Video, Book, Users, Repeat, Store, Percent, Shield, Star, Gear, Plus, Help,
 } from "@/components/icons";
 
 export type Bilingual = { fr: string; ar: string };
@@ -122,6 +122,8 @@ export const APP_NAV: NavGroup[] = [
       { key: "plan", href: "/dashboard/plan", label: { fr: "Mon offre", ar: "العرض متاعي" }, icon: Star },
       // Réglages (4 tabs: ?tab=compte|vitrine|notifications|securite); /account redirects tutors here.
       { key: "settings", href: "/dashboard/settings", label: { fr: "Réglages", ar: "الإعدادات" }, icon: Gear },
+      // espace prof v2 · pro (P7, C9): the public help page — it opens outside the shell.
+      { key: "help", href: "/aide", label: { fr: "Aide", ar: "مساعدة" }, icon: Help },
     ],
   },
 ];

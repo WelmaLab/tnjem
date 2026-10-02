@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { Link } from "@/components/Link";
 import { useLocale } from "@/components/LocaleProvider";
 import { Eye, Store } from "@/components/icons";
-import { AppPage, Blocker, EmptyState } from "@/components/app/AppShell";
+import { useRouter } from "next/navigation";
+import { AppPage, Blocker, EmptyState, ErrorState, PageSkeleton } from "@/components/app/AppShell";
 import type { TutorVerifStatus } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 
@@ -92,6 +93,29 @@ export function OwnerPreviewEmpty() {
       <EmptyState icon={<Store />} title={c.emptyTitle} action={<Link href="/onboarding" className="btn btn-primary btn-sm">{c.emptyCta}</Link>}>
         {c.emptyBody}
       </EmptyState>
+    </AppPage>
+  );
+}
+
+/* espace prof v2 · pro (P7) — the two other states of this server page. A failed
+   read is an ERROR with a retry (it used to fall through to « Tu n'as pas encore de
+   page », telling a tutor with a page that they had none); the wait is a skeleton
+   (loading.tsx next to the page). */
+export function OwnerPreviewError() {
+  const { locale } = useLocale();
+  const router = useRouter();
+  return (
+    <AppPage title={copy[locale].title} width="narrow">
+      <ErrorState onRetry={() => router.refresh()} />
+    </AppPage>
+  );
+}
+
+export function OwnerPreviewLoading() {
+  const { locale } = useLocale();
+  return (
+    <AppPage title={copy[locale].title}>
+      <PageSkeleton rows={3} />
     </AppPage>
   );
 }

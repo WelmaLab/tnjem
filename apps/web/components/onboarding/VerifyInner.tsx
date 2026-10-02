@@ -7,7 +7,7 @@ import { Shield, Check, Upload, User, Book, Clock, Info } from "@/components/ico
 import { getMyVerification, submitVerification } from "@/app/actions";
 import { PUBLIC_TEACHER_DECLARATION } from "@tnajem/shared";
 import { UserText } from "@/components/UserText";
-import { AppPage, ActionBar, PageSkeleton } from "@/components/app/AppShell";
+import { AppPage, ActionBar, ErrorState, PageSkeleton } from "@/components/app/AppShell";
 import type { TutorVerification, Locale, OnboardingState } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 
@@ -282,25 +282,34 @@ export function VerifyInner({ state }: { state: OnboardingState | null }) {
   /** The status heading; focused after a submit so focus follows the view. */
   const doneRef = useRef<HTMLHeadingElement | null>(null);
 
+  /* espace prof v2 · pro (P7): a failed read is an error with a retry — it used to
+     fall through to the upload form, so a tutor whose dossier is under review could
+     be shown the form as if nothing had been sent. */
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
     let alive = true;
     getMyVerification()
       .then((v) => {
         if (!alive) return;
+        setLoadFailed(false);
         setVerif(v);
         // A refused dossier comes back with its languages ticked.
         if (v?.status === "rejected" && v.languages) {
           setLangs(v.languages.split(/\s*,\s*/).filter(Boolean));
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (alive) setLoadFailed(true);
+      })
       .finally(() => {
         if (alive) setLoading(false);
       });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [reloadKey]);
 
   const pre = verif && verif.status === "rejected" ? verif : null;
   const status = verif?.status ?? state?.status ?? null;
@@ -407,6 +416,20 @@ export function VerifyInner({ state }: { state: OnboardingState | null }) {
       <AppPage title={c.title} subtitle={c.reassure} width="narrow">
         <PageSkeleton rows={2} />
         <span className="sr-only">{c.loadingStatus}</span>
+      </AppPage>
+    );
+  }
+
+  /* ---------- the dossier could not be read (espace prof v2 · pro P7) ---------- */
+  if (loadFailed) {
+    return (
+      <AppPage title={c.title} subtitle={c.reassure} width="narrow">
+        <ErrorState
+          onRetry={() => {
+            setLoading(true);
+            setReloadKey((k) => k + 1);
+          }}
+        />
       </AppPage>
     );
   }

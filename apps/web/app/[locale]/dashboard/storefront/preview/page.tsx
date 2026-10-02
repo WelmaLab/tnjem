@@ -12,7 +12,7 @@
    small client-side owner check sends the owner here. */
 import { redirect } from "next/navigation";
 import { StorefrontView } from "@/components/storefront/StorefrontView";
-import { OwnerPreviewFrame, OwnerPreviewEmpty } from "@/components/dashboard/storefront/OwnerPreviewFrame";
+import { OwnerPreviewFrame, OwnerPreviewEmpty, OwnerPreviewError } from "@/components/dashboard/storefront/OwnerPreviewFrame";
 import { getOwnerPreview } from "@/app/actions-shell";
 import { getTutorReviews } from "@/app/actions";
 import { pageGuard, localeOf, localePath } from "@/lib/page-guard";
@@ -27,7 +27,14 @@ export default async function OwnerPreviewPage(props: { params: Promise<{ locale
   }
   if (guard.kind !== "user") return <OwnerPreviewEmpty />;
 
-  const preview = await getOwnerPreview().catch(() => null);
+  /* espace prof v2 · pro (P7): null = no page yet (the empty state); a THROW = the
+     read failed (an error with a retry), never "you have no page". */
+  let preview: Awaited<ReturnType<typeof getOwnerPreview>>;
+  try {
+    preview = await getOwnerPreview();
+  } catch {
+    return <OwnerPreviewError />;
+  }
   if (!preview) return <OwnerPreviewEmpty />;
 
   const slug = preview.storefront.tutor.slug;

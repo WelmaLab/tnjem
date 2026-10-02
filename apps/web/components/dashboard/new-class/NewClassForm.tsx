@@ -6,7 +6,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { Video, Board, Quiz, Copy as CopyIcon, Check } from "@/components/icons";
 import { createClass, getClass, getOnboardingState } from "@/app/actions";
 import { useToast } from "@/components/useToast";
-import { AppPage, Blocker, ActionBar, FormSection } from "@/components/app/AppShell";
+import { AppPage, Blocker, ActionBar, FormSection, ErrorState, PageSkeleton } from "@/components/app/AppShell";
 import { DateTimeField } from "@/components/app/DatePicker";
 import { classUrl } from "@/components/app/links";
 import { useShell } from "@/components/app/ShellContext";
@@ -116,7 +116,7 @@ const copy = bilingual({
   },
   ar: {
     title: "حصة دايركت جديدة",
-    priceHelp: "تحتفظ بـ 100 % في فترة التجربة : Tnajem ما تاخذ والو.",
+    priceHelp: "تحتفظ بـ \u2066100 %\u2069 في فترة التجربة : Tnajem ما تاخذ والو.",
     descPh: "مثال: مناهج + امتحانات. نعملو 3 تمارين نموذجية مع بعضنا.",
     errTitle: "العنوان لازم يكون فيه 3 حروف على الأقل.",
     errDescription: "الوصف ما ينجّمش يفوت 1000 حرف.",
@@ -156,7 +156,7 @@ const copy = bilingual({
     publishedB: "تبان في صفحتك. شاركها باش تتعمّر البلايص.",
     shareClass: "شارك الحصة هاذي",
     promo: (pct: number, final: number, base: number, until: string) =>
-      `التخفيض متاعك −${pct} % ماشي: التلميذ يخلّص ${final} د.ت عوض ${base} د.ت، حتى لـ ${until}.`,
+      `التخفيض متاعك \u2066−${pct} %\u2069 ماشي: التلميذ يخلّص ${final} د.ت عوض ${base} د.ت، حتى لـ ${until}.`,
     seeClasses: "شوف حصصي",
     another: "اعمل حصة أخرى",
   },
@@ -251,12 +251,19 @@ export function NewClassForm() {
     setDuplicatedFrom(k.title);
   }, []);
 
+  /* espace prof v2 · pro (P7) — the page's own states: a skeleton until the tutor's
+     side (subject, levels, verification, draft) is known, an error with a retry if it
+     cannot be read — never a half-filled form that changes under the tutor's fingers. */
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "failed">("loading");
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
     let alive = true;
     const from = new URLSearchParams(window.location.search).get("from");
     getOnboardingState()
       .then((s) => {
         if (!alive) return;
+        setLoadState("ready");
         setFfOption(Boolean(s?.offersFreeFirstSession));
         setStatus(s?.status ?? null);
         setSubject(s?.draft?.subject ?? "");
@@ -274,13 +281,15 @@ export function NewClassForm() {
         }
       })
       .catch(() => {
-        if (alive) setFfOption(false);
+        if (!alive) return;
+        setFfOption(false);
+        setLoadState("failed");
       });
     if (from) void prefillFrom(from);
     return () => {
       alive = false;
     };
-  }, [prefillFrom]);
+  }, [prefillFrom, reloadKey]);
 
   // Autosave, a beat after the last keystroke.
   useEffect(() => {
@@ -474,6 +483,23 @@ export function NewClassForm() {
           </div>
         </section>
         {toast}
+      </AppPage>
+    );
+  }
+
+  if (loadState !== "ready") {
+    return (
+      <AppPage title={c.title} width="wide">
+        {loadState === "failed" ? (
+          <ErrorState
+            onRetry={() => {
+              setLoadState("loading");
+              setReloadKey((k) => k + 1);
+            }}
+          />
+        ) : (
+          <PageSkeleton rows={4} />
+        )}
       </AppPage>
     );
   }

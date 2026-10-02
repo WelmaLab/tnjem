@@ -40,6 +40,8 @@ import { subscriptionRoutes } from "./routes/subscriptions";
 import { adminAccountRoutes } from "./routes/admin-accounts";
 import { debugRoutes } from "./routes/debug";
 import { tutorSpaceRoutes } from "./routes/tutor-space"; // espace prof v2 · shell
+import { bookingCalendarRoutes } from "./routes/booking-calendar"; // espace prof v2 · pro (P7)
+import { cronReminderRoutes } from "./routes/cron-reminders"; // espace prof v2 · pro (P7)
 
 /** logStream: tests capture every log line (test/log-pii.test.ts). */
 export async function buildServer(opts: { logStream?: { write(line: string): void } } = {}): Promise<FastifyInstance> {
@@ -163,6 +165,9 @@ export async function buildServer(opts: { logStream?: { write(line: string): voi
   await app.register((await import("./routes/notification-prefs")).notificationPrefRoutes); // espace prof v2 · growth (P4, C5)
   await app.register((await import("./routes/offers")).offerRoutes); // espace prof v2 · growth (P5)
   await app.register((await import("./routes/promotions")).promotionRoutes); // espace prof v2 · growth (P5)
+  await app.register(bookingCalendarRoutes); // espace prof v2 · pro (P7)
+  await app.register(cronReminderRoutes); // espace prof v2 · pro (P7)
+  await app.register((await import("./routes/admin-offers")).adminOfferRoutes); // espace prof v2 · pro (P7)
 
   app.get("/health", async (req) => {
     let dbOk = false;

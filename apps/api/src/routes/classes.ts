@@ -28,6 +28,7 @@ import { db } from "../db";
 import { getSession } from "../lib/session";
 import { recomputeTutorStats } from "../lib/stats";
 import { cancelClassForEveryone } from "../lib/class-cancel";
+import { dispatchMail, mailClassMoved } from "../lib/booking-mail"; // espace prof v2 · pro (P7)
 import { assertNoContactInfo, CONTACT_ERROR } from "../lib/contact-guard";
 import { planForTutor, openClassCount, planStateForTutor } from "../lib/entitlements";
 
@@ -427,6 +428,8 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
         href: "/student",
       });
     }
+    // espace prof v2 · pro (P7): the new time by email, with an updated .ics (same UID, higher SEQUENCE).
+    if (live.length) dispatchMail("class-moved", () => mailClassMoved(c.id));
 
     return { ok: true, notified: live.length, revalidate: { tutors: [c.slug] } };
   });

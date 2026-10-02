@@ -72,3 +72,8 @@ export * from "./email-prefs";
 // espace prof v2 · growth (P5, contract C6) — THE price calculation, and the offer/promotion DTOs. Pure.
 export * from "./pricing";
 export * from "./offers";
+// espace prof v2 · pro (P7) — .ics events, who may review, JSON-LD builders. All pure.
+export * from "./ics";
+export * from "./review-eligibility";
+export * from "./structured-data";
+export * from "./admin-offers";

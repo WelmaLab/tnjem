@@ -205,6 +205,8 @@ export const ROUTES = [
   { path: "/yassine-math", name: "storefront", nojs: true, h1: "main h1", sub: "main .sf-bio", cta: "main a.btn-primary, main a.btn-green, main a.sf-empty-cta" },
   { path: "/terms", name: "terms", nojs: true, h1: "main h1", sub: "main p.web-lead", cta: null },
   { path: "/privacy", name: "privacy", nojs: true, h1: "main h1", sub: "main p.web-lead", cta: null },
+  // espace prof v2 · pro (P7): the help page, public and linked from the prof shell.
+  { path: "/aide", name: "aide", nojs: true, h1: "main h1", sub: "main p.web-lead", cta: null },
   { path: "/nonexistent-404", name: "404", nojs: true, h1: "main h1", sub: "main p.web-lead", cta: "main a.btn-primary" },
   // espace prof v2 · growth (P4): the unsubscribe confirm page (no token → the "link does not work" state).
   { path: "/email/unsubscribe", name: "email-unsubscribe", nojs: true, h1: "main h1", sub: "main .eu-lead", cta: null },

@@ -8,7 +8,7 @@ import { getCachedStorefront, getCachedVisibility, STOREFRONT_TTL, tutorTag } fr
 import { getTutorReviews } from "@/app/actions";
 import { isLocale, DEFAULT_LOCALE, type AppLocale } from "@/lib/locale";
 import { dict } from "@/lib/i18n";
-import { tutorStanding, isOpenForBooking } from "@tnajem/shared";
+import { priceWithPromotion, profileJsonLd } from "@tnajem/shared"; // espace prof v2 · pro (P7)
 import { publicTutorName, publicDisplayName } from "@tnajem/shared"; // phase-a lane L2 (A23)
 import { advertisesFreeFirst } from "@tnajem/shared"; // phase-a lane L3 (A5)
 
@@ -222,92 +222,28 @@ export default async function StorefrontPage(props: Props) {
   }
 
   const { tutor } = data;
-  const shownName = publicTutorName(tutor.full_name) ?? ""; // phase-a lane L2 (A23): JSON-LD says "Mohamed B."
-  const url = `${SITE_URL}/${loc}/${params.slug}`; // locale-prefixed canonical URL
-  // The same standing StorefrontView renders — markup can never claim more than the page shows.
-  const standing = tutorStanding({ reviewCount: reviews.count, rating: reviews.average, students: tutor.students_count });
-  /* Truthful structured data for the storefront. The AggregateRating is emitted
-     ONLY when this tutor has real reviews (reviews.count > 0) — marking up a rating
-     that does not exist is structured-data spam and draws a Google manual action,
-     and it is exactly the fabricated social proof the truth rule forbids. A new
-     tutor ships Person + Service + BreadcrumbList and NO rating markup. */
-  /* Real prices, from classes that can actually be booked. A cancelled, finished
-     or already-started class is not an offer. */
-  const offerPrices = data.classes
-    .filter((c) => isOpenForBooking(c))
-    .map((c) => c.price_tnd)
-    .filter((p) => Number.isFinite(p) && p >= 0);
-
-  const jsonLd: object[] = [
-    {
-      "@context": "https://schema.org",
-      "@type": "Person",
-      name: shownName,
-      url,
-      jobTitle: tutor.subject,
-      ...(tutor.bio ? { description: tutor.bio } : {}),
-      worksFor: { "@type": "Organization", name: "Tnajem", url: SITE_URL },
-      knowsLanguage: ["fr", "ar"],
-      areaServed: { "@type": "Country", name: "Tunisia" },
-      ...(standing.kind === "rated"
-        ? {
-            aggregateRating: {
-              "@type": "AggregateRating",
-              ratingValue: standing.rating,
-              reviewCount: standing.reviewCount,
-              bestRating: 5,
-              worstRating: 1,
-            },
-          }
-        : {}),
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "Service",
-      serviceType: "Cours particuliers en direct",
-      provider: { "@type": "Person", name: shownName, url },
-      areaServed: { "@type": "Country", name: "Tunisia" },
-      availableLanguage: ["fr", "ar"],
-      description: tutor.bio || tutor.subject,
-      /* WAS: { "@type": "Offer", price: "0", priceCurrency: "TND",
-                 description: "Première séance offerte" }
-         — emitted for EVERY tutor, including ones with no class at all, and
-         French-only on Arabic pages.
-
-         Two separate untruths in one line. It told Google this tutor's service
-         costs zero dinars when their classes cost 15-20, and it made a
-         free-first-session claim on behalf of a tutor who had never been asked
-         (that was the platform default, not their choice — see
-         packages/db/sql/0008). Fabricated structured data is what draws a manual
-         action, and it is the same rule that already keeps AggregateRating off a
-         tutor with no reviews, twenty lines above.
-
-         NOW: a real AggregateOffer built from the prices of actually-published
-         classes, and nothing at all when there are none. The free-session claim
-         is not structured data — it is marketing copy, and it now lives only in
-         the visible page, gated on the tutor's own opt-in. */
-      ...(offerPrices.length
-        ? {
-            offers: {
-              "@type": "AggregateOffer",
-              priceCurrency: "TND",
-              lowPrice: String(Math.min(...offerPrices)),
-              highPrice: String(Math.max(...offerPrices)),
-              offerCount: offerPrices.length,
-            },
-          }
-        : {}),
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Accueil", item: `${SITE_URL}/${loc}` },
-        { "@type": "ListItem", position: 2, name: "Explorer", item: `${SITE_URL}/${loc}/explore` },
-        { "@type": "ListItem", position: 3, name: shownName, item: url },
-      ],
-    },
-  ];
+  /* Truthful structured data for the storefront — espace prof v2 · pro (P7): built by
+     @tnajem/shared/structured-data.ts, where the truth rules are tested once
+     (apps/api/test/ep2-structured-data.test.ts): an AggregateRating ONLY from real
+     reviews (the same tutorStanding the page renders), no Review objects, the public
+     name ("Mohamed B.", A23), an image only for an approved photo, and an
+     AggregateOffer only from classes that can actually be booked — at the price a
+     student is quoted today (the one best PUBLIC promotion, pricing.ts / C6). Never a
+     "0" for a free first session: that is per student, not a property of a class. */
+  const promotions = data.promotions ?? [];
+  const jsonLd = profileJsonLd({
+    siteUrl: SITE_URL,
+    locale: loc,
+    slug: params.slug,
+    name: publicTutorName(tutor.full_name) ?? "",
+    subject: tutor.subject,
+    bio: tutor.bio,
+    imageUrl: tutor.has_photo ? `${SITE_URL}/api/avatar/${tutor.slug}/md` : null,
+    reviews: { count: reviews.count, average: reviews.average },
+    students: tutor.students_count,
+    classes: data.classes,
+    quotedPrice: (c) => (c.id ? priceWithPromotion({ kind: "class", id: c.id, priceTnd: c.price_tnd }, promotions).finalTnd : c.price_tnd),
+  });
 
   return (
     <>
