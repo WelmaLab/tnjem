@@ -135,12 +135,15 @@ test.describe("Réglages (/dashboard/settings, image 4)", () => {
     /* Truth: Réservations and Rappels e-mail a tutor (espace prof v2 · pro P7); Messages
        and Abonnés do not yet — live-fixes-1 · F1: they say « Bientôt » and cannot be moved. */
     await expect(page.locator("[data-e2e=prefs-not-yet]")).toHaveText("Choisis les e-mails que tu reçois. La cloche reste toujours active.");
-    for (const k of ["bookings", "messages", "reminders", "followers"]) {
+    for (const k of ["bookings", "reminders"]) {
       await expect(page.locator(`[data-e2e=pref-${k}] [role=switch]`)).toHaveAttribute("aria-checked", "true");
     }
+    /* live-fixes-2 · B: a « Bientôt » switch is drawn OFF (nothing is sent), whatever is
+       stored — the stored « on » is still there (the poll below reads messages: true). */
     for (const k of ["messages", "followers"]) {
       await expect(page.locator(`[data-e2e=pref-${k}]`)).toContainText("Bientôt");
       await expect(page.locator(`[data-e2e=pref-${k}] [role=switch]`)).toBeDisabled();
+      await expect(page.locator(`[data-e2e=pref-${k}] [role=switch]`)).toHaveAttribute("aria-checked", "false");
     }
     await page.locator("[data-e2e=pref-bookings] [role=switch]").click();
     await expect(page.locator("[data-e2e=pref-bookings] [role=switch]")).toHaveAttribute("aria-checked", "false");

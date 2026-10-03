@@ -25,10 +25,15 @@ import { bilingual } from "@/lib/i18n";
    the followers digest goes to the students who follow).
 
    live-fixes-1 · F1 — those two rows say « Bientôt » and their switch is DISABLED,
-   rather than hidden: the tutor sees what is coming and that it is not on yet, and
-   the switch still shows the choice that is stored (on by default) — the one that
-   will apply the day those e-mails exist. Hiding them would make the list look
-   complete; a working-looking switch that sends nothing was the confusion. */
+   rather than hidden: the tutor sees what is coming and that it is not on yet.
+   Hiding them would make the list look complete; a working-looking switch that
+   sends nothing was the confusion.
+
+   live-fixes-2 · B — and that switch is drawn OFF (aria-checked false, the neutral
+   off track), whatever is stored: a dimmed blue « on » read as « on but broken »,
+   and today no such e-mail goes out, so « off » is the truth. Only the drawing
+   changes — the stored choice (on by default) is never written from here and is
+   still the one that will apply the day those e-mails exist. */
 
 const KEYS = ["bookings", "reminders", "messages", "followers"] as const;
 type Key = (typeof KEYS)[number];
@@ -118,7 +123,7 @@ export function NotificationsTab() {
               <p id={`pref-${k}-help`} className="st-row-b">{c.rows[k][1]}</p>
             </div>
             <Switch
-              checked={prefs[k]}
+              checked={soon ? false : prefs[k]}
               onChange={(v) => flip(k, v)}
               label={c.rows[k][0]}
               describedBy={`pref-${k}-help`}
