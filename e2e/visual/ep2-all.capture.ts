@@ -8,6 +8,7 @@ import { mintSession, sessionCookie } from "../support/session";
 import { api } from "../support/journey";
 import { recoverOtp, resetRateLimits } from "../support/otp";
 import { fillOtp } from "../support/otp-ui";
+import { chooseOption } from "../support/select-ui"; // live-fixes-2 · C
 import { E2E_PASSWORD } from "../support/password-ui";
 import { BASE_URL } from "../support/env";
 
@@ -191,8 +192,9 @@ async function act(page: Page, a: Act | undefined, locale: "fr" | "ar", withPass
     await resetRateLimits();
     const address = email(`e2e-ep2all-${randomBytes(4).toString("hex")}`);
     await page.locator('input[type="email"]').fill(address);
-    await page.locator("main select").nth(0).selectOption("3");
-    await page.locator("main select").nth(1).selectOption("1988");
+    // live-fixes-2 · C: the shell Selects, by their hooks (either language)
+    await chooseOption(page, page.locator("[data-e2e=birth-month]"), "3");
+    await chooseOption(page, page.locator("[data-e2e=birth-year]"), "1988");
     await page.locator("main form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
     await page.locator('[data-e2e="auth-step-code"]').waitFor({ timeout: 20_000 });
     await expect.poll(async () => (await sql<{ n: number }[]>`select count(*)::int n from otp_codes where identifier = ${address}`)[0].n, { timeout: 20_000 }).toBe(1);

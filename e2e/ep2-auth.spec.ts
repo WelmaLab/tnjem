@@ -7,6 +7,7 @@ import { fillOtp } from "./support/otp-ui";
 import { mintSession, sessionCookie } from "./support/session";
 import { api, browserSession } from "./support/journey";
 import { E2E_PASSWORD, signUpThroughUi, loginWithPasswordUi } from "./support/password-ui";
+import { chooseBirthDate } from "./support/select-ui"; // live-fixes-2 · C
 
 /* ════════════════════════════════════════════════════════════════════════════
    espace prof v2 · phase 2 — ACCOUNTS AND PASSWORDS, through the browser, against
@@ -49,8 +50,7 @@ test("sign-up: email + birth date → code → « Crée ton mot de passe » → 
   const address = fresh("signup");
   await page.goto("/fr/signup/prof", { waitUntil: "networkidle" });
   await page.locator('input[type="email"]').fill(address);
-  await page.getByLabel("Mois de naissance", { exact: true }).selectOption("3");
-  await page.getByLabel("Année de naissance", { exact: true }).selectOption("1988");
+  await chooseBirthDate(page, { month: 3, year: 1988 }); // live-fixes-2 · C
   await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
   await expect(page.locator('[data-e2e="auth-step-code"]')).toBeVisible({ timeout: 20_000 });
   await expect.poll(async () => (await sql<{ n: number }[]>`select count(*)::int n from otp_codes where identifier = ${address}`)[0].n, { timeout: 20_000 }).toBe(1);
@@ -168,8 +168,7 @@ test("an address that already has an account: signup sends it to /auth, prefille
   const me = await seedProfile({ role: "student", birthYear: 1994 });
   await page.goto("/fr/signup/eleve?next=%2Ffr%2Fexplore", { waitUntil: "networkidle" });
   await page.locator('input[type="email"]').fill(me.email);
-  await page.getByLabel("Mois de naissance", { exact: true }).selectOption("3");
-  await page.getByLabel("Année de naissance", { exact: true }).selectOption("1994");
+  await chooseBirthDate(page, { month: 3, year: 1994 }); // live-fixes-2 · C
   await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
 
   await page.waitForURL(/\/fr\/auth\?/, { timeout: 20_000 });

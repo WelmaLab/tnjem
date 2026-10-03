@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { resetRateLimits } from "../support/otp";
 import { fillOtp } from "../support/otp-ui";
+import { chooseBirthDate } from "../support/select-ui"; // live-fixes-2 · C
 
 /* Auth Option B — screenshots of the sign-up and login pages (UI_AUTH_OPTION_B.md §4.4).
    NOT part of `npm run test`: the main config only matches *.spec.ts, and this file
@@ -104,8 +105,7 @@ test("capture the OTP error state: /fr/auth at 1440 and 390, /fr/signup/prof at 
   for (const s of shots) {
     const { ctx, page } = await openPage(browser, s.vp, s.path);
     if (s.birthDate) {
-      await page.getByLabel("Mois de naissance", { exact: true }).selectOption("3");
-      await page.getByLabel("Année de naissance", { exact: true }).selectOption("1988");
+      await chooseBirthDate(page, { month: 3, year: 1988 }); // live-fixes-2 · C
     }
     await toCodeStep(page);
     // This address never had a code, so any six digits are refused (invalid-code).

@@ -6,6 +6,7 @@ import { Button, Spinner, Tag } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
 import { useToast } from "@/components/useToast";
 import { SiteShell } from "@/components/SiteShell";
+import { Select } from "@/components/app/Select";
 import { Shield, Users, Info } from "@/components/icons";
 import { UserText } from "@/components/UserText";
 import { getAdminPlans, grantPlan, revokePlan, type AdminPlanRow } from "@/app/actions";
@@ -278,7 +279,7 @@ export default function AdminPlansPage() {
                     const until = formatDate(row.expiresAt, locale);
                     const working = Boolean(busy[row.tutorId]);
                     return (
-                      <div key={row.tutorId} className="panel panel-pad">
+                      <div key={row.tutorId} className="panel panel-pad" data-e2e="plan-row" data-tutor={row.tutorId}>
                         <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -307,28 +308,27 @@ export default function AdminPlansPage() {
                               name a control that was already named. Its 12px
                               (inherited from the wrapper) also tripped the text
                               floor for a string nobody can see. */}
-                          <label className="flex flex-col gap-1 text-[13px] text-muted">
-                            {/* A VISIBLE label, not just aria-label. The control
-                                rendered as a bare "—" dropdown with nothing next
-                                to it, and the "Mois" label beside it read as if
-                                it belonged to this one. */}
-                            {c.planField}
-                            <select
-                              className="inp"
+                          {/* A VISIBLE label, not just aria-label. The control
+                              rendered as a bare "—" dropdown with nothing next
+                              to it, and the "Mois" label beside it read as if
+                              it belonged to this one.
+                              live-fixes-2 · C: the shell's Select, not a native
+                              <select> — a <div>, not a <label>, around it (see
+                              Select.tsx). Same state: "" (nothing chosen, Attribuer
+                              stays disabled) or a GRANTABLE code. */}
+                          <div className="flex flex-col gap-1 text-[13px] text-muted min-w-[150px]">
+                            <span id={`plan-l-${row.tutorId}`}>{c.planField}</span>
+                            <Select
                               value={choice[row.tutorId] ?? ""}
-                              onChange={(e) =>
-                                setChoice((v) => ({ ...v, [row.tutorId]: e.target.value }))
-                              }
-                              aria-label={c.grant}
-                            >
-                              <option value="">—</option>
-                              {GRANTABLE.map((p) => (
-                                <option key={p.code} value={p.code}>
-                                  {p.code}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
+                              onChange={(next) => setChoice((v) => ({ ...v, [row.tutorId]: next }))}
+                              options={[
+                                { value: "", label: "—" },
+                                ...GRANTABLE.map((p) => ({ value: p.code, label: p.code })),
+                              ]}
+                              labelledBy={`plan-l-${row.tutorId}`}
+                              e2e="plan-choice"
+                            />
+                          </div>
                           {/* 13px is the floor the harness enforces and the
                               smallest size this product ships — a form label on
                               a 320px screen is exactly where it matters. */}

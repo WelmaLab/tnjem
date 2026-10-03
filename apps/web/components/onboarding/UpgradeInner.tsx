@@ -12,11 +12,12 @@
    it refuses without `confirm`, and it refuses a minor. */
 import { useRef, useState } from "react";
 import { useLocalizedRouter, Link } from "@/components/Link";
-import { Button, Field } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
 import { Check, Shield, Calendar } from "@/components/icons";
 import { becomeTutor } from "@/app/actions";
 import { SiteShell } from "@/components/SiteShell";
+import { Select, SelectField } from "@/components/app/Select";
 
 const COPY = {
   fr: {
@@ -109,13 +110,13 @@ export function UpgradeInner({
   // phase-a lane L2 (A14)
   const [birthMonth, setBirthMonth] = useState("");
   const [monthError, setMonthError] = useState<string | null>(null);
-  const birthMonthRef = useRef<HTMLSelectElement>(null);
+  const birthMonthRef = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /* The birth year is the one field here. Its problems go ON it, with focus moved
-     there (Field sets aria-invalid + aria-describedby); `error` is for the rest. */
+     there (SelectField sets aria-invalid + aria-describedby); `error` is for the rest. */
   const [ageError, setAgeError] = useState<string | null>(null);
-  const birthYearRef = useRef<HTMLSelectElement>(null);
+  const birthYearRef = useRef<HTMLButtonElement>(null);
   function invalidAge(message: string) {
     setError(null);
     setAgeError(message);
@@ -206,53 +207,54 @@ export function UpgradeInner({
             {list(c.changesTitle, c.changes, "blue")}
             {list(c.keepsTitle, c.keeps, "green")}
 
+            {/* live-fixes-2 · C: the shell's Select, not native <select>s (the browser's
+                own list, in the system's language). Same state, same checks
+                (handleConfirm), focus moved to the field on a refusal. */}
             {needsBirthYear && (
-              <Field label={c.byLabel} error={ageError ?? undefined}>
-                <div className="inp" style={birthYear ? { borderColor: "var(--blue)" } : undefined}>
-                  <Calendar className="" />
-                  <select
-                    ref={birthYearRef}
-                    value={birthYear}
-                    onChange={(e) => { setBirthYear(e.target.value); setAgeError(null); }}
-                    required
-                    aria-required="true"
-                    aria-label={c.byLabel}
-                    className="min-w-0 w-full border-0 bg-transparent font-[inherit]"
-                    style={{ color: birthYear ? "var(--ink)" : "var(--muted)" }}
-                  >
-                    <option value="" disabled>{c.byPh}</option>
-                    {years.map((y) => (
-                      <option key={y} value={y} className="text-ink">{y}</option>
-                    ))}
-                  </select>
-                </div>
-                <p className="text-[13px] text-muted mt-1.5 leading-[1.5]">{c.byNote}</p>
-              </Field>
+              <SelectField label={c.byLabel} error={ageError ?? undefined} className="lf-mark-set">
+                {({ labelId, describedBy, invalid }) => (
+                  <>
+                    <Select
+                      value={birthYear}
+                      onChange={(v) => { setBirthYear(v); setAgeError(null); }}
+                      options={years.map((y) => ({ value: String(y), label: String(y) }))}
+                      labelledBy={labelId}
+                      placeholder={c.byPh}
+                      icon={<Calendar />}
+                      describedBy={describedBy}
+                      invalid={invalid}
+                      required
+                      buttonRef={birthYearRef}
+                      e2e="upgrade-birth-year"
+                    />
+                    <p className="text-[13px] text-muted mt-1.5 leading-[1.5]">{c.byNote}</p>
+                  </>
+                )}
+              </SelectField>
             )}
 
             {/* phase-a lane L2 (A14): the month, only when none is on file. */}
             {needsBirthMonth && (
-              <Field label={c.bmLabel} error={monthError ?? undefined}>
-                <div className="inp" style={birthMonth ? { borderColor: "var(--blue)" } : undefined}>
-                  <Calendar className="" />
-                  <select
-                    ref={birthMonthRef}
-                    value={birthMonth}
-                    onChange={(e) => { setBirthMonth(e.target.value); setMonthError(null); }}
-                    required
-                    aria-required="true"
-                    aria-label={c.bmLabel}
-                    className="min-w-0 w-full border-0 bg-transparent font-[inherit]"
-                    style={{ color: birthMonth ? "var(--ink)" : "var(--muted)" }}
-                  >
-                    <option value="" disabled>{c.bmPh}</option>
-                    {c.bmMonths.map((m, i) => (
-                      <option key={m} value={i + 1} className="text-ink">{m}</option>
-                    ))}
-                  </select>
-                </div>
-                {!needsBirthYear && <p className="text-[13px] text-muted mt-1.5 leading-[1.5]">{c.byNote}</p>}
-              </Field>
+              <SelectField label={c.bmLabel} error={monthError ?? undefined} className="lf-mark-set">
+                {({ labelId, describedBy, invalid }) => (
+                  <>
+                    <Select
+                      value={birthMonth}
+                      onChange={(v) => { setBirthMonth(v); setMonthError(null); }}
+                      options={c.bmMonths.map((m, i) => ({ value: String(i + 1), label: m }))}
+                      labelledBy={labelId}
+                      placeholder={c.bmPh}
+                      icon={<Calendar />}
+                      describedBy={describedBy}
+                      invalid={invalid}
+                      required
+                      buttonRef={birthMonthRef}
+                      e2e="upgrade-birth-month"
+                    />
+                    {!needsBirthYear && <p className="text-[13px] text-muted mt-1.5 leading-[1.5]">{c.byNote}</p>}
+                  </>
+                )}
+              </SelectField>
             )}
 
             {error && (

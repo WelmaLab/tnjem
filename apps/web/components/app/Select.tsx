@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { ChevronDown, Check } from "@/components/icons";
 import { placePopover, type Placement } from "./popover-place";
 
@@ -16,7 +16,19 @@ import { placePopover, type Placement } from "./popover-place";
      Escape            close          Tab             close, keep the choice
      a letter          jump to the next option starting with it
    Opening from the button with ↓ / ↑ / Enter / Space starts on the current choice.
-   The list opens upward when the room below (under the sticky bars) is too short. */
+   The list opens upward when the room below (under the sticky bars) is too short.
+
+   live-fixes-2 · C — the same control everywhere else (signup, student welcome,
+   upgrade, admin), so it also takes what those native selects had: a placeholder
+   for a choice not made yet (« Mois », « Choisir… »: shown muted, never an option),
+   a leading icon like any .inp field, and the field's state for assistive tech —
+   aria-required, aria-invalid, aria-describedby (hint / error) — plus a ref the page
+   focuses on a refusal. Those two states belong to a combobox, not to a plain
+   button, so the button now says what it is: role="combobox" (allowed on <button>;
+   the pattern's own name), still opening its listbox the same way.
+   SelectField is the field around it: a <div>, not Field's <label> — a label
+   would forward every click inside it (an option of the open list included) to
+   the button, reopening the list it just closed. */
 
 export type SelectOption = { value: string; label: string; hint?: string };
 
@@ -28,6 +40,12 @@ export function Select({
   labelledBy,
   e2e,
   disabled,
+  placeholder,
+  icon,
+  describedBy,
+  invalid,
+  required,
+  buttonRef,
 }: {
   id?: string;
   value: string;
@@ -37,6 +55,17 @@ export function Select({
   labelledBy: string;
   e2e?: string;
   disabled?: boolean;
+  /** Shown, muted, while the value is "" or matches no option. Not an option itself. */
+  placeholder?: string;
+  /** A leading (decorative) icon, as in an .inp field. */
+  icon?: ReactNode;
+  /** The field's hint and/or error ids. */
+  describedBy?: string;
+  invalid?: boolean;
+  /** A choice the form cannot go on without (the page checks it; this announces it). */
+  required?: boolean;
+  /** For a page that moves focus to this field when it refuses a submit. */
+  buttonRef?: RefObject<HTMLButtonElement | null>;
 }) {
   const auto = useId();
   const btnId = id ?? `${auto}-btn`;
@@ -46,12 +75,21 @@ export function Select({
   const [active, setActive] = useState(0);
   const [place, setPlace] = useState<Placement>("below");
   const wrapRef = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const typed = useRef({ text: "", at: 0 });
+  const setBtn = useCallback(
+    (el: HTMLButtonElement | null) => {
+      btnRef.current = el;
+      if (buttonRef) buttonRef.current = el;
+    },
+    [buttonRef],
+  );
 
-  const selectedIndex = Math.max(0, options.findIndex((o) => o.value === value));
+  const match = options.findIndex((o) => o.value === value);
+  const selectedIndex = Math.max(0, match);
   const selected = options[selectedIndex];
+  const showPlaceholder = placeholder !== undefined && (value === "" || match < 0);
 
   // Click outside closes.
   useEffect(() => {
@@ -133,21 +171,28 @@ export function Select({
   return (
     <div ref={wrapRef} className="lf-sel">
       <button
-        ref={btnRef}
+        ref={setBtn}
         id={btnId}
         type="button"
+        role="combobox"
         className="inp lf-sel-btn"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         aria-labelledby={`${labelledBy} ${btnId}`}
+        aria-describedby={describedBy}
+        aria-invalid={invalid || undefined}
+        aria-required={required || undefined}
         disabled={disabled}
         onClick={() => (open ? setOpen(false) : openAt(selectedIndex))}
         onKeyDown={onButtonKey}
         data-e2e={e2e}
         data-value={value}
       >
-        <span className="lf-sel-v" dir="auto">{selected?.label ?? ""}</span>
+        {icon}
+        <span className={`lf-sel-v${showPlaceholder ? " is-ph" : ""}`} dir="auto">
+          {showPlaceholder ? placeholder : (selected?.label ?? "")}
+        </span>
         <ChevronDown className="lf-sel-chev" />
       </button>
       {open && (
@@ -186,6 +231,45 @@ export function Select({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/** The field around one or more Selects: the visible label, the error (announced) and
+    the hint, laid out exactly as <Field> lays them out — but in a <div> (see the
+    header), and handing the ids to the children, since a Select takes them as props
+    rather than having them cloned onto it. */
+export function SelectField({
+  label,
+  help,
+  error,
+  e2e,
+  className,
+  children,
+}: {
+  label: string;
+  help?: string;
+  error?: string;
+  e2e?: string;
+  /** Extra classes on the field, e.g. « lf-mark-set »: a chosen value outlines it in blue. */
+  className?: string;
+  children: (a: { labelId: string; describedBy: string | undefined; invalid: boolean }) => ReactNode;
+}) {
+  const uid = useId();
+  const labelId = `${uid}-label`;
+  const helpId = help ? `${uid}-help` : undefined;
+  const errorId = error ? `${uid}-error` : undefined;
+  const describedBy = [errorId, helpId].filter(Boolean).join(" ") || undefined;
+  return (
+    <div className={className ? `field ${className}` : "field"} data-e2e={e2e}>
+      <span className="field-label" id={labelId}>{label}</span>
+      {children({ labelId, describedBy, invalid: Boolean(error) })}
+      {error && (
+        <div id={errorId} role="alert" className="help text-rose font-semibold">
+          {error}
+        </div>
+      )}
+      {help && <div id={helpId} className="help">{help}</div>}
     </div>
   );
 }

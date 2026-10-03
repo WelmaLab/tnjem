@@ -27,6 +27,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { User, Book, Phone } from "@/components/icons";
 import { saveStudentProfile } from "@/app/actions";
 import { SiteShell } from "@/components/SiteShell";
+import { Select, SelectField } from "@/components/app/Select";
 import { STUDENT_LEVELS } from "@tnajem/shared";
 import { subjectLabel, normalizeSubjects, type SubjectCode } from "@tnajem/shared"; // phase-a lane L5 (A18.12)
 import type { StudentLevel, StudentProfile } from "@tnajem/shared";
@@ -226,25 +227,25 @@ export function StudentWelcomeInner({
               </div>
             </Field>
 
-            <Field label={c.level}>
-              <div className="inp" style={level ? { borderColor: "var(--blue)" } : undefined}>
-                <Book className="" />
-                <select
+            {/* live-fixes-2 · C: the shell's Select, not a native <select> (the browser's
+                own list, in the system's language). Same state: "" (no level — still a
+                choice, as it was) or a STUDENT_LEVELS code. */}
+            <SelectField label={c.level} className="lf-mark-set">
+              {({ labelId }) => (
+                <Select
                   value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  aria-label={c.level}
-                  className="min-w-0 w-full border-0 bg-transparent font-[inherit]"
-                  style={{ color: level ? "var(--ink)" : "var(--muted)" }}
-                >
-                  <option value="">{c.levelPh}</option>
-                  {STUDENT_LEVELS.map((l) => (
-                    <option key={l} value={l} className="text-ink">
-                      {LEVEL_LABEL[l][locale]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </Field>
+                  onChange={setLevel}
+                  options={[
+                    { value: "", label: c.levelPh },
+                    ...STUDENT_LEVELS.map((l) => ({ value: l, label: LEVEL_LABEL[l][locale] })),
+                  ]}
+                  labelledBy={labelId}
+                  placeholder={c.levelPh}
+                  icon={<Book />}
+                  e2e="welcome-level"
+                />
+              )}
+            </SelectField>
 
             <Field label={c.phone} help={c.phoneHelp} error={fieldError?.field === "phone" ? fieldError.message : undefined}>
               <div className="inp" style={phone ? { borderColor: "var(--blue)" } : undefined}>

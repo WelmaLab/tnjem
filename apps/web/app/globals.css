@@ -1470,3 +1470,15 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .st-level.is-on{border-color:var(--blue);background:var(--blue50);color:var(--blue)}
   .st-level:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 }
+
+/* ── live-fixes-2 · ui ── ───────────────────────────────────────────────────
+   C · the Select (components/app/Select.tsx) outside the prof space too: signup,
+   student welcome, upgrade, admin. No native <select> is left on any page. */
+@layer components {
+  /* A choice not made yet: the placeholder reads like an empty .inp's. */
+  .lf-sel-v.is-ph{color:var(--muted)}
+  /* The forms whose filled fields turn blue (welcome, upgrade) do the same for a choice. */
+  .lf-mark-set .lf-sel-btn:not([data-value=""]){border-color:var(--blue)}
+  /* The signup birth date: month and year side by side, one field. */
+  .lf-bd{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px}
+}

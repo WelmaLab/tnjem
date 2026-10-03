@@ -280,6 +280,9 @@ export const ROUTES = [
   { path: "/dashboard/settings?tab=securite", name: "dashboard-settings-securite", auth: true },
   /* The public « Ce prof arrive bientôt »: the harness tutor's own slug, seen anonymously. */
   { path: "/audit-harness", name: "coming-soon" },
+  /* live-fixes-2 · C: the one admin screen the list did not have (found by the crawl
+     of every route for a visible native select or file input, e2e/lf2-c-native-controls). */
+  { path: "/admin/moderation", name: "admin-moderation", auth: "admin" },
 ];
 
 /** Expand the bare routes across both locales. */

@@ -6,6 +6,7 @@ import { sql } from "../support/db";
 import { email, seedProfile, seedPassword } from "../support/seed";
 import { recoverOtp, resetRateLimits } from "../support/otp";
 import { fillOtp } from "../support/otp-ui";
+import { chooseOption } from "../support/select-ui"; // live-fixes-2 · C
 import { mintSession, sessionCookie } from "../support/session";
 import { E2E_PASSWORD } from "../support/password-ui";
 
@@ -108,8 +109,8 @@ for (const locale of LOCALES) {
         const { ctx, page } = await newPage(browser, vp);
         await page.goto(`/${locale}/signup/prof`, { waitUntil: "networkidle" });
         await page.locator('input[type="email"]').fill(address);
-        await page.locator("main select").nth(0).selectOption("3");
-        await page.locator("main select").nth(1).selectOption("1988");
+        await chooseOption(page, page.locator("[data-e2e=birth-month]"), "3"); // live-fixes-2 · C
+        await chooseOption(page, page.locator("[data-e2e=birth-year]"), "1988");
         await submit(page);
         await expect(page.locator('[data-e2e="auth-step-code"]')).toBeVisible({ timeout: 20_000 });
         await fillOtp(page, await codeFor(address));
@@ -125,8 +126,8 @@ for (const locale of LOCALES) {
         const { ctx, page } = await newPage(browser, vp);
         await page.goto(`/${locale}/signup/eleve`, { waitUntil: "networkidle" });
         await page.locator('input[type="email"]').fill(withPw.email);
-        await page.locator("main select").nth(0).selectOption("3");
-        await page.locator("main select").nth(1).selectOption("1994");
+        await chooseOption(page, page.locator("[data-e2e=birth-month]"), "3"); // live-fixes-2 · C
+        await chooseOption(page, page.locator("[data-e2e=birth-year]"), "1994");
         await submit(page);
         await expect(page.locator('[data-e2e="existing-account-notice"]')).toBeVisible({ timeout: 20_000 });
         await shoot(page, `auth-existing-${tag}`);

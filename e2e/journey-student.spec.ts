@@ -5,6 +5,7 @@ import { email, seedProfile, seedTutor, seedClass, seedBooking } from "./support
 import { recoverOtp, resetRateLimits } from "./support/otp";
 import { fillOtp } from "./support/otp-ui";
 import { completePasswordStep } from "./support/password-ui"; // espace prof v2 · auth
+import { chooseBirthDate } from "./support/select-ui"; // live-fixes-2 · C
 import { mintSession } from "./support/session";
 import { api, browserSession } from "./support/journey";
 
@@ -43,8 +44,7 @@ test("student journey: minor signup → consent → explore → book → live ga
     await page.goto("/fr/signup/eleve");
     await page.locator('input[type="email"]').fill(address);
     // phase-a lane L2 (A24): month AND year. Minors are allowed here: playwright.config sets ALLOW_MINORS=1.
-    await page.getByLabel("Mois de naissance", { exact: true }).selectOption("3");
-    await page.getByLabel("Année de naissance", { exact: true }).selectOption(String(new Date().getFullYear() - 14));
+    await chooseBirthDate(page, { month: 3, year: new Date().getFullYear() - 14 }); // live-fixes-2 · C
     await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
     await expect.poll(async () => (await sql<{ n: number }[]>`select count(*)::int n from otp_codes where identifier = ${address}`)[0].n, { timeout: 20_000 }).toBe(1);
     const code = await recoverOtp(address);

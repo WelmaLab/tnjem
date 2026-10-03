@@ -36,7 +36,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocalizedRouter } from "@/components/Link";
 import { Button, Field } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
-import { Phone, Calendar, Mail, Back, ChevronDown, Lock } from "@/components/icons";
+import { Phone, Calendar, Mail, Back, Lock } from "@/components/icons";
+import { Select, SelectField } from "@/components/app/Select";
 import { requestOtp, verifyOtp } from "@/app/actions";
 import { accountStatus, setPassword } from "@/app/actions-auth"; // espace prof v2 · auth
 import { AuthShell } from "@/components/auth/AuthShell";
@@ -324,7 +325,7 @@ export function SignupInner({
   const [fieldError, setFieldError] = useState<{ field: FieldName; message: string } | null>(null);
   const identifierRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
-  const birthMonthRef = useRef<HTMLSelectElement>(null); // phase-a lane L2 (A24)
+  const birthMonthRef = useRef<HTMLButtonElement>(null); // phase-a lane L2 (A24); live-fixes-2 · C: the Select's button
   /* Neutral guidance, not a failure — styled and announced as information. */
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -827,58 +828,54 @@ export function SignupInner({
             {/* phase-a lane L2 (A24) — birth MONTH + year. A year alone passed a
                 December-born 17-year-old as 18 all year. Drives the adult-only pilot
                 (ALLOW_MINORS off) and, when minors are allowed, the consent gate.
-                ONE field: a single .inp holding both selects. Field wires the hint
-                and the error onto the FIRST control (the month); the year carries its
-                own aria-invalid. */}
+                ONE field, two choices side by side. The hint and the error are wired
+                onto the FIRST control (the month), as Field did; the year carries its
+                own aria-invalid.
+                live-fixes-2 · C: the shell's Select, not two native <select>s — their
+                list was the browser's own, in the system's language and style. Same
+                state (the strings "1"–"12" and the year), same checks (birthDateOk). */}
             {asksBirthDate && (
-              <Field
+              <SelectField
                 label={minorsAllowed && isStudent ? c.bdLabel : c.bdLabelSelf}
                 help={!isStudent ? c.bdTutorNote : adultsOnly ? c.bdAdultsNote : c.byNote}
                 error={fieldError?.field === "birth" ? fieldError.message : undefined}
               >
-                <div className="inp" data-e2e="birth-date">
-                  <Calendar />
-                  <select
-                    ref={birthMonthRef}
-                    value={birthMonth}
-                    onChange={(e) => {
-                      setBirthMonth(e.target.value);
-                      if (fieldError?.field === "birth") setFieldError(null);
-                    }}
-                    required
-                    aria-required="true"
-                    aria-label={c.bdMonth}
-                    className="flex-1 min-w-0"
-                    style={{ color: birthMonth ? "var(--ink)" : "var(--muted)" }}
-                  >
-                    <option value="" disabled>{c.bdMonthPh}</option>
-                    {c.bdMonths.map((m, i) => (
-                      <option key={m} value={i + 1} className="text-ink">{m}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="inp-chev" />
-                  <span className="inp-divider" aria-hidden="true" />
-                  <select
-                    value={birthYear}
-                    onChange={(e) => {
-                      setBirthYear(e.target.value);
-                      if (fieldError?.field === "birth") setFieldError(null);
-                    }}
-                    required
-                    aria-required="true"
-                    aria-label={c.bdYear}
-                    aria-invalid={fieldError?.field === "birth" ? true : undefined}
-                    className="flex-1 min-w-0"
-                    style={{ color: birthYear ? "var(--ink)" : "var(--muted)" }}
-                  >
-                    <option value="" disabled>{c.bdYearPh}</option>
-                    {years.map((y) => (
-                      <option key={y} value={y} className="text-ink">{y}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="inp-chev" />
-                </div>
-              </Field>
+                {({ labelId, describedBy, invalid }) => (
+                  <div className="lf-bd" role="group" aria-labelledby={labelId} data-e2e="birth-date">
+                    <span id={`${labelId}-m`} className="sr-only">{c.bdMonth}</span>
+                    <span id={`${labelId}-y`} className="sr-only">{c.bdYear}</span>
+                    <Select
+                      value={birthMonth}
+                      onChange={(v) => {
+                        setBirthMonth(v);
+                        if (fieldError?.field === "birth") setFieldError(null);
+                      }}
+                      options={c.bdMonths.map((m, i) => ({ value: String(i + 1), label: m }))}
+                      labelledBy={`${labelId}-m`}
+                      placeholder={c.bdMonthPh}
+                      icon={<Calendar />}
+                      describedBy={describedBy}
+                      invalid={invalid}
+                      required
+                      buttonRef={birthMonthRef}
+                      e2e="birth-month"
+                    />
+                    <Select
+                      value={birthYear}
+                      onChange={(v) => {
+                        setBirthYear(v);
+                        if (fieldError?.field === "birth") setFieldError(null);
+                      }}
+                      options={years.map((y) => ({ value: String(y), label: String(y) }))}
+                      labelledBy={`${labelId}-y`}
+                      placeholder={c.bdYearPh}
+                      invalid={invalid}
+                      required
+                      e2e="birth-year"
+                    />
+                  </div>
+                )}
+              </SelectField>
             )}
 
             {errorLine}

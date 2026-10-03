@@ -13,6 +13,7 @@ import { expect, type Page } from "@playwright/test";
 import { sql } from "./db";
 import { recoverOtp } from "./otp";
 import { fillOtp } from "./otp-ui";
+import { chooseBirthDate } from "./select-ui";
 
 /** Passes the API's policy (10+ characters, not a common password). */
 export const E2E_PASSWORD = "Tnajem-e2e-cartable-2026";
@@ -41,10 +42,8 @@ export async function signUpThroughUi(
   const locale = opts.locale ?? "fr";
   await page.goto(`/${locale}/signup/${opts.role === "tutor" ? "prof" : "eleve"}`, { waitUntil: "networkidle" });
   await page.locator('input[type="email"]').fill(opts.email);
-  const month = locale === "ar" ? "شهر الولادة" : "Mois de naissance";
-  const year = locale === "ar" ? "عام الولادة" : "Année de naissance";
-  await page.getByLabel(month, { exact: true }).selectOption(String(opts.birthMonth ?? 3));
-  await page.getByLabel(year, { exact: true }).selectOption(String(opts.birthYear));
+  // live-fixes-2 · C: the birth date is two shell Selects now, found by their names in FR or AR.
+  await chooseBirthDate(page, { month: opts.birthMonth ?? 3, year: opts.birthYear, locale });
   await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
   await expect
     .poll(async () => (await sql<{ n: number }[]>`select count(*)::int n from otp_codes where identifier = ${opts.email}`)[0].n, {

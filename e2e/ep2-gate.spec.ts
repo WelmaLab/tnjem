@@ -5,6 +5,7 @@ import { loginAs } from "./support/session";
 import { resetRateLimits } from "./support/otp";
 import { E2E_PASSWORD } from "./support/password-ui";
 import { BASE_URL } from "./support/env";
+import { chooseBirthDate } from "./support/select-ui"; // live-fixes-2 · C
 
 /* ════════════════════════════════════════════════════════════════════════════
    espace prof v2 · phase 8 (gate) — the spec's §8.3 list, where the phase specs
@@ -155,8 +156,7 @@ test("« email already exists » through the tutor door, in Arabic: /ar/signup/p
   const existing = await seedProfile({ role: "tutor", birthYear: 1988 });
   await page.goto("/ar/signup/prof", { waitUntil: "networkidle" });
   await page.locator('input[type="email"]').fill(existing.email);
-  await page.locator("main select").nth(0).selectOption("3");
-  await page.locator("main select").nth(1).selectOption("1988");
+  await chooseBirthDate(page, { month: 3, year: 1988, locale: "ar" }); // live-fixes-2 · C: the shell's Select
   await page.locator("main form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
 
   await page.waitForURL(/\/ar\/auth\?/, { timeout: 20_000 });

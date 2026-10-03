@@ -4,6 +4,7 @@ import { recoverOtp, resetRateLimits } from "./support/otp";
 import { email } from "./support/seed";
 import { fillOtp } from "./support/otp-ui";
 import { completePasswordStep } from "./support/password-ui"; // espace prof v2 · auth
+import { chooseBirthDate } from "./support/select-ui"; // live-fixes-2 · C
 import { randomBytes } from "node:crypto";
 
 /* The REAL login flow, end to end, through the browser.
@@ -40,13 +41,11 @@ test("a student signs up with a real OTP and lands signed in", async ({ page }) 
 
   await page.goto("/fr/signup/eleve");
   await page.locator('input[type="email"]').fill(identifier);
-  /* The birth-year select is `required` — the student signup collects it for the
-     minor-consent gate. Leave it blank and HTML5 validation swallows the submit
-     with no error in the page, the console, or the server log: the form simply
-     does nothing. (Same trap as the required `price` field on new-class.) */
-  // phase-a lane L2 (A24): month AND year, two selects now.
-  await page.getByLabel("Mois de naissance", { exact: true }).selectOption("3");
-  await page.getByLabel("Année de naissance", { exact: true }).selectOption("1995");
+  /* The birth date is required — the student signup collects it for the
+     minor-consent gate. Leave it blank and the form stops on the birth field
+     instead of asking for a code. */
+  // phase-a lane L2 (A24): month AND year, two selects now (live-fixes-2 · C: the shell's Select).
+  await chooseBirthDate(page, { month: 3, year: 1995 });
 
   /* form.requestSubmit(), not button.click().
 

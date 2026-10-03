@@ -5,6 +5,7 @@ import { email, seedAdmin, seedProfile } from "./support/seed";
 import { recoverOtp, resetRateLimits } from "./support/otp";
 import { fillOtp } from "./support/otp-ui";
 import { completePasswordStep } from "./support/password-ui"; // espace prof v2 · auth
+import { chooseBirthDate } from "./support/select-ui"; // live-fixes-2 · C
 import { mintSession } from "./support/session";
 import { e2eStore } from "./support/store";
 import { openForE2E } from "./support/doc-crypto";
@@ -41,8 +42,7 @@ test("tutor journey: signup → storefront → ID → approved → class → boo
     await page.goto("/fr/signup/prof");
     await page.locator('input[type="email"]').fill(address);
     // phase-a lane L2 (A14): /signup/prof asks for a birth month + year (18+).
-    await page.getByLabel("Mois de naissance", { exact: true }).selectOption("3");
-    await page.getByLabel("Année de naissance", { exact: true }).selectOption("1988");
+    await chooseBirthDate(page, { month: 3, year: 1988 }); // live-fixes-2 · C
     await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
     await expect.poll(async () => (await sql<{ n: number }[]>`select count(*)::int n from otp_codes where identifier = ${address}`)[0].n, { timeout: 20_000 }).toBe(1);
     const code = await recoverOtp(address);

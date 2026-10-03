@@ -19,6 +19,8 @@
                      a screen reader.
      4. Tokens       no raw hex outside globals.css. Every colour is a token, so
                      contrast.mjs can actually see all of them.
+     7. Controls     no native <select>, and every <input type=file> visually
+                     hidden behind its own labelled control (live-fixes-2 · C).
 
    Exit code 1 on any violation.
    ══════════════════════════════════════════════════════════════════════════════ */
@@ -342,6 +344,38 @@ section("6. no demo fixture text in the production build");
   }
 }
 
+/* ── 7. no native <select>, no visible file input ─────────────────────────── */
+section("7. No native <select>; a file input is always visually hidden");
+/* live-fixes-2 · C. The browser's own <select> list and « Choose File / No file
+   chosen » render in the SYSTEM's language and style (English on most machines,
+   whatever the page says). Every choice is components/app/Select.tsx; every upload
+   is a labelled zone or button whose real <input type=file> is .sr-only (FileDrop,
+   the verification cards, the profile photo) — still what the keyboard, a screen
+   reader and the phone's picker use. This reads the source; its runtime twin, on
+   every route in FR and AR, is e2e/lf2-c-native-controls.spec.ts. */
+let nativeHits = 0;
+let fileInputs = 0;
+for (const f of FILES.filter((p) => p.endsWith(".tsx"))) {
+  const src = stripComments(readFileSync(f, "utf8"));
+  const lineOf = (i) => src.slice(0, i).split("\n").length;
+  for (const m of src.matchAll(/<select[\s>]/g)) {
+    nativeHits++;
+    fail(`${rel(f)}:${lineOf(m.index)}  a native <select> — use <Select> (components/app/Select.tsx)`);
+  }
+  for (const m of src.matchAll(/<input\b/g)) {
+    // An <input> is void: in JSX it always ends with "/>", which ends its attributes.
+    const end = src.indexOf("/>", m.index);
+    const tag = src.slice(m.index, end === -1 ? undefined : end);
+    if (!/\btype\s*=\s*(?:"file"|'file'|\{\s*["']file["']\s*\})/.test(tag)) continue;
+    fileInputs++;
+    if (!/\bsr-only\b/.test(tag)) {
+      nativeHits++;
+      fail(`${rel(f)}:${lineOf(m.index)}  a file input that is not .sr-only — hide it behind a labelled zone (FileDrop)`);
+    }
+  }
+}
+if (!nativeHits) console.log(`  ok    0 native <select>; ${fileInputs} file input(s), every one .sr-only behind its own control`);
+
 console.log(`\n  ${fails} guardrail violation(s)\n`);
 if (fails) process.exit(1);
-console.log("  OK — RTL logical-only, FR/AR parity exact, no hardcoded French, no untokenised colour.\n");
+console.log("  OK — RTL logical-only, FR/AR parity exact, no hardcoded French, no untokenised colour, no native select.\n");

@@ -84,8 +84,11 @@ async function walk(browser, locale, width) {
   // ── 2. Ask for a code ───────────────────────────────────────────────────
   await page.locator('main input[type="email"], main input[type="tel"]').first().fill(email);
   // phase-a lane L2 (A14): /signup/prof asks for a birth month + year (18+).
-  await page.locator("main select").nth(0).selectOption("3");
-  await page.locator("main select").nth(1).selectOption("1988");
+  // live-fixes-2 · C: the shell's Select (a button + listbox), not a native <select>.
+  for (const [hook, value] of [["birth-month", "3"], ["birth-year", "1988"]]) {
+    await page.locator(`[data-e2e=${hook}]`).click();
+    await page.locator(`[data-e2e=${hook}-list] [role=option][data-value="${value}"]`).click();
+  }
   await shot(page, locale, width, "identifier-filled");
   await page.locator('main button[type="submit"]').first().click();
 

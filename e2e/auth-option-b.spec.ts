@@ -4,6 +4,7 @@ import { sql } from "./support/db";
 import { resetRateLimits } from "./support/otp";
 import { email } from "./support/seed";
 import { fillOtp, OTP_DIGIT, OTP_GROUP } from "./support/otp-ui";
+import { chooseBirthDate, selectByLabel } from "./support/select-ui"; // live-fixes-2 · C
 
 /* ════════════════════════════════════════════════════════════════════════════
    Auth Option B (UI_AUTH_OPTION_B.md) — the sign-up and login pages as ONE flow:
@@ -197,7 +198,7 @@ test("/fr/signup/prof: a code typed with no birth date goes back to the birth fi
     page.getByRole("alert").filter({ hasText: "Choisis le mois et l'année de naissance." }),
     "the birth field says what is missing",
   ).toBeVisible();
-  await expect(page.getByLabel("Mois de naissance", { exact: true }), "focus is on the month").toBeFocused();
+  await expect(selectByLabel(page, "Mois de naissance"), "focus is on the month").toBeFocused();
 
   expect(await verifiesSeenByApi(), "no verify was sent: the age is checked before the code is spent").toBe(0);
   const [p] = await sql<{ n: number }[]>`select count(*)::int n from profiles where email = ${address}`;
@@ -207,8 +208,7 @@ test("/fr/signup/prof: a code typed with no birth date goes back to the birth fi
      DOES reach the API (and is refused there — this address never had a code). */
   await open(page, "/fr/signup/prof");
   await page.locator('input[type="email"]').fill(address);
-  await page.getByLabel("Mois de naissance", { exact: true }).selectOption("3");
-  await page.getByLabel("Année de naissance", { exact: true }).selectOption("1988");
+  await chooseBirthDate(page, { month: 3, year: 1988 }); // live-fixes-2 · C
   await page.locator(HAVE_CODE).click();
   await expect(page.locator(STEP2)).toBeVisible();
   await fillOtp(page, "123456");
