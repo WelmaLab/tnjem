@@ -127,78 +127,75 @@ jobs:
       - name: Guardrails (needs the production build)
         run: node tools/ui-audit/guardrails.mjs
 
-      # ── LAUNCH-MIN (30 Sept 2026) ────────────────────────────────────────────
-      # Disabled for the first launch: Playwright (~10 min), pm2 lifecycle, npm audit.
-      # Re-enable one at a time once the site is live: delete the "#LM " prefix.
-      # The API tests, typecheck, lint, build and guardrails above still gate every deploy.
-#LM       - name: Install Playwright browser
-#LM         run: npx playwright install --with-deps chromium
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
 
-#LM       # Builds and starts both servers itself (api :4000, standalone web :3210) —
-#LM       # webServer in playwright.config.ts, with reuseExistingServer off under CI.
-#LM       - name: Playwright
-#LM         run: npx playwright test
+      # Builds and starts its servers itself (api :4000, standalone web :3210, and the
+      # ALLOW_MINORS-unset web :3212 on the same build) — webServer in
+      # playwright.config.ts, with reuseExistingServer off under CI.
+      - name: Playwright
+        run: npx playwright test
 
-#LM       # ── pm2 lifecycle: SIGTERM on the runner must free the port ──────────────
-#LM       # apps/web/scripts/serve-standalone.mjs is a supervisor that SPAWNS the Next
-#LM       # server, so killing it does not kill the child that holds the port. Without
-#LM       # signal forwarding, `pm2 reload tnajem-web` leaves the old server on :3000 and
-#LM       # the replacement dies with EADDRINUSE — a deploy that reports success while
-#LM       # serving the previous build. This is that regression test; it needs real POSIX
-#LM       # signals, which is why it lives here and not in a spec that also runs on Windows.
-#LM       # Reuses the build Playwright just made, so it costs seconds.
-#LM       - name: pm2 lifecycle — SIGTERM frees the port
-#LM         run: |
-#LM           set -euo pipefail
-#LM           # `curl -s` without -f succeeds on ANY http status, so this asks only "is
-#LM           # something listening on :3000" — which is the whole question here. The API
-#LM           # is already stopped at this point, so /fr may well answer 500, and that is
-#LM           # still a bound port holding the address the next release needs.
-#LM           bound() { curl -s --max-time 3 -o /dev/null "http://localhost:3000/fr"; }
-#LM           # HOSTNAME as in ecosystem.config.cjs: the runner exports its own machine name
-#LM           # as HOSTNAME, and Next binds to that instead of loopback.
-#LM           HOSTNAME=localhost PORT=3000 API_URL=http://127.0.0.1:4000 node apps/web/scripts/serve-standalone.mjs &
-#LM           parent=$!
-#LM           for i in $(seq 1 60); do
-#LM             if bound; then break; fi
-#LM             sleep 1
-#LM           done
-#LM           bound || { echo "web never bound :3000"; exit 1; }
-#LM           children="$(pgrep -P "$parent" || true)"
-#LM           echo "parent=$parent children=${children:-none}"
-#LM           [ -n "$children" ] || { echo "expected a spawned child process"; exit 1; }
-#LM           kill -TERM "$parent"
-#LM           for i in $(seq 1 15); do
-#LM             if ! kill -0 "$parent" 2>/dev/null; then break; fi
-#LM             sleep 1
-#LM           done
-#LM           sleep 1
-#LM           if bound; then
-#LM             echo "FAIL: something still holds :3000 after SIGTERM to the supervisor"
-#LM             pkill -P "$parent" 2>/dev/null || true
-#LM             exit 1
-#LM           fi
-#LM           for pid in $children; do
-#LM             if kill -0 "$pid" 2>/dev/null; then
-#LM               echo "FAIL: child $pid outlived the supervisor"; kill -9 "$pid"; exit 1
-#LM             fi
-#LM           done
-#LM           echo "OK: supervisor and child both exited, :3000 is free"
+      # ── pm2 lifecycle: SIGTERM on the runner must free the port ──────────────
+      # apps/web/scripts/serve-standalone.mjs is a supervisor that SPAWNS the Next
+      # server, so killing it does not kill the child that holds the port. Without
+      # signal forwarding, `pm2 reload tnajem-web` leaves the old server on :3000 and
+      # the replacement dies with EADDRINUSE — a deploy that reports success while
+      # serving the previous build. This is that regression test; it needs real POSIX
+      # signals, which is why it lives here and not in a spec that also runs on Windows.
+      # Reuses the build Playwright just made, so it costs seconds.
+      - name: pm2 lifecycle — SIGTERM frees the port
+        run: |
+          set -euo pipefail
+          # `curl -s` without -f succeeds on ANY http status, so this asks only "is
+          # something listening on :3000" — which is the whole question here. The API
+          # is already stopped at this point, so /fr may well answer 500, and that is
+          # still a bound port holding the address the next release needs.
+          bound() { curl -s --max-time 3 -o /dev/null "http://localhost:3000/fr"; }
+          # HOSTNAME as in ecosystem.config.cjs: the runner exports its own machine name
+          # as HOSTNAME, and Next binds to that instead of loopback.
+          HOSTNAME=localhost PORT=3000 API_URL=http://127.0.0.1:4000 node apps/web/scripts/serve-standalone.mjs &
+          parent=$!
+          for i in $(seq 1 60); do
+            if bound; then break; fi
+            sleep 1
+          done
+          bound || { echo "web never bound :3000"; exit 1; }
+          children="$(pgrep -P "$parent" || true)"
+          echo "parent=$parent children=${children:-none}"
+          [ -n "$children" ] || { echo "expected a spawned child process"; exit 1; }
+          kill -TERM "$parent"
+          for i in $(seq 1 15); do
+            if ! kill -0 "$parent" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          sleep 1
+          if bound; then
+            echo "FAIL: something still holds :3000 after SIGTERM to the supervisor"
+            pkill -P "$parent" 2>/dev/null || true
+            exit 1
+          fi
+          for pid in $children; do
+            if kill -0 "$pid" 2>/dev/null; then
+              echo "FAIL: child $pid outlived the supervisor"; kill -9 "$pid"; exit 1
+            fi
+          done
+          echo "OK: supervisor and child both exited, :3000 is free"
 
-#LM       # --audit-level=high, not bare `npm audit --omit=dev`. The bare form fails on any
-#LM       # severity, so a freshly published low-severity advisory in a transitive dep would
-#LM       # block an unrelated deploy with no code change. Stage 4 left this at 0
-#LM       # vulnerabilities; `npm audit --omit=dev` is still the Stage 8 hand gate.
-#LM       - name: npm audit (production deps, high and above)
-#LM         run: npm audit --omit=dev --audit-level=high
+      # --audit-level=high, not bare `npm audit --omit=dev`. The bare form fails on any
+      # severity, so a freshly published low-severity advisory in a transitive dep would
+      # block an unrelated deploy with no code change. Stage 4 left this at 0
+      # vulnerabilities; `npm audit --omit=dev` is still the Stage 8 hand gate.
+      - name: npm audit (production deps, high and above)
+        run: npm audit --omit=dev --audit-level=high
 
-#LM       - name: Upload Playwright report on failure
-#LM         if: failure()
-#LM         uses: actions/upload-artifact@v4
-#LM         with:
-#LM           name: playwright-report
-#LM           path: |
-#LM             playwright-report/
-#LM             test-results/
-#LM           retention-days: 7
-#LM           if-no-files-found: ignore
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore

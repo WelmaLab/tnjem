@@ -7,8 +7,9 @@ import { bilingual } from "@/lib/i18n";
    page (rule 7: one note per page), now beside the field or the section it is about.
 
    A disclosure, not a hover-only tooltip — touch has no hover:
-     • a real button (a 44px target; the « ? » drawn smaller inside it) toggles the
-       bubble on click or tap; Escape or a click elsewhere closes it;
+     • a real button (a 44px target; the « ? » drawn smaller inside it) opens the
+       bubble on click or tap and closes it on the next; Escape or a click elsewhere
+       closes it too;
      • a mouse hovering it shows the bubble too (pointerType "mouse" only, so a tap
        never leaves it stuck open);
      • the text is ALWAYS in the DOM and is the button's description (aria-describedby),
@@ -87,10 +88,18 @@ export function InfoTip({ label, children, e2e }: { label?: string; children: Re
         aria-controls={id}
         aria-describedby={id}
         onClick={() => {
-          // A click decides on its own: it opens what is closed and closes what is shown.
+          /* A click PINS the bubble open, or unpins it — it never closes what the
+             pointer has only hovered. A mouse reaches the « ? » before it clicks, so the
+             hover has usually shown the bubble already; toggling on what is shown made
+             that click hide the text the user was asking for (and made a fast synthetic
+             click race the hover's render: live-fixes-2 · E, a CI flake). */
+          if (open) {
+            setOpen(false);
+            setHover(false);
+            return;
+          }
           if (!shown) place();
-          setOpen(!shown);
-          setHover(false);
+          setOpen(true);
         }}
         data-e2e={e2e}
       >
