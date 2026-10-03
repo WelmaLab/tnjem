@@ -37,9 +37,17 @@ const demoActive = !isProd && process.env.TNAJEM_DEMO === "1" && !process.env.AP
    `default-src 'none'; sandbox` CSP, which combines with this one, never loosens it.
 
    Live video runs on meet.jit.si in a NEW TAB (window.open in app/live), not an
-   iframe, so no frame-src/camera/microphone grant is needed on our origin. That
-   keeps the policy tight: nothing may frame us, we frame nothing, no plugins,
-   no base-tag or form-action hijack, and img/font are self-only.
+   iframe, so no camera/microphone grant is needed on our origin. That keeps the
+   policy tight: nothing may frame us, no plugins, no base-tag or form-action
+   hijack, and img/font are self-only.
+
+   WE FRAME ONE THING (live-fixes-2 · D): a tutor's YouTube video, on the
+   storefront, from youtube-nocookie only, and only once someone presses « Voir la
+   vidéo » (components/storefront/MaterialsPanel.tsx, the one embed). With no
+   frame-src the policy fell back to default-src 'self' and refused that frame —
+   the video slot showed a broken page. frame-src names exactly that origin, and
+   'self' keeps what default-src already allowed. /privacy §9 already says a video
+   loads from YouTube's no-cookie domain only when it is started.
 
    ONE THIRD PARTY, by exact origin (live-fixes-1 · I): Cloudflare, which fronts
    the site, injects its Web Analytics beacon into every HTML page; blocked, it
@@ -53,6 +61,8 @@ const demoActive = !isProd && process.env.TNAJEM_DEMO === "1" && !process.env.AP
    made in those tests, never a side effect. */
 const CF_BEACON_SCRIPT = "https://static.cloudflareinsights.com";
 const CF_BEACON_REPORT = "https://cloudflareinsights.com";
+// The host youTubeEmbedUrl() (packages/shared/src/uploads.ts) builds every embed on.
+const YOUTUBE_EMBED = "https://www.youtube-nocookie.com";
 
 function contentSecurityPolicy() {
   const directives = [
@@ -69,6 +79,7 @@ function contentSecurityPolicy() {
     // Dev needs the HMR websocket; prod talks to its own origin (server actions) and
     // the beacon's report endpoint.
     `connect-src 'self' ${CF_BEACON_REPORT}${isProd ? "" : " ws: wss:"}`,
+    `frame-src 'self' ${YOUTUBE_EMBED}`,
     "manifest-src 'self'",
   ];
   if (isProd) directives.push("upgrade-insecure-requests");
@@ -124,8 +135,12 @@ const nextConfig = {
   },
 
   async headers() {
+    /* What a file route takes from the API instead (app/api/admin/doc and
+       app/api/material pass these through verbatim); only the rest is added here. */
+    const fromTheApi = ["Content-Security-Policy", "Referrer-Policy", "X-Content-Type-Options"];
+    const fileRouteHeaders = () => securityHeaders().filter((h) => !fromTheApi.includes(h.key));
     return [
-      { source: "/:path((?!api/admin/doc/).*)", headers: securityHeaders() },
+      { source: "/:path((?!api/admin/doc/|api/material/).*)", headers: securityHeaders() },
       /* THE ID-SCAN ROUTE IS EXCLUDED from the site-wide set, and gets no CSP here.
          Since Next 15/16, a header named in this config REPLACES the same header set
          by a route handler (on 14 the handler won). The site-wide CSP therefore
@@ -134,12 +149,14 @@ const nextConfig = {
          with the app's permissive page policy (and its Referrer-Policy over the
          document's no-referrer). e2e/admin.spec.ts caught it. The route passes the
          API's headers through; only the ones the API does not set are added here. */
-      {
-        source: "/api/admin/doc/:id",
-        headers: securityHeaders().filter(
-          (h) => !["Content-Security-Policy", "Referrer-Policy", "X-Content-Type-Options"].includes(h.key),
-        ),
-      },
+      { source: "/api/admin/doc/:id", headers: fileRouteHeaders() },
+      /* A TEACHING MATERIAL, the same way (live-fixes-2 · D). The file a student
+         opens is a PDF or an image, never a page: it keeps the API's own policy
+         (`default-src 'none'` — no script, no connection, no frame, and nothing may
+         frame it), not the page policy with its inline scripts and Cloudflare's
+         beacon. e2e/lf2-d-material-csp.spec.ts pins it, and proves a PDF still
+         opens in the browser's viewer and an image still displays. */
+      { source: "/api/material/:id", headers: fileRouteHeaders() },
     ];
   },
 

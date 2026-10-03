@@ -92,6 +92,9 @@ const OK_MATERIAL_MIME = /^(application\/pdf|image\/(png|jpeg|webp))$/;
 
 const SAFE_SERVE_MIME = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
 
+/** The policy a material's bytes are served with (GET /materials/:id/file). */
+export const MATERIAL_FILE_CSP = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'";
+
 /** Everyone who may read a given material, resolved against the database. */
 async function canRead(
   material: { id: string; tutorId: string; visibility: string; classId?: string | null }, // phase-a lane L5 (A18.9): + classId
@@ -389,6 +392,16 @@ export async function materialRoutes(app: FastifyInstance): Promise<void> {
        would hand a students-only file to the next person through it. */
     reply.header("cache-control", "private, no-store");
     reply.header("x-content-type-options", "nosniff");
+    /* THE ONE API RESPONSE A BROWSER RENDERS AS A DOCUMENT (live-fixes-2 · D): a
+       student opens the file in a tab, and the browser's own viewer shows it. So it
+       keeps the API's baseline — default-src 'none', nothing may frame it — plus the
+       one thing Chrome's image viewer needs: it lays out its page (centred image,
+       dark backdrop) with inline style attributes, which default-src 'none' refuses,
+       three console errors and the image pinned to a corner. An inline style cannot
+       run code, and these bytes are never HTML (allow-listed type, nosniff). The web
+       route passes this header through untouched (apps/web/next.config.mjs);
+       e2e/lf2-d-material-csp.spec.ts pins it on both. */
+    reply.header("content-security-policy", MATERIAL_FILE_CSP);
     reply.header(
       "content-disposition",
       `inline; filename="${safeFileName(m.fileName ?? "material", 60)}"`,

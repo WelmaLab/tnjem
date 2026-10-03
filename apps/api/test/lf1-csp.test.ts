@@ -56,6 +56,8 @@ const hostsOf = (policy: Record<string, string[]>) =>
 
 const CF_SCRIPT = "https://static.cloudflareinsights.com";
 const CF_REPORT = "https://cloudflareinsights.com";
+// live-fixes-2 · D: the storefront's one embed (youTubeEmbedUrl, packages/shared/src/uploads.ts).
+const YT_EMBED = "https://www.youtube-nocookie.com";
 
 /* THE POLICY. Changing a line here is the decision; the config follows it. */
 const PROD: Record<string, string[]> = {
@@ -69,6 +71,7 @@ const PROD: Record<string, string[]> = {
   "style-src": ["'self'", "'unsafe-inline'"],
   "script-src": ["'self'", "'unsafe-inline'", CF_SCRIPT],
   "connect-src": ["'self'", CF_REPORT],
+  "frame-src": ["'self'", YT_EMBED],
   "manifest-src": ["'self'"],
   "upgrade-insecure-requests": [],
 };
@@ -82,10 +85,12 @@ const DEV: Record<string, string[]> = {
 delete DEV["upgrade-insecure-requests"];
 for (const p of [PROD, DEV]) for (const k of Object.keys(p)) p[k] = [...p[k]].sort();
 
-/* The ONLY hosts the site lets a page load code from or talk to, and who they are. */
-const THIRD_PARTIES: Record<string, string> = {
-  [CF_SCRIPT]: "Cloudflare Web Analytics",
-  [CF_REPORT]: "Cloudflare Web Analytics",
+/* The ONLY hosts the site lets a page load code from, talk to or frame, and who they
+   are — as /privacy names them in French and in Arabic. */
+const THIRD_PARTIES: Record<string, { fr: string; ar: string }> = {
+  [CF_SCRIPT]: { fr: "Cloudflare Web Analytics", ar: "Cloudflare Web Analytics" },
+  [CF_REPORT]: { fr: "Cloudflare Web Analytics", ar: "Cloudflare Web Analytics" },
+  [YT_EMBED]: { fr: "YouTube", ar: "يوتيوب" },
 };
 
 const cspOf = (rule: Rule | undefined) => rule?.headers.find((h) => h.key === "Content-Security-Policy")?.value;
@@ -93,7 +98,7 @@ const cspOf = (rule: Rule | undefined) => rule?.headers.find((h) => h.key === "C
 describe("live-fixes-1 · I — the CSP allows Cloudflare's beacon and nothing else", () => {
   const prod = rulesUnder("production");
   const dev = rulesUnder("development");
-  const siteWide = (rules: Rule[]) => rules.find((r) => r.source === "/:path((?!api/admin/doc/).*)");
+  const siteWide = (rules: Rule[]) => rules.find((r) => r.source === "/:path((?!api/admin/doc/|api/material/).*)");
 
   test("production: every directive and every source is exactly the pinned policy", () => {
     const csp = cspOf(siteWide(prod));
@@ -107,12 +112,15 @@ describe("live-fixes-1 · I — the CSP allows Cloudflare's beacon and nothing e
     assert.deepEqual(parse(csp), DEV);
   });
 
-  test("the two Cloudflare origins are the only hosts, each in its one directive", () => {
+  test("the two Cloudflare origins and YouTube's no-cookie embed are the only hosts, each in its one directive", () => {
     for (const rules of [prod, dev]) {
       const policy = parse(cspOf(siteWide(rules))!);
       assert.deepEqual(hostsOf(policy), Object.keys(THIRD_PARTIES).sort());
       assert.ok(policy["script-src"].includes(CF_SCRIPT) && !policy["connect-src"].includes(CF_SCRIPT), "the CDN serves the script, it is not an endpoint");
       assert.ok(policy["connect-src"].includes(CF_REPORT) && !policy["script-src"].includes(CF_REPORT), "the report endpoint serves no script");
+      for (const d of Object.keys(policy).filter((k) => k !== "frame-src")) {
+        assert.ok(!policy[d].includes(YT_EMBED), `YouTube may be framed, nothing more (${d})`);
+      }
       for (const d of ["default-src", "img-src", "font-src", "style-src", "frame-ancestors", "form-action"]) {
         assert.equal(hostsOf({ [d]: policy[d] }).length, 0, `${d} stays first-party`);
       }
@@ -124,7 +132,25 @@ describe("live-fixes-1 · I — the CSP allows Cloudflare's beacon and nothing e
       const doc = rules.find((r) => r.source === "/api/admin/doc/:id");
       assert.ok(doc, "the ID-scan rule exists");
       assert.equal(cspOf(doc), undefined);
-      assert.equal(rules.length, 2, "two rules: the site, and the ID-scan route");
+      assert.equal(rules.length, 3, "three rules: the site, the ID-scan route and the material route");
+    }
+  });
+
+  /* live-fixes-2 · D — a material keeps the API's policy, the same way. A header the
+     config names REPLACES the route handler's (Next 15/16), so the page CSP used to
+     land on every PDF and image a student opened. */
+  test("the material route gets NO CSP, referrer or nosniff from the config: the API's pass through", () => {
+    const fromApi = ["Content-Security-Policy", "Referrer-Policy", "X-Content-Type-Options"];
+    for (const rules of [prod, dev]) {
+      const site = siteWide(rules);
+      assert.ok(site, "the site-wide rule keeps its exact source, which excludes both file routes");
+      const material = rules.find((r) => r.source === "/api/material/:id");
+      assert.ok(material, "the material rule exists");
+      const keys = material.headers.map((h) => h.key);
+      for (const h of fromApi) assert.ok(!keys.includes(h), `${h} comes from the API, never from the config`);
+      // Everything else the site sends, the file gets too (framing, permissions, HSTS in prod).
+      assert.deepEqual(keys.sort(), site.headers.map((h) => h.key).filter((k) => !fromApi.includes(k)).sort());
+      assert.deepEqual(material.headers, rules.find((r) => r.source === "/api/admin/doc/:id")!.headers, "the same set as the ID-scan route");
     }
   });
 });
@@ -150,8 +176,8 @@ describe("live-fixes-1 · I — /privacy discloses every third party the CSP all
     for (const host of hosts) {
       const vendor = THIRD_PARTIES[host];
       assert.ok(vendor, `${host} is allowed by the CSP but has no vendor here — name it, and disclose it on /privacy`);
-      assert.ok(fr.includes(vendor), `/fr/privacy does not name ${vendor}`);
-      assert.ok(ar.includes(vendor), `/ar/privacy does not name ${vendor}`);
+      assert.ok(fr.includes(vendor.fr), `/fr/privacy does not name ${vendor.fr}`);
+      assert.ok(ar.includes(vendor.ar), `/ar/privacy does not name ${vendor.ar}`);
     }
   });
 
