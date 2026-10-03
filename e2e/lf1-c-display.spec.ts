@@ -128,4 +128,33 @@ test.describe("C2 · the subject in /onboarding's editor", () => {
     await expect.poll(async () => (await subjectRow()).subject, { timeout: 15_000 }).toBe("Physique · Bac");
     await ctx.close();
   });
+
+  /* live-fixes-1 · K: found in the K screenshots — the editor keeps the name as typed
+     (« walid tester »), but the live preview beside it, « Voilà ce que tes élèves
+     verront », showed it as typed too, while students read « Walid T. ». */
+  test("the live preview shows the name as students read it: « walid tester » → « Walid T. » (FR + AR)", async ({ browser }) => {
+    const { me } = await walid();
+    const ctx = await contextAs(browser, me.id);
+    const page = await ctx.newPage();
+    for (const loc of ["fr", "ar"] as const) {
+      await page.goto(`/${loc}/onboarding`, { waitUntil: "networkidle" });
+      await expect(page.locator("[data-e2e=onboarding-preview-name]")).toHaveText("Walid T.");
+    }
+    // Typing updates it the same way; the field itself keeps exactly what was typed.
+    const nameField = page.getByLabel("اسمك كأستاذ");
+    await nameField.fill("amel ben salah");
+    await expect(page.locator("[data-e2e=onboarding-preview-name]")).toHaveText("Amel B.");
+    await expect(nameField).toHaveValue("amel ben salah");
+    // In the Arabic UI a French name / bio reads left-to-right (dir="auto" once filled,
+    // as on Réglages › Vitrine); an emptied field goes back to the page's direction.
+    const bio = page.getByLabel("جملة عليك (بالدارجة، باهي)");
+    await bio.fill("Prof de maths au lycée : méthode et exercices.");
+    for (const f of [nameField, bio]) {
+      await expect(f).toHaveAttribute("dir", "auto");
+      expect(await f.evaluate((n) => getComputedStyle(n).direction)).toBe("ltr");
+    }
+    await bio.fill("");
+    expect(await bio.evaluate((n) => getComputedStyle(n).direction)).toBe("rtl");
+    await ctx.close();
+  });
 });

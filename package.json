@@ -38,7 +38,8 @@
     "test:api": "npm run test -w @tnajem/api",
     "ui:shots-a": "playwright test -c e2e/visual/visual.config.ts option-a",
     "ui:shots-b": "playwright test -c e2e/visual/visual.config.ts auth-b",
-    "ui:shots-ep2": "playwright test -c e2e/visual/visual.config.ts ep2-all"
+    "ui:shots-ep2": "playwright test -c e2e/visual/visual.config.ts ep2-all",
+    "ui:shots-lf1": "playwright test -c e2e/visual/visual.config.ts lf1-all"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

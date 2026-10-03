@@ -79,10 +79,20 @@ test.describe("D2 · the preview's empty state in the brand face", () => {
 });
 
 /** Scroll so the date field sits `gap` px above the action bar (or right under the top bar). */
-async function placeDateField(page: Page, where: "low" | "high"): Promise<void> {
+async function placeDateField(page: Page, where: "low" | "high" | "middle"): Promise<void> {
   await page.evaluate((w) => {
     const field = document.querySelector(".aps-dp-inp")!;
     const r = field.getBoundingClientRect();
+    if (w === "middle") {
+      // The field's centre at the centre of the band between the pinned bars.
+      const top = document.querySelector(".aps-top")?.getBoundingClientRect().bottom ?? 0;
+      const bars = [...document.querySelectorAll<HTMLElement>(".aps-actionbar, .aps-tabs")]
+        .map((b) => b.getBoundingClientRect())
+        .filter((b) => b.height > 0 && b.top < window.innerHeight);
+      const limit = Math.min(window.innerHeight, ...bars.map((b) => b.top));
+      window.scrollBy(0, r.top + r.height / 2 - (top + limit) / 2);
+      return;
+    }
     if (w === "high") {
       const top = document.querySelector(".aps-top")?.getBoundingClientRect().bottom ?? 0;
       window.scrollBy(0, r.top - top - 24);
@@ -149,6 +159,36 @@ test.describe("D3 · the calendar is never cut off by a bar", () => {
         await placeDateField(page, "low");
         await page.locator("[data-e2e=date-open]").click();
         await expect(page.locator("[data-e2e=date-calendar]")).toHaveAttribute("data-place", "above");
+        await page.locator("[data-e2e=date-calendar] button[data-date]:not([aria-disabled=true])").last().click();
+        await expect(page.locator("[data-e2e=date-input]")).toHaveValue(/^\d{2}\/\d{2}\/\d{4}$/);
+        await ctx.close();
+      });
+    }
+  }
+
+  /* live-fixes-1 · K: found in the K screenshots — mid-screen on a 674px-high window
+     there is room on NEITHER side; the calendar opened on the roomier side and ran
+     under the action bar and off the screen. The page now makes room. */
+  for (const vp of [{ width: 1440, height: 674 }, { width: 390, height: 844 }]) {
+    for (const loc of ["fr", "ar"] as const) {
+      test(`${vp.width}×${vp.height} ${loc}: mid-screen with room on neither side, the page scrolls so no bar covers the calendar`, async ({ browser }) => {
+        const { me } = await tutor(false);
+        const ctx = await contextAs(browser, me.id);
+        const page = await ctx.newPage();
+        await page.setViewportSize(vp);
+        await page.goto(`/${loc}/dashboard/new-class`, { waitUntil: "networkidle" });
+        await placeDateField(page, "middle");
+        await page.locator("[data-e2e=date-open]").click();
+        const r = await calendarClear(page);
+        expect(r.overlaps, "no bar over the calendar").toEqual([]);
+        expect(r.lastDayHit, "the last day is clickable, not under a bar or off the screen").toBe(true);
+        // The field stays in view above or below it.
+        const fieldSeen = await page.evaluate(() => {
+          const f = document.querySelector(".aps-dp-inp")!.getBoundingClientRect();
+          const top = document.querySelector(".aps-top")?.getBoundingClientRect().bottom ?? 0;
+          return f.top >= top - 1 && f.bottom <= window.innerHeight;
+        });
+        expect(fieldSeen, "the date field is still on screen").toBe(true);
         await page.locator("[data-e2e=date-calendar] button[data-date]:not([aria-disabled=true])").last().click();
         await expect(page.locator("[data-e2e=date-input]")).toHaveValue(/^\d{2}\/\d{2}\/\d{4}$/);
         await ctx.close();

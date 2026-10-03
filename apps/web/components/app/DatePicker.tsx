@@ -4,7 +4,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { Calendar, Back, Forward } from "@/components/icons";
 import { MONTHS_FR, monthLabel, tunisWallTime } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
-import { placePopover, type Placement } from "./popover-place"; // live-fixes-1 · D3
+import { freeBand, placePopover, type Placement } from "./popover-place"; // live-fixes-1 · D3 (+ K)
 
 /* ══════════════════════════════════════════════════════════════════════════════
    espace prof v2 · shell — THE DATE AND TIME FIELDS OF THE PROF SPACE (rule 6).
@@ -177,7 +177,21 @@ export function DatePicker({
   useLayoutEffect(() => {
     const a = fieldOf(wrapRef.current);
     if (!open || !popRef.current || !a) return;
-    setPlace(placePopover(a, popRef.current.offsetHeight));
+    const h = popRef.current.offsetHeight;
+    const p = placePopover(a, h);
+    setPlace(p);
+    /* live-fixes-1 · K: with the field mid-screen on a short window (1440×674) NEITHER
+       side has room, and the roomier side still ran the calendar under the action bar
+       and off the screen. The page then scrolls just enough for the calendar to sit
+       between the bars — never so far that it slides under the bar on the other side
+       (the field stays in view whenever the band holds both). */
+    const { top, bottom, rect } = freeBand(a);
+    const gap = 6;
+    const popTop = p === "below" ? rect.bottom + gap : rect.top - gap - h;
+    const popBottom = popTop + h;
+    const spare = (n: number) => Math.max(0, n);
+    if (popBottom > bottom - gap) window.scrollBy(0, Math.min(popBottom - (bottom - gap), spare(popTop - (top + gap))));
+    else if (popTop < top + gap) window.scrollBy(0, -Math.min(top + gap - popTop, spare(bottom - gap - popBottom)));
   }, [open]);
 
   // Click outside closes; focus goes nowhere surprising.

@@ -38,7 +38,7 @@ import type { OnboardingState } from "@tnajem/shared";
 import { LEVEL_CODES, LEVEL_LABELS, sortLevels, type LevelCode } from "@tnajem/shared"; // phase-a lane L5 (A18.7)
 import { bilingual } from "@/lib/i18n";
 import { COMMISSION_PCT, requirePlan, tnd } from "@tnajem/shared";
-import { editableSubject, subjectToSave } from "@tnajem/shared"; // live-fixes-1 · C2
+import { editableSubject, subjectToSave, publicTutorName } from "@tnajem/shared"; // live-fixes-1 · C2 (+ K)
 
 /* The subscription floor, from the catalogue. This string used to say "a partir
    de 29 TND/mois" while /tarifs renders a 0 TND tier as its first card. */
@@ -375,6 +375,7 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
                       placeholder={t.onboarding.namePh}
                       ref={fieldRefs.name}
                       value={name}
+                      dir={name.trim() ? "auto" : undefined}
                       onChange={(e) => { handleName(e.target.value); clearError("name"); }}
                       maxLength={80}
                       className="min-w-0"
@@ -389,6 +390,7 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
                       placeholder={t.onboarding.subjectPh}
                       ref={fieldRefs.subject}
                       value={subject}
+                      dir={subject.trim() ? "auto" : undefined}
                       onChange={(e) => { setSubject(e.target.value); clearError("subject"); }}
                       maxLength={80}
                       className="min-w-0"
@@ -427,7 +429,11 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
                       rows={2}
                       placeholder={t.onboarding.bioPh}
                       ref={fieldRefs.bio}
+                      /* live-fixes-1 · K: name, subject and bio take their direction from the text
+                         once there is some (a French bio in the Arabic UI read right-to-left), as
+                         Réglages › Vitrine does; empty, they keep the page's (the placeholder). */
                       value={bio}
+                      dir={bio.trim() ? "auto" : undefined}
                       onChange={(e) => { setBio(e.target.value); clearError("bio"); }}
                       maxLength={1000}
                       className="resize-none min-w-0"
@@ -548,8 +554,10 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
                 <div className="flex gap-3 items-center bg-paper rounded-[13px] p-3.5">
                   <Avatar initials={inits} size={52} square />
                   <div className="min-w-0">
-                    <div className="font-display text-[16px] mb-[3px] truncate">
-                      {name ? <UserText>{name}</UserText> : <span className="text-muted">{c.yourName}</span>}
+                    {/* live-fixes-1 · K (C2): the name as students will read it on the page
+                        (« walid tester » → « Walid T. »), not as typed. */}
+                    <div className="font-display text-[16px] mb-[3px] truncate" data-e2e="onboarding-preview-name">
+                      {name ? <UserText>{publicTutorName(name) ?? name}</UserText> : <span className="text-muted">{c.yourName}</span>}
                     </div>
                     <div className="text-[13px] text-muted truncate">
                       {subject ? <UserText>{subject}</UserText> : t.onboarding.subjectPh}

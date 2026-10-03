@@ -105,3 +105,43 @@ test.describe("E · the « ? » beside the field", () => {
     await ctx.close();
   });
 });
+
+/* live-fixes-1 · K — the promo-code hint ends with the link suffix « ?promo=CODE ».
+   In Arabic it was split by the bidi algorithm and the line breaker: the « ? » hung
+   at the end of one line and « promo=CODE. » started the next. The suffix is now a
+   left-to-right isolate with a word joiner after the « ? »: one unit, one line. */
+test.describe("K · « ?promo=CODE » stays one unit", () => {
+  for (const loc of ["fr", "ar"] as const) {
+    test(`Promotions (${loc}, 390): the hint's « ?promo=CODE » sits on one line, « ? » first`, async ({ browser }) => {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      await asTutor(page, "verified");
+      await page.goto(`/${loc}/dashboard/promotions`, { waitUntil: "networkidle" });
+      const geometry = await page.evaluate(() => {
+        const walker = document.createTreeWalker(document.querySelector("main")!, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          const text = n.textContent ?? "";
+          const end = text.indexOf("promo=CODE");
+          if (end < 0) continue;
+          const start = text.lastIndexOf("?", end);
+          const range = document.createRange();
+          range.setStart(n, start);
+          range.setEnd(n, end + "promo=CODE".length);
+          const rects = [...range.getClientRects()].filter((r) => r.width > 0);
+          const q = document.createRange();
+          q.setStart(n, start);
+          q.setEnd(n, start + 1);
+          const p = document.createRange();
+          p.setStart(n, end);
+          p.setEnd(n, end + 1);
+          return { tops: rects.map((r) => Math.round(r.top)), qLeft: q.getBoundingClientRect().left, pLeft: p.getBoundingClientRect().left };
+        }
+        return null;
+      });
+      expect(geometry, "the hint is on the page").not.toBeNull();
+      expect(new Set(geometry!.tops).size, `one line: ${JSON.stringify(geometry)}`).toBe(1);
+      expect(geometry!.qLeft, "« ? » reads first, left of « promo »").toBeLessThan(geometry!.pLeft);
+      await ctx.close();
+    });
+  }
+});
