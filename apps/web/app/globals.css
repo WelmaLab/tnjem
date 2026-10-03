@@ -711,6 +711,10 @@ html[dir="rtl"] * { letter-spacing: normal !important }
     --aps-clear:16px;     /* what stays free above anything pinned to the bottom */
     --aps-page-w:1080px;  /* A5: THE width of the prof space */
     --aps-form-w:760px;   /* A5: a single-column form's column, inside it */
+    /* live-fixes-2 · A: the inline padding of a nav row AND of a group title (ENSEIGNER,
+       التدريس…) — ONE value, so a title starts where the icons under it start, in FR and
+       mirrored in AR, in the sidebar, its short-screen variant and the phone sheet. */
+    --aps-row-x:12px;
   }
   /* What is pinned to the bottom of the screen, plus --aps-clear: the page keeps this much room
      at its end (.aps-main), and the document scrolls a field above it (scroll-padding), so a
@@ -774,8 +778,9 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .aps-nav{display:flex;flex-direction:column;gap:2px;padding-inline:12px}
   .aps-nav ul{list-style:none;display:flex;flex-direction:column;gap:2px}
   .aps-group{margin-block-start:10px}
-  .aps-group-t{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 12px;line-height:1.35}
-  .aps-link{display:flex;align-items:center;gap:11px;min-height:44px;padding:9px 12px;border-radius:12px;
+  .aps-group-t{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+    padding-block:4px;padding-inline:var(--aps-row-x);text-align:start;line-height:1.35}
+  .aps-link{display:flex;align-items:center;gap:11px;min-height:44px;padding-block:9px;padding-inline:var(--aps-row-x);border-radius:12px;
     font-size:14.5px;font-weight:600;color:var(--ink2)}
   .aps-link .ic{width:19px;height:19px;color:var(--muted)}
   .aps-link:hover{background:var(--blue50);color:var(--blue)}
@@ -859,7 +864,8 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   }
   /* A4: a laptop screen (674px with the browser's bars, the founder's): the same sidebar, tighter —
      the brand, the group titles and the avatar card give up their air, never the 44px rows — so
-     the whole nav fits from ~640px tall. */
+     the whole nav fits from ~640px tall. Block padding only: a title and a row keep the same
+     inline padding (--aps-row-x) here too. */
   @media (min-width:900px) and (max-height:800px){
     .aps-side .aps-brand{padding-block:7px 3px}
     .aps-side .aps-nav,.aps-side .aps-nav ul{gap:0}
