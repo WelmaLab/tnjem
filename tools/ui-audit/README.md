@@ -9,7 +9,7 @@ not a report you can talk yourself out of.
 | `guardrails.mjs` | RTL uses logical properties only · FR/AR key sets identical · no hardcoded French · no untokenised colour | no |
 | `nojs.mjs` | every public route shows h1 + sub-headline + primary CTA with **JavaScript disabled** | yes |
 | `a11y.mjs` | zero serious/critical axe violations + skip link + 44px targets + 13px text floor, every route, **both locales** | yes |
-| `keyboard.mjs` | Tab through every route: skip link first, every stop visibly ringed, no traps, no positive tabindex | yes |
+| `keyboard.mjs` | Tab through every route: skip link first, every stop visibly ringed **and on screen** (not hidden, not under a sticky bar), the prof shell's frame in order, no traps, no positive tabindex | yes |
 | `lighthouse.mjs` | Performance >= 80 and Accessibility = 100, mobile, simulated 3G (**production build only**) | yes |
 | `shots.mjs` | full-page screenshots at 320 / 380 / 768 / 1280, **plus** viewport-overflow and text-clipping detection | yes |
 | `weight.mjs` | what a first-time visitor downloads per route, split by resource type (informational) | yes |
@@ -38,7 +38,13 @@ UI_AUDIT_BASE=http://localhost:3222 node tools/ui-audit/shots.mjs
 > **kill -> build -> restart**, never build-while-serving.
 
 `UI_AUDIT_BASE` points the browser runners somewhere else (default
-`http://localhost:3111`).
+`http://localhost:3111`). `keyboard.mjs` also takes `UI_AUDIT_VIEWPORTS`
+(`1440x900,390x844`; default `380x900`) and `UI_AUDIT_ROUTES` (a regex on the
+locale-bare path) — the prof shell's keyboard pass (live-fixes-2 · F):
+
+```bash
+UI_AUDIT_BASE=http://localhost:3222 UI_AUDIT_VIEWPORTS=1440x900,390x844   UI_AUDIT_ROUTES='^/(dashboard|messages|onboarding(/verify)?$)' node tools/ui-audit/keyboard.mjs
+```
 
 ## Logged-in routes
 

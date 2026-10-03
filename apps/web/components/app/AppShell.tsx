@@ -84,6 +84,8 @@ import { publicDisplayName, type TutorShell } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 import { ShellContext, type Crumb, type ShellContextValue } from "./ShellContext";
 import { NotificationsBell } from "./NotificationsBell";
+import { closeOnLeave } from "./disclosure";
+import { useFocusRescue } from "./focus-rescue";
 import { APP_NAV, CREATE_ACTIONS, CREATE_TAB_AT, MOBILE_TABS, activeItemKey, crumbsFor, navItem, type NavItem } from "./nav";
 
 export { AppPage, Blocker, ActionBar, FormMode, FormSection, PageSkeleton, EmptyState, ErrorState } from "./AppPage";
@@ -212,8 +214,28 @@ function AvatarCard({ shell, c }: { shell: TutorShell | null; c: Copy }) {
     };
   }, [open]);
 
+  /* live-fixes-2 · F: the menu comes AFTER its button in the DOM (it is drawn above it
+     all the same — absolutely placed), so the Tab after opening it goes INTO it rather
+     than on to the top bar with the menu left open; and focus leaving it closes it. */
   return (
-    <div ref={wrapRef} className="aps-me">
+    <div ref={wrapRef} className="aps-me" onBlur={(e) => closeOnLeave(e, () => setOpen(false))}>
+      <button
+        ref={btnRef}
+        type="button"
+        className="aps-me-btn"
+        aria-expanded={open}
+        aria-controls="aps-me-menu"
+        aria-label={`${c.me} · ${first}`}
+        onClick={() => setOpen((v) => !v)}
+        data-e2e="shell-me"
+      >
+        <span className="avatar aps-me-av" aria-hidden="true">{shell?.initials ?? "?"}</span>
+        <span className="aps-me-txt">
+          <span className="aps-me-name">{first}</span>
+          <span className="aps-me-plan" data-e2e="shell-plan">{planLine(shell, c)}</span>
+        </span>
+        <ChevronUp className="aps-me-chev" />
+      </button>
       {open && (
         <ul id="aps-me-menu" className="aps-pop aps-me-menu" data-e2e="shell-me-menu">
           <li>
@@ -236,23 +258,6 @@ function AvatarCard({ shell, c }: { shell: TutorShell | null; c: Copy }) {
           </li>
         </ul>
       )}
-      <button
-        ref={btnRef}
-        type="button"
-        className="aps-me-btn"
-        aria-expanded={open}
-        aria-controls="aps-me-menu"
-        aria-label={`${c.me} · ${first}`}
-        onClick={() => setOpen((v) => !v)}
-        data-e2e="shell-me"
-      >
-        <span className="avatar aps-me-av" aria-hidden="true">{shell?.initials ?? "?"}</span>
-        <span className="aps-me-txt">
-          <span className="aps-me-name">{first}</span>
-          <span className="aps-me-plan" data-e2e="shell-plan">{planLine(shell, c)}</span>
-        </span>
-        <ChevronUp className="aps-me-chev" />
-      </button>
     </div>
   );
 }
@@ -333,20 +338,9 @@ function CreateFab({ c }: { c: Copy }) {
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
+  // live-fixes-2 · F: the menu after its button (Tab goes into it), closed when focus leaves.
   return (
-    <div ref={wrapRef} className="aps-fab-wrap">
-      {open && (
-        <ul id="aps-fab-menu" className="aps-pop aps-fab-menu" data-e2e="shell-fab-menu">
-          {CREATE_ACTIONS.map((a) => (
-            <li key={a.href}>
-              <Link prefetch={false} href={a.href} className="aps-menu-item" onClick={() => setOpen(false)}>
-                <a.icon />
-                {a.label[locale]}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div ref={wrapRef} className="aps-fab-wrap" onBlur={(e) => closeOnLeave(e, () => setOpen(false))}>
       <button
         ref={btnRef}
         type="button"
@@ -359,6 +353,18 @@ function CreateFab({ c }: { c: Copy }) {
       >
         <Plus />
       </button>
+      {open && (
+        <ul id="aps-fab-menu" className="aps-pop aps-fab-menu" data-e2e="shell-fab-menu">
+          {CREATE_ACTIONS.map((a) => (
+            <li key={a.href}>
+              <Link prefetch={false} href={a.href} className="aps-menu-item" onClick={() => setOpen(false)}>
+                <a.icon />
+                {a.label[locale]}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -398,6 +404,9 @@ export function AppShell({ shell, children }: { shell: TutorShell | null; childr
   useEffect(() => setSheet(false), [path]);
 
   const ctx = useMemo<ShellContextValue>(() => ({ shell, setCrumbs: setOverride, refreshCounts }), [shell, setOverride, refreshCounts]);
+
+  // live-fixes-2 · F: a removed control (a confirmed « Retirer »…) hands focus to its neighbour, not to <body>.
+  useFocusRescue();
 
   return (
     <ShellContext.Provider value={ctx}>

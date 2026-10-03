@@ -7,6 +7,7 @@ import { Bell } from "@/components/icons";
 import { getNotifications, markNotificationsRead } from "@/app/actions";
 import type { NotificationItem } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
+import { closeOnLeave } from "./disclosure";
 
 /* espace prof v2 · shell — the top bar's bell, on the existing `notifications`
    table (GET /notifications, POST /notifications/read). Moved here from the old
@@ -17,7 +18,9 @@ import { bilingual } from "@/lib/i18n";
    what was new; the badge drops at once.
 
    A plain disclosure, not role="menu": a menu promises menuitem children and
-   arrow-key roving focus, and this is a scrollable list of links. */
+   arrow-key roving focus, and this is a scrollable list of links. The panel follows
+   the button, so Tab goes into it; Escape gives focus back to the bell, and focus
+   leaving the panel closes it (live-fixes-2 · F: it stayed open over the page). */
 
 const copy = bilingual({
   fr: {
@@ -98,7 +101,7 @@ export function NotificationsBell({ unread, onRead }: { unread: number; onRead: 
   }
 
   return (
-    <div ref={wrapRef} className="aps-pop-wrap">
+    <div ref={wrapRef} className="aps-pop-wrap" onBlur={(e) => closeOnLeave(e, () => setOpen(false))}>
       <button
         ref={btnRef}
         type="button"

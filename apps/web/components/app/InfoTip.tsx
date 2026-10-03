@@ -2,6 +2,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useLocale } from "@/components/LocaleProvider";
 import { bilingual } from "@/lib/i18n";
+import { closeOnLeave } from "./disclosure";
 
 /* live-fixes-1 · pages (E) — « ? »: the detail that used to be a SECOND note on the
    page (rule 7: one note per page), now beside the field or the section it is about.
@@ -14,6 +15,9 @@ import { bilingual } from "@/lib/i18n";
        never leaves it stuck open);
      • the text is ALWAYS in the DOM and is the button's description (aria-describedby),
        so a screen reader hears it on focus without opening anything.
+   live-fixes-2 · F (the keyboard pass): Escape dismisses the bubble however it was
+   shown — a hover-only bubble too, the mouse still on it (WCAG 1.4.13) — and Tab
+   leaving the « ? » closes it, so it never sits over the field the Tab reached.
    The bubble starts at the « ? » and is nudged back inside the screen when it would
    overflow its end edge (a phone, a « ? » far along a line). The room is measured
    BEFORE it shows: once a box overflows, a phone widens its layout viewport to fit it,
@@ -51,7 +55,7 @@ export function InfoTip({ label, children, e2e }: { label?: string; children: Re
   }
 
   useEffect(() => {
-    if (!open) return;
+    if (!shown) return;
     const onDown = (e: PointerEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     };
@@ -67,12 +71,13 @@ export function InfoTip({ label, children, e2e }: { label?: string; children: Re
       document.removeEventListener("pointerdown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [shown]);
 
   return (
     <span
       ref={wrapRef}
       className="lf-tip"
+      onBlur={(e) => closeOnLeave(e, () => setOpen(false))}
       onPointerEnter={(e) => {
         if (e.pointerType !== "mouse") return;
         place();

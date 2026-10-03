@@ -19,6 +19,10 @@ import { freeBand, placePopover, type Placement } from "./popover-place"; // liv
                      day (mirrored in Arabic), Home/End the week, PageUp/PageDown a
                      month (+Shift: a year), Enter/Space picks, Escape closes and
                      returns focus. Days before `min` cannot be picked.
+                     live-fixes-2 · F: the calendar is a modal dialog for the keyboard —
+                     Tab and Shift+Tab cycle between its month buttons and the day, and
+                     Escape closes it from any of them (it only worked from the grid, and
+                     inside « Déplacer la séance » it closed the whole dialog instead).
      <TimeInput>     HH:MM, 24 h. A spinbutton: ArrowUp/ArrowDown move by `step`.
      <DateTimeField> both, side by side, producing the WALL TIME the API expects
                      ("2026-10-08T18:00", read as Tunis time by parseScheduleInput).
@@ -234,6 +238,26 @@ export function DatePicker({
     setOpen(true);
   }
 
+  /* Escape, from anywhere in the calendar, closes the calendar only — inside a <dialog>
+     (« Déplacer la séance ») it must not reach the dialog. Tab stays in the calendar:
+     its focusable controls are the two month buttons and the one day in the tab order. */
+  function onPopKey(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      setOpen(false);
+      toggleRef.current?.focus();
+      return;
+    }
+    if (e.key !== "Tab" || !popRef.current) return;
+    const stops = [...popRef.current.querySelectorAll<HTMLElement>("button")].filter((b) => b.tabIndex >= 0);
+    if (!stops.length) return;
+    e.preventDefault();
+    const at = stops.indexOf(document.activeElement as HTMLElement);
+    const next = at < 0 ? (e.shiftKey ? stops.length - 1 : 0) : (at + (e.shiftKey ? -1 : 1) + stops.length) % stops.length;
+    stops[next].focus();
+  }
+
   function onGridKey(e: KeyboardEvent<HTMLTableElement>) {
     const fwd = rtl ? -1 : 1; // the grid is mirrored in Arabic: "left" is the next day
     const moves: Record<string, () => YMD> = {
@@ -249,10 +273,6 @@ export function DatePicker({
     if (moves[e.key]) {
       e.preventDefault();
       setFocus(moves[e.key]());
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      setOpen(false);
-      toggleRef.current?.focus();
     }
   }
 
@@ -308,8 +328,9 @@ export function DatePicker({
           ref={popRef}
           className={`aps-pop aps-dp-pop${place === "above" ? " is-above" : ""}`}
           role="dialog"
-          aria-modal="false"
+          aria-modal="true"
           aria-label={c.choose}
+          onKeyDown={onPopKey}
           data-e2e="date-calendar"
           data-place={place}
         >
