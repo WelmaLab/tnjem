@@ -1,4 +1,5 @@
 import { CANCEL_FREE_WINDOW_HOURS, LATE_CANCEL_RETAINED_PCT, MONTHLY_PAYMENT_NOTE } from "@tnajem/shared";
+import { CANCEL_GRACE_MINUTES, CANCEL_GRACE_MIN_LEAD_MINUTES } from "@tnajem/shared"; // live-fixes-3 · C
 
 /* THE BOOKING EMAILS — copy only (espace prof v2 · phase 7). The sender is
    ./booking-mail.ts; this file is words, so it can be read and tested on its own.
@@ -14,8 +15,9 @@ import { CANCEL_FREE_WINDOW_HOURS, LATE_CANCEL_RETAINED_PCT, MONTHLY_PAYMENT_NOT
        the tutor reads growth's own phrasing ("l'élève te paie hors Tnajem"). Nothing
        says "payé", and apps/api/test/ep2-booking-mail-copy.test.ts scans for the rest.
      • The cancellation rule is the one routes/bookings.ts enforces (48 h free,
-       then 40 % NOTED, never taken while payments are off), from the same
-       constants as the student space.
+       then 40 % NOTED, never taken while payments are off — and, live-fixes-3 · C,
+       always free within 15 min of booking unless the class starts within 15 min),
+       from the same constants as the student space.
      • The link to the class is the Tnajem live page (/live/<id>), never the room
        URL: that page re-checks the booking every time, and a cancelled seat or a
        rotated room token stops working there (lib/room-rotation.ts).
@@ -35,10 +37,16 @@ export type Coverage =
   | { kind: "free" } // the free first session with this tutor (bookings.is_free)
   | { kind: "subscription" }; // covered by the student's monthly subscription (C7, bookings.subscription_id)
 
-export type CancelOutcome = { late: boolean; waived: boolean; wasFree: boolean; wasCovered?: boolean; retainedTnd: number };
+export type CancelOutcome = {
+  late: boolean; waived: boolean; wasFree: boolean; wasCovered?: boolean; retainedTnd: number;
+  /** live-fixes-3 · C: cancelled within 15 min of booking — free, whatever the time to the class. */
+  grace?: boolean;
+};
 
 const pct = Math.round(LATE_CANCEL_RETAINED_PCT * 100);
 const H = CANCEL_FREE_WINDOW_HOURS;
+const G = CANCEL_GRACE_MINUTES; // live-fixes-3 · C
+const GL = CANCEL_GRACE_MIN_LEAD_MINUTES;
 const tnd = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, ""));
 
 /* A percentage inside Arabic text is wrapped in Unicode isolates (LRI … PDI): in a
@@ -76,6 +84,10 @@ const fr = {
   cancelRule: (cov: Coverage, spaceUrl: string) =>
     lines(
       `Annulation gratuite jusqu'à ${H} h avant, depuis « Mes cours » : ${spaceUrl}`,
+      // live-fixes-3 · C: only where a late cancel could cost something (a paid seat, or the free first session).
+      cov.kind === "paid" || cov.kind === "free"
+        ? `Tu changes d'avis ? Dans les ${G} min qui suivent ta réservation, l'annulation est toujours gratuite (sauf si la séance commence dans moins de ${GL} min).`
+        : null,
       {
         paid: `Plus tard, tu peux encore annuler : ${pct} % du prix de la place sont alors notés comme retenus pour le prof. Rien n'est prélevé pendant le pilote.`,
         zero: null,
@@ -146,6 +158,8 @@ const fr = {
         ? "Rien n'est retenu, et la séance revient dans ton abonnement du mois."
         : p.outcome.waived
         ? "Le prof avait déplacé la séance après ta réservation : l'annulation est sans frais."
+        : p.outcome.grace && p.outcome.late // live-fixes-3 · C
+          ? `Tu as annulé dans les ${G} min qui ont suivi ta réservation : c'est gratuit, rien n'est retenu.`
         : !p.outcome.late
           ? "Tu as annulé à temps : rien n'est retenu."
           : p.outcome.wasFree
@@ -309,6 +323,9 @@ const ar: typeof fr = {
   cancelRule: (cov: Coverage, spaceUrl: string) =>
     lines(
       `الإلغاء مجاني حتى ${H} ساعة قبل، من « حصصي » : ${spaceUrl}`,
+      cov.kind === "paid" || cov.kind === "free"
+        ? `بدّلت رايك ؟ في الـ${G} دقيقة اللي بعد الحجز، الإلغاء ديما بلاش (إلّا كان الحصة تبدا في أقل من ${GL} دقيقة).`
+        : null,
       {
         paid: `من بعد تنجّم برك تلغي : وقتها ${ltr(`${pct} %`)} من ثمن البلاصة يتسجّل كمستحق للأستاذ. ما يتخصم حتى مليم في فترة التجربة.`,
         zero: null,
@@ -379,6 +396,8 @@ const ar: typeof fr = {
         ? "حتى شي ما يتحسب، والحصة ترجع للاشتراك متاعك متاع الشهر."
         : p.outcome.waived
         ? "الأستاذ بدّل وقت الحصة بعد ما حجزت : الإلغاء بلاش مصاريف."
+        : p.outcome.grace && p.outcome.late
+          ? `لغيت في الـ${G} دقيقة اللي بعد الحجز : بلاش، حتى شي ما يتحسب.`
         : !p.outcome.late
           ? "لغيت في الوقت : حتى شي ما يتحسب."
           : p.outcome.wasFree

@@ -10,6 +10,8 @@ import type { StudentClass, StudentDashboard } from "@tnajem/shared";
    A component hardcoding 0.4 is a component that disagrees with the server the
    first time the rate moves — and this one renders the number to a student. */
 import { CANCEL_FREE_WINDOW_MS, CANCEL_FREE_WINDOW_HOURS, LATE_CANCEL_RETAINED_PCT, monthLabel } from "@tnajem/shared";
+// live-fixes-3 · C: the 15-minute grace after booking — the rule the server applies, from the same module.
+import { CANCEL_GRACE_MINUTES, bookingGraceEndsAt, tunisClock, withinBookingGrace } from "@tnajem/shared";
 import { SiteShell } from "@/components/SiteShell";
 import { MessageBookingButton } from "@/components/MessageBookingButton";
 import { UserText } from "@/components/UserText";
@@ -40,6 +42,9 @@ const copy = bilingual({
        noted, never taken. */
     cancelLateWarnAmount: (tnd: string) => `Le cours est dans moins de ${CANCEL_FREE_WINDOW_HOURS}h. Tu peux quand même annuler, et ta place repart tout de suite — ${tnd} TND (${Math.round(LATE_CANCEL_RETAINED_PCT * 100)} % du prix de la place) seront notés comme retenus pour ton prof dans le registre des annulations. Aucun montant n'est prélevé pendant le pilote.`,
     cancelLateWarnNothing: `Le cours est dans moins de ${CANCEL_FREE_WINDOW_HOURS}h. Tu peux annuler, ta place repart tout de suite, et rien n'est retenu pour cette place.`,
+    /* live-fixes-3 · C: inside the grace, the confirm says plainly that it is free, and until when. */
+    cancelGrace: (until: string) => `Annulation gratuite jusqu'à ${until} : tu as réservé il y a moins de ${CANCEL_GRACE_MINUTES} min. Rien n'est retenu pour ton prof.`,
+    cancelledGrace: `Réservation annulée, la place est de nouveau libre. C'était dans les ${CANCEL_GRACE_MINUTES} min après ta réservation : c'est gratuit, rien n'est retenu.`,
     cancelledLateAmount: (tnd: string) => `Réservation annulée, la place est de nouveau libre. C'était à moins de ${CANCEL_FREE_WINDOW_HOURS}h : ${tnd} TND sont notés comme retenus pour ton prof dans le registre des annulations. Rien n'est prélevé pendant le pilote.`,
     cancelledLateCharged: (tnd: string) => `Réservation annulée, la place est de nouveau libre. C'était à moins de ${CANCEL_FREE_WINDOW_HOURS}h : ${tnd} TND sont retenus pour ton prof.`,
     cancelledNothing: "Réservation annulée, la place est de nouveau libre. Rien n'est retenu pour cette place.",
@@ -90,6 +95,9 @@ const copy = bilingual({
     // phase-a lane L3 (A21)
     cancelLateWarnAmount: (tnd: string) => `الحصة في أقل من ${CANCEL_FREE_WINDOW_HOURS} ساعة. تنجّم برك تلغي، ومكانك يرجع متوفّر على طول — ${tnd} د.ت (\u2066${Math.round(LATE_CANCEL_RETAINED_PCT * 100)} %\u2069 من ثمن البلاصة) يتسجّلو كمستحق لأستاذك في سجلّ الإلغاءات. ما يتخصم حتى مليم في فترة التجربة.`,
     cancelLateWarnNothing: `الحصة في أقل من ${CANCEL_FREE_WINDOW_HOURS} ساعة. تنجّم تلغي، ومكانك يرجع متوفّر على طول، وما يتحسب عليك حتى شي على هالبلاصة.`,
+    // live-fixes-3 · C
+    cancelGrace: (until: string) => `الإلغاء بلاش حتى لـ ${until} : حجزت من أقل من ${CANCEL_GRACE_MINUTES} دقيقة. ما يتحسب حتى شي لأستاذك.`,
+    cancelledGrace: `الحجز تلغى، والمكان ولّى متوفّر. كان في الـ${CANCEL_GRACE_MINUTES} دقيقة اللي بعد الحجز : بلاش، ما يتحسب عليك حتى شي.`,
     cancelledLateAmount: (tnd: string) => `الحجز تلغى، والمكان ولّى متوفّر. كان في أقل من ${CANCEL_FREE_WINDOW_HOURS} ساعة: ${tnd} د.ت يتسجّلو كمستحق لأستاذك في سجلّ الإلغاءات. ما يتخصم حتى مليم في فترة التجربة.`,
     cancelledLateCharged: (tnd: string) => `الحجز تلغى، والمكان ولّى متوفّر. كان في أقل من ${CANCEL_FREE_WINDOW_HOURS} ساعة: ${tnd} د.ت يتحسبو لأستاذك.`,
     cancelledNothing: "الحجز تلغى، والمكان ولّى متوفّر. ما يتحسب عليك حتى شي على هالبلاصة.",
@@ -277,7 +285,7 @@ function RateBox({ item, onDone }: { item: StudentClass; onDone: () => void }) {
    recorded against them should be told so on the same screen — and told, in the
    same breath, that nothing is taken during the pilot. */
 /* phase-a lane L3 (A21): what the server says was retained, not a flat "40 %". */
-type CancelOutcome = { late: boolean; retainedTnd: number; paymentsEnabled: boolean };
+type CancelOutcome = { late: boolean; retainedTnd: number; paymentsEnabled: boolean; grace?: boolean }; // live-fixes-3 · C: grace
 const tndLabel = (n: number) => n.toLocaleString("fr-FR", { maximumFractionDigits: 2 });
 
 function UpcomingCard({ item, hero, onChanged }: { item: StudentClass; hero: boolean; onChanged: (outcome: CancelOutcome) => void }) {
@@ -307,6 +315,9 @@ function UpcomingCard({ item, hero, onChanged }: { item: StudentClass; hero: boo
      allowed; what changes inside the window is the warning below, not access. */
   const cancellable = startsIn > 0;
   const lateCancel = cancellable && startsIn < CANCEL_FREE_WINDOW_MS;
+  /* live-fixes-3 · C: inside the 15-minute grace after booking a late cancel is free.
+     A hint only, ticking with `now` — the server decides on its own clock. */
+  const inGrace = lateCancel && item.bookedAt !== undefined && withinBookingGrace({ bookedAt: item.bookedAt, scheduledAt: item.ts, now });
 
   async function doCancel() {
     setBusy(true);
@@ -319,7 +330,7 @@ function UpcomingCard({ item, hero, onChanged }: { item: StudentClass; hero: boo
        boundary the server evaluated differently. Fall back to the local guess
        only if the field is missing. */
     if (res.ok) {
-      onChanged({ late: res.late ?? lateCancel, retainedTnd: res.retainedTnd ?? 0, paymentsEnabled: res.paymentsEnabled ?? false });
+      onChanged({ late: res.late ?? lateCancel, retainedTnd: res.retainedTnd ?? 0, paymentsEnabled: res.paymentsEnabled ?? false, grace: res.grace ?? false });
       return;
     }
     setErr(res.error === "already-started" ? c.alreadyStarted : c.cancelErr);
@@ -415,7 +426,9 @@ function UpcomingCard({ item, hero, onChanged }: { item: StudentClass; hero: boo
           <div className="text-[13px] font-bold mb-1">{c.cancelSure}</div>
           <div className="text-[13px] text-on-dark mb-2.5 leading-[1.5]">
             {/* phase-a lane L3 (A21): the figure THIS seat would retain; 0 → "rien n'est retenu". */}
-            {!lateCancel
+            {inGrace && item.bookedAt !== undefined // live-fixes-3 · C: free, and until when
+              ? c.cancelGrace(tunisClock(bookingGraceEndsAt({ bookedAt: item.bookedAt, scheduledAt: item.ts })))
+              : !lateCancel
               ? c.cancelRule
               : item.lateCancelRetainedTnd === undefined
                 ? (item.isFree ? c.cancelLateWarnNothing : c.cancelLateWarn)
@@ -557,7 +570,9 @@ export default function StudentPage() {
                     onChanged={(o) => {
                       // phase-a lane L3 (A21): the actual retained amount, as the ledger outcome while payments are off.
                       setFlash(
-                        !o.late
+                        o.grace
+                          ? c.cancelledGrace // live-fixes-3 · C
+                          : !o.late
                           ? c.cancelled
                           : o.retainedTnd > 0
                             ? (o.paymentsEnabled ? c.cancelledLateCharged : c.cancelledLateAmount)(tndLabel(o.retainedTnd))

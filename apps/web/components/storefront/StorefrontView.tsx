@@ -45,6 +45,7 @@ import { PaymentStory } from "@/components/PaymentStory";
 import { LEVEL_LABELS } from "@tnajem/shared"; // phase-a lane L5 (A18.7)
 import { nextSessionOf } from "@tnajem/shared"; // phase-a lane L5 (A18.11)
 import { displaySubject } from "@tnajem/shared"; // live-fixes-1 · C2
+import { LateCancelNote } from "@/components/checkout/LateCancelNote"; // live-fixes-3 · C: a client island (it reads the clock)
 
 
 /* Component-local copy (FR + Tunisian Derija). lib/i18n.ts is owned elsewhere, so
@@ -628,6 +629,9 @@ export function StorefrontView({
 
                     <PriceBlock cls={firstClass} big />
 
+                    {/* live-fixes-3 · C: inside 48 h, said before the student goes to confirm. */}
+                    <LateCancelNote startsAt={firstClass.starts_at} priceTnd={firstClass.price_tnd} locale={locale} pilotLine={!paymentsEnabled()} className="lcn-sf" />
+
                     {/* CTA — only reachable when firstClass exists. */}
                     <Link
                       href={`/checkout?class=${firstClass.id}`}
@@ -667,6 +671,8 @@ export function StorefrontView({
           states above already offer /explore. */}
       {firstClass && !allFull && (
         <div data-sf-mobilecta="true" className="sf-mcta">
+          {/* live-fixes-3 · C: the same note on a phone, where this bar is the way to the checkout. */}
+          <LateCancelNote startsAt={firstClass.starts_at} priceTnd={firstClass.price_tnd} locale={locale} pilotLine={!paymentsEnabled()} className="lcn-bar" />
           <div className="sf-mcta-row">
             <div className="sf-mcta-price">
               {firstClass.is_free_first ? (

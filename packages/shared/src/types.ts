@@ -234,6 +234,9 @@ export type StudentClass = {
   replayUrl?: string;
   // phase-a lane L3 (A21): TND a late cancel of this seat would retain (0: free seat, or moved after booking).
   lateCancelRetainedTnd?: number;
+  /* live-fixes-3 · C: epoch ms the booking was made (bookings.created_at, server time) —
+     the confirm box states the 15-minute grace from it (@tnajem/shared/cancellation). */
+  bookedAt?: number;
 };
 
 // Real student dashboard payload (see getStudentDashboard in app/actions.ts).

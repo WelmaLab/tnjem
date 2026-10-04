@@ -14,6 +14,7 @@ import { formatNumericDate, priceWithPromotion, type MySubscription, type Public
 import { storedPromoCode } from "@/components/pricing/promo-store";
 import { bilingual } from "@/lib/i18n";
 import { PaymentStory } from "@/components/PaymentStory"; // phase-a lane L3 (A22)
+import { LateCancelNote } from "@/components/checkout/LateCancelNote"; // live-fixes-3 · C
 
 
 /* Payments are OFF for the pilot (lib/payments.ts). This screen is a free
@@ -56,7 +57,7 @@ const copy = bilingual({
     next2: "Le lien de la séance apparaît dans « Mes cours ».",
     next3: "Tu te connectes à l'heure — c'est tout.",
     cancelRule:
-      "Annulation gratuite jusqu'à 48h avant le cours, depuis « Mes cours ». "
+      "Annulation gratuite jusqu'à 48h avant le cours, depuis « Mes cours », et toujours dans les 15 min qui suivent ta réservation (sauf à moins de 15 min du début). " // live-fixes-3 · C
       + "Plus tard, tu peux encore annuler — 40 % de la place est alors noté comme "
       + "retenu pour le prof, et rien n'est prélevé pendant le pilote.",
 
@@ -119,7 +120,7 @@ const copy = bilingual({
     next2: "رابط الحصة يبان في « حصصي ».",
     next3: "تدخل في الوقت — وهذا الكل.",
     cancelRule:
-      "الإلغاء مجاني حتى 48 ساعة قبل الحصة، من « حصصي ». "
+      "الإلغاء مجاني حتى 48 ساعة قبل الحصة، من « حصصي »، وديما في الـ15 دقيقة اللي بعد الحجز (إلّا كان الحصة تبدا في أقل من 15 دقيقة). " // live-fixes-3 · C
       + "من بعد تنجّم برك تلغي — وقتها \u206640 %\u2069 من البلاصة يتسجّل كمستحق "
       + "للأستاذ، وما يتخصم حتى مليم في فترة التجربة.",
 
@@ -550,6 +551,8 @@ export default function CheckoutInner() {
         <Calendar />
         <span>{c.cancelRule}</span>
       </div>
+      {/* live-fixes-3 · C: inside 48 h, said before confirming (a client island; nothing for a seat that costs nothing). */}
+      {!closed && !soldOut && <LateCancelNote startsAt={cls.starts_at} priceTnd={coveredHint ? 0 : quote.finalTnd} locale={locale} className="lcn-ck" />}
 
       {/* Errors — every one of them offers the next move. */}
       {err && (

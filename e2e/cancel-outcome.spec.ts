@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { sql } from "./support/db";
 import { seedProfile, seedTutor, seedClass, seedBooking } from "./support/seed";
+import { backdateBooking } from "./support/seed"; // live-fixes-3 · C
 import { loginAs } from "./support/session";
 
 /* phase-a lane L3 (A21) — the cancel messages state what was ACTUALLY retained.
@@ -17,7 +18,9 @@ async function lateSeat(opts: { isFree?: boolean; movedAfterBooking?: boolean })
   const tutor = await seedTutor({ status: "verified" });
   const klass = await seedClass({ tutorId: tutor.id, isFreeFirst: false, priceTnd: 40, hoursFromNow: opts.movedAfterBooking ? 96 : 5 });
   const student = await seedProfile({ role: "student", birthYear: 1990 });
-  await seedBooking({ classId: klass.id, studentId: student.id, isFree: opts.isFree ?? false });
+  const booking = await seedBooking({ classId: klass.id, studentId: student.id, isFree: opts.isFree ?? false });
+  // live-fixes-3 · C: a seat booked an hour ago — outside the 15-minute grace after booking.
+  await backdateBooking(booking.id);
   await sql`update classes set seats_taken = 1 where id = ${klass.id}`;
   if (opts.movedAfterBooking) {
     await sql`update classes set scheduled_at = now() + interval '5 hours', rescheduled_at = now() + interval '1 second'

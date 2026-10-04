@@ -13,6 +13,7 @@ import {
   CANCEL_FREE_WINDOW_HOURS,
   FREE_FIRST_SPENT_REASON, cancelSpendsFreeFirst, // phase-a lane L3 (A6)
   movedAfterBooking as isMovedAfterBooking, lateCancelRetainedTnd, retainedShare, // phase-a lane L3 (A21)
+  BOOKING_GRACE_REASON, // live-fixes-3 · C
 } from "@tnajem/shared";
 import { resolveMeetUrl } from "@tnajem/shared/live";
 import { rotateRoomToken } from "../lib/room-rotation";
@@ -388,6 +389,9 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
       amountTnd: bk.isFree || bk.subscriptionId ? 0 : Number(bk.priceTnd ?? cls.priceTnd ?? 0),
       now,
       waived: movedAfterBooking,
+      /* live-fixes-3 · C: the 15-minute grace runs from bookings.created_at — written
+         by Postgres, reset by a re-booking (A8), never anything the client sent. */
+      bookedAt: bk.createdAt,
     });
 
     const [tut] = await db.select().from(tutors).where(eq(tutors.id, cls.tutorId)).limit(1);
@@ -457,9 +461,13 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
              path reads this reason (freeFirstSeatFor). */
           reason: movedAfterBooking
             ? "class-rescheduled-waiver"
-            : cancelSpendsFreeFirst({ actor: "student", wasFree: bk.isFree, late: outcome.late, waived: false })
-              ? FREE_FIRST_SPENT_REASON
-              : null,
+            /* live-fixes-3 · C: late, and nothing retained, because it came within 15
+               minutes of the booking. A free seat cancelled then is not spent either. */
+            : outcome.grace
+              ? BOOKING_GRACE_REASON
+              : cancelSpendsFreeFirst({ actor: "student", wasFree: bk.isFree, late: outcome.late, waived: false, grace: outcome.grace })
+                ? FREE_FIRST_SPENT_REASON
+                : null,
         })
         .onConflictDoNothing();
 
@@ -485,7 +493,8 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
           classTitle: cls.title,
           at: new Date(cls.scheduledAt).toISOString(),
           who: publicDisplayName(session.profile.fullName),
-          late: outcome.late,
+          // live-fixes-3 · C: inside the grace it is not a « late » cancellation (nothing counts) — as the e-mail says.
+          late: outcome.late && !outcome.grace,
           lateHours: CANCEL_FREE_WINDOW_HOURS,
         },
         href: "/dashboard",
@@ -499,6 +508,7 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
       mailBookingCancelled(bookingId.value, {
         late: outcome.late,
         waived: movedAfterBooking,
+        grace: outcome.grace, // live-fixes-3 · C
         wasFree: Boolean(bk.isFree),
         wasCovered: Boolean(bk.subscriptionId),
         retainedTnd: outcome.retainedTnd,
@@ -520,6 +530,9 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
          free seat), and the screen said "40 %" beside nothing retained. */
       retainedPct: retainedShare(outcome),
       waived: movedAfterBooking,
+      /* live-fixes-3 · C: free because it came within 15 minutes of the booking — so
+         the message after can say why nothing was retained, not just that. */
+      grace: outcome.grace,
       paymentsEnabled: paymentsEnabled(),
       revalidate: tut?.slug ? { tutors: [tut.slug] } : undefined,
     };
@@ -583,6 +596,8 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
           amountTnd: r.isFree || r.subscriptionId ? 0 : Number(r.bookedPriceTnd ?? r.priceTnd ?? 0),
           waived: isMovedAfterBooking(r.bookedAt, r.rescheduledAt),
         }),
+        // live-fixes-3 · C: the confirm box states the 15-minute grace from it.
+        bookedAt: r.bookedAt ? new Date(r.bookedAt).getTime() : undefined,
         status: r.status ?? "scheduled",
         // Never blank: falls back to the class's private token room. This list is the
         // student's own live bookings, so the room is theirs to have.

@@ -1,4 +1,6 @@
 /* CANCELLATION — 48 hours free, 40% retained after that. One definition.
+   (live-fixes-3 · C: and always free within 15 minutes of booking, unless the class
+   starts in less than 15 minutes — see CANCEL_GRACE_MS below.)
 
    ══════════════════════════════════════════════════════════════════════════════
    THIS IS A BEHAVIOUR CHANGE, AND IT LOOSENS A RULE.
@@ -26,16 +28,74 @@
    The `paymentsEnabled` column on the ledger exists exactly so that a future
    reader can tell a "would have been" row from a real one. Do not drop it. */
 
-import { CANCEL_FREE_WINDOW_HOURS, LATE_CANCEL_RETAINED_PCT } from "./legal";
+import {
+  CANCEL_FREE_WINDOW_HOURS, LATE_CANCEL_RETAINED_PCT,
+  CANCEL_GRACE_MINUTES, CANCEL_GRACE_MIN_LEAD_MINUTES, // live-fixes-3 · C
+} from "./legal";
 
 /** Free-cancellation window (48 hours, up from 24) and the share of a seat's value
     retained on a late cancellation. Both are Terms §7 values: they live in ./legal. */
 export { CANCEL_FREE_WINDOW_HOURS, LATE_CANCEL_RETAINED_PCT };
 export const CANCEL_FREE_WINDOW_MS = CANCEL_FREE_WINDOW_HOURS * 60 * 60 * 1000;
 
+/* ── live-fixes-3 · C — THE 15-MINUTE GRACE AFTER BOOKING ───────────────────────
+
+   Live case, 4 Oct 2026: a student booked a class 30 h away, cancelled 30 seconds
+   later, and 40 % was recorded as retained for the tutor — while every page says
+   « Sans engagement ». A seat held for half a minute blocked nothing for anyone.
+
+   THE RULE: a cancellation within CANCEL_GRACE_MINUTES of the booking is free,
+   whatever the time to the class, UNLESS the class starts in less than
+   CANCEL_GRACE_MIN_LEAD_MINUTES at the moment of cancelling (a seat taken and
+   dropped at the last minute does cost the tutor the seat). Otherwise the 48 h /
+   40 % rule applies unchanged. Both boundaries are inclusive — the tie goes to the
+   student, like the 48 h one: 15:00 after booking is free, 15:01 is not; exactly
+   15:00 before the start still gets the grace, 14:59 does not.
+
+   `bookedAt` is bookings.created_at — written by Postgres, reset by a re-booking
+   (A8) — NEVER a client-supplied time. Like the 48 h window, every caller in
+   apps/api passes the server's clock. */
+export const CANCEL_GRACE_MS = CANCEL_GRACE_MINUTES * 60 * 1000;
+export const CANCEL_GRACE_MIN_LEAD_MS = CANCEL_GRACE_MIN_LEAD_MINUTES * 60 * 1000;
+
+/** The ledger's `reason` when the grace is what made a late cancellation free. */
+export const BOOKING_GRACE_REASON = "booking-grace";
+
+/** The last instant (ms) this booking's grace still applies: CANCEL_GRACE_MINUTES
+    after the booking, cut short so it never reaches into the last
+    CANCEL_GRACE_MIN_LEAD_MINUTES before the start. NaN when either date is
+    unparseable — and NaN is never ≥ now, so a bad date never means "free". */
+export function bookingGraceEndsAt(input: { bookedAt: Date | string | number; scheduledAt: Date | string | number }): number {
+  const booked = new Date(input.bookedAt).getTime();
+  const start = new Date(input.scheduledAt).getTime();
+  return Math.min(booked + CANCEL_GRACE_MS, start - CANCEL_GRACE_MIN_LEAD_MS);
+}
+
+/** Is a cancellation made at `now` inside this booking's grace? */
+export function withinBookingGrace(input: {
+  bookedAt: Date | string | number;
+  scheduledAt: Date | string | number;
+  now?: number;
+}): boolean {
+  return (input.now ?? Date.now()) <= bookingGraceEndsAt(input);
+}
+
+/** Until when (ms) a cancellation of this booking is FREE under the whole rule: the
+    later of the 48 h deadline and the end of the grace. What the confirm box says
+    ("gratuite jusqu'à 18:32"). A free seat or a waived one retains nothing anyway;
+    this is about the rule, not the amount. */
+export function freeCancellationUntil(input: { bookedAt: Date | string | number; scheduledAt: Date | string | number }): number {
+  const start = new Date(input.scheduledAt).getTime();
+  return Math.max(start - CANCEL_FREE_WINDOW_MS, bookingGraceEndsAt(input));
+}
+
 export type CancellationOutcome = {
   /** True when the cancellation lands inside the 48-hour window. */
   late: boolean;
+  /** live-fixes-3 · C: true when the 15-minute grace after booking is what made a
+      LATE cancellation free. Reported beside `late`, never instead of it — like
+      `waived`, the ledger keeps the facts and says why nothing was retained. */
+  grace: boolean;
   /** Milliseconds between the cancellation and the class start. Negative if the
       class has already started — see the note on that case below. */
   msBeforeStart: number;
@@ -87,6 +147,9 @@ export function cancellationOutcome(input: {
      pretending it was an early cancellation — a ledger that rewrites the facts to
      justify the number is not a ledger. */
   waived?: boolean;
+  /* live-fixes-3 · C: when the booking was made (bookings.created_at — server
+     time). Without it there is no grace: the rule as it was. */
+  bookedAt?: Date | string | number;
 }): CancellationOutcome {
   const startsAt = new Date(input.scheduledAt).getTime();
   const now = input.now ?? Date.now();
@@ -96,11 +159,14 @@ export function cancellationOutcome(input: {
      every comparison, so state the intent instead of relying on that. */
   const late = Number.isNaN(startsAt) ? true : msBeforeStart < CANCEL_FREE_WINDOW_MS;
 
+  // live-fixes-3 · C: an unparseable bookedAt gives NaN, which is never inside the grace.
+  const grace = late && input.bookedAt !== undefined && withinBookingGrace({ bookedAt: input.bookedAt, scheduledAt: input.scheduledAt, now });
+
   /* Negative or non-finite amounts are nonsense; treat them as zero rather than
      recording a negative retention. */
   const amountTnd = Number.isFinite(input.amountTnd) ? Math.max(0, toCentimes(input.amountTnd)) : 0;
 
-  const retainedPct = late && !input.waived ? LATE_CANCEL_RETAINED_PCT : 0;
+  const retainedPct = late && !input.waived && !grace ? LATE_CANCEL_RETAINED_PCT : 0;
   const retainedTnd = toCentimes(amountTnd * retainedPct);
   /* released is the REMAINDER.
 
@@ -119,7 +185,7 @@ export function cancellationOutcome(input: {
      (0.2 + 0.306 = 0.506, not 0.51). */
   const releasedTnd = toCentimes(amountTnd - retainedTnd);
 
-  return { late, msBeforeStart, retainedPct, amountTnd, retainedTnd, releasedTnd };
+  return { late, grace, msBeforeStart, retainedPct, amountTnd, retainedTnd, releasedTnd };
 }
 
 /* ── phase-a lane L3 (A21) — what the student is TOLD ─────────────────────── */

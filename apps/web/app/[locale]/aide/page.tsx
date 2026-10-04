@@ -9,6 +9,7 @@ import { isLocale, DEFAULT_LOCALE, type AppLocale } from "@/lib/locale";
 import { pageMetadata } from "@/lib/metadata";
 import {
   CANCEL_FREE_WINDOW_HOURS, ID_DOCUMENT_RETENTION_DAYS, LATE_CANCEL_RETAINED_PCT, supportWhatsAppHref,
+  CANCEL_GRACE_MINUTES, CANCEL_GRACE_MIN_LEAD_MINUTES, // live-fixes-3 · C
   OFFER_MAX_PER_TUTOR, OFFER_SESSIONS_MAX, OFFER_SESSIONS_MIN,
   PRICE_FLOOR_TND, PRICE_STEP_TND, PROMO_PERCENT_MAX, PROMO_PERCENT_MIN,
 } from "@tnajem/shared";
@@ -50,6 +51,8 @@ const SITE_HOST = (() => {
 const WA_LINK = supportWhatsAppHref(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP);
 const PCT = Math.round(LATE_CANCEL_RETAINED_PCT * 100);
 const H = CANCEL_FREE_WINDOW_HOURS;
+const G = CANCEL_GRACE_MINUTES; // live-fixes-3 · C: the grace after booking
+const GL = CANCEL_GRACE_MIN_LEAD_MINUTES;
 /** "0,5" — the Tunisian decimal comma, in both languages (prices elsewhere read "0,5 د.ت" too). */
 const frNum = (n: number) => String(n).replace(".", ",");
 
@@ -97,7 +100,8 @@ const copy = bilingual({
         a: [
           "Tu fixes ton prix, classe par classe. Pendant le pilote, Tnajem ne touche pas à l'argent et ne prend aucune commission.",
           "Paiement en ligne bientôt : pour l'instant, ton élève te paie hors Tnajem — c'est entre vous.",
-          `Une annulation à moins de ${H} h est notée dans le registre des annulations (${PCT} % du prix de la place), mais rien n'est prélevé pendant le pilote.`,
+          // live-fixes-3 · C: except within 15 min of the booking (@tnajem/shared/cancellation).
+          `Une annulation à moins de ${H} h est notée dans le registre des annulations (${PCT} % du prix de la place), mais rien n'est prélevé pendant le pilote. Une annulation dans les ${G} min qui suivent la réservation reste gratuite, sauf si la séance commence dans moins de ${GL} min.`,
         ],
         story: true,
         after: "Les tarifs d'après le pilote sont sur la page Tarifs. On te préviendra avant tout changement.",
@@ -176,7 +180,7 @@ const copy = bilingual({
         a: [
           "إنت اللي تحدّد ثمنك، حصة بحصة. في فترة التجربة، Tnajem ما يمسّش الفلوس وما ياخذ حتى عمولة.",
           "الخلاص أونلاين قريب : للوقت هذا، التلميذ يخلّصك برّا Tnajem — هاذي بيناتكم.",
-          `الإلغاء قبل أقل من ${H} ساعة يتسجّل في سجلّ الإلغاءات (\u2066${PCT} %\u2069 من ثمن البلاصة)، أما ما يتخصم حتى مليم في فترة التجربة.`,
+          `الإلغاء قبل أقل من ${H} ساعة يتسجّل في سجلّ الإلغاءات (\u2066${PCT} %\u2069 من ثمن البلاصة)، أما ما يتخصم حتى مليم في فترة التجربة. الإلغاء في الـ${G} دقيقة اللي بعد الحجز يبقى بلاش، إلّا كان الحصة تبدا في أقل من ${GL} دقيقة.`,
         ],
         story: true,
         after: "أسعار ما بعد التجربة موجودة في صفحة الأسعار. نعلموك قبل أي تبديل.",

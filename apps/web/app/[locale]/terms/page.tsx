@@ -131,7 +131,8 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
           "Un prof peut choisir d'offrir la première séance à un nouvel élève. Quand c'est le cas, c'est indiqué clairement sur sa page.",
           "L'offre est limitée à une séance gratuite par élève et par prof. Elle ne peut être ni revendue, ni cumulée, ni transformée en argent. Un prof peut retirer l'offre pour ses futures séances à tout moment ; cela n'affecte pas une séance gratuite déjà réservée.",
           // A6 (D2): apps/api/src/routes/bookings.ts freeFirstSeatFor + packages/shared/src/free-first.ts cancelSpendsFreeFirst.
-          "Si tu annules ta séance offerte moins de 48 heures avant le début, elle compte comme utilisée. Si tu l'annules à temps, si le prof l'annule, ou si le prof a déplacé la séance après ta réservation, tu la gardes pour une prochaine séance avec ce prof.",
+          // live-fixes-3 · C: the 15-minute grace after booking (cancelSpendsFreeFirst, grace).
+          "Si tu annules ta séance offerte moins de 48 heures avant le début, elle compte comme utilisée. Si tu l'annules à temps ou dans les 15 minutes qui suivent ta réservation (sauf à moins de 15 minutes du début), si le prof l'annule, ou si le prof a déplacé la séance après ta réservation, tu la gardes pour une prochaine séance avec ce prof.",
         ],
       },
       {
@@ -155,7 +156,9 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         p: ["Une séance a un nombre de places limité. La réservation est confirmée dans la limite des places disponibles."],
         list: [
           "Tu peux annuler gratuitement jusqu'à 48 heures avant le début de la séance. Exactement 48 heures avant compte encore comme « à temps ».",
-          "À moins de 48 heures du début, tu peux toujours annuler et ta place est immédiatement remise à disposition. 40 % du prix de la place est alors enregistré comme retenu pour le prof, au titre du créneau qu'il avait bloqué.",
+          // live-fixes-3 · C: packages/shared/src/cancellation.ts (CANCEL_GRACE_MINUTES, inclusive).
+          "Tu peux aussi annuler gratuitement dans les 15 minutes qui suivent ta réservation, quel que soit le temps qui reste avant la séance — sauf si elle commence dans moins de 15 minutes. Exactement 15 minutes après la réservation compte encore comme gratuit.",
+          "À moins de 48 heures du début, et en dehors de ces 15 minutes, tu peux toujours annuler et ta place est immédiatement remise à disposition. 40 % du prix de la place est alors enregistré comme retenu pour le prof, au titre du créneau qu'il avait bloqué.",
           "Ce pourcentage est aujourd'hui une écriture, pas un prélèvement : Tnajem n'encaisse aucun paiement pendant le pilote et aucun montant ne t'est débité. Si les paiements sont activés un jour, ces conditions seront mises à jour et tu en seras informé avant.",
           "Une séance qui a déjà commencé ne peut plus être annulée en ligne.",
           "Une séance offerte vaut zéro : 40 % de zéro reste zéro, même en cas d'annulation tardive.",
@@ -310,7 +313,7 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         p: [
           "الأستاذ ينجّم يختار يعطي الحصة الأولى مجانا لتلميذ جديد. وقتها يتكتب بوضوح في صفحته.",
           "العرض محدود بحصة مجانية وحدة لكل تلميذ مع كل أستاذ. ما ينباعش، ما يتجمّعش وما يتحوّلش لفلوس. الأستاذ ينجّم ينحّي العرض على حصصه الجايّة وقت ما يحبّ؛ هذا ما يمسّش حصة مجانية محجوزة من قبل.",
-          "كان تلغي الحصة المجانية متاعك أقلّ من 48 ساعة قبل ما تبدا، تتحسب مستعملة. كان تلغيها في الوقت، كان الأستاذ يلغيها، ولا كان الأستاذ بدّل وقت الحصة بعد ما حجزت، تبقالك لحصة جاية مع نفس الأستاذ.",
+          "كان تلغي الحصة المجانية متاعك أقلّ من 48 ساعة قبل ما تبدا، تتحسب مستعملة. كان تلغيها في الوقت ولا في الـ15 دقيقة اللي بعد الحجز (إلّا كان الحصة تبدا في أقلّ من 15 دقيقة)، كان الأستاذ يلغيها، ولا كان الأستاذ بدّل وقت الحصة بعد ما حجزت، تبقالك لحصة جاية مع نفس الأستاذ.",
         ],
       },
       {
@@ -330,7 +333,8 @@ const copy: { fr: LegalCopy; ar: LegalCopy } = {
         p: ["الحصة عندها عدد أماكن محدود. الحجز يتأكّد على قدّ الأماكن المتوفّرة."],
         list: [
           "تنجّم تلغي بلا مصاريف حتى 48 ساعة قبل بداية الحصة. 48 ساعة بالضبط ما زالت تتعدّ « في الوقت ».",
-          "أقلّ من 48 ساعة قبل البداية، تنجّم برك تلغي ومكانك يرجع متوفّر على طول. وقتها \u206640 %\u2069 من ثمن البلاصة يتسجّل كمستحق للأستاذ، مقابل الوقت اللي حبسو.",
+          "تنجّم زادة تلغي بلا مصاريف في الـ15 دقيقة اللي بعد الحجز، مهما كان الوقت اللي قاعد قبل الحصة — إلّا كان الحصة تبدا في أقلّ من 15 دقيقة. 15 دقيقة بالضبط بعد الحجز ما زالت بلاش.",
+          "أقلّ من 48 ساعة قبل البداية، وبرّا الـ15 دقيقة هاذوما، تنجّم برك تلغي ومكانك يرجع متوفّر على طول. وقتها \u206640 %\u2069 من ثمن البلاصة يتسجّل كمستحق للأستاذ، مقابل الوقت اللي حبسو.",
           "هالنسبة اليوم هي قيد في الدفاتر، موش خصم: تنجّم ما تقبض حتى خلاص في فترة التجربة وما يتخصم منك حتى مليم. إذا تفعّل الخلاص في المستقبل، الشروط هاذي تتحيّن ونعلموك قبل.",
           "الحصة اللي بدات ما عادش تتلغى أونلاين.",
           "الحصة المجانية تساوي صفر: \u206640 %\u2069 من صفر تبقى صفر، حتى كان الإلغاء متأخّر.",

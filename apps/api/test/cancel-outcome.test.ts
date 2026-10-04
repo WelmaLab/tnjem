@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   startApp, stopApp, seedProfile, seedTutor, seedClass, seedBooking, login, call, sql, type App,
 } from "./support/fx";
+import { backdateBooking } from "./support/fx"; // live-fixes-3 · C
 
 /* phase-a lane L3 (A21) — a cancel message states what was ACTUALLY retained.
 
@@ -29,6 +30,8 @@ async function seat(opts: { hoursFromNow: number; isFree?: boolean; movedAfterBo
   classIds.push(klass.id);
   const student = await seedProfile({ role: "student", birthYear: 1990 });
   const booking = await seedBooking({ classId: klass.id, studentId: student.id, isFree: opts.isFree ?? false });
+  // live-fixes-3 · C: a seat booked an hour ago — outside the 15-minute grace after booking.
+  await backdateBooking(booking.id);
   await sql`update classes set seats_taken = 1 where id = ${klass.id}`;
   if (opts.movedAfterBooking) {
     await sql`update classes set scheduled_at = now() + ${opts.hoursFromNow} * interval '1 hour',

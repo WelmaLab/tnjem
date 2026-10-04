@@ -41,8 +41,10 @@ export function isEffectivelyFreeFirst(
    It COMES BACK when the tutor cancels (the student did not choose that), when
    the student cancels 48h or more before, when the platform releases the seat
    (block, consent withdrawal), and when a late cancel is waived because the
-   tutor moved the class. It is SPENT only by the student's own late, un-waived
-   cancellation of a free seat — the one case the 40% rule would apply to. The
+   tutor moved the class, and (live-fixes-3 · C) when the student cancels within the
+   15-minute grace after booking. It is SPENT only by the student's own late,
+   un-waived cancellation of a free seat outside that grace — the one case the 40%
+   rule would apply to. The
    ledger row carries FREE_FIRST_SPENT_REASON so the booking path can see it:
    bookings.is_free is overwritten when a cancelled row is re-booked, the ledger
    is not. */
@@ -54,8 +56,10 @@ export function cancelSpendsFreeFirst(input: {
   wasFree: boolean | null | undefined;
   late: boolean;
   waived: boolean;
+  /** live-fixes-3 · C: inside the 15-minute grace after booking (CancellationOutcome.grace). */
+  grace?: boolean;
 }): boolean {
-  return input.actor === "student" && input.wasFree === true && input.late && !input.waived;
+  return input.actor === "student" && input.wasFree === true && input.late && !input.waived && !input.grace;
 }
 
 /** Does this tutor advertise a free first session AT ALL?

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { sql } from "./support/db";
 import { seedProfile, seedTutor, seedClass, seedBooking, seedAdmin } from "./support/seed";
+import { backdateBooking } from "./support/seed"; // live-fixes-3 · C
 import { mintSession } from "./support/session";
 
 /* REPORTING, MODERATION AND ACCOUNT DELETION (Step 15).
@@ -266,6 +267,7 @@ test.describe("account deletion — the purge", () => {
     const klass = await seedClass({ tutorId: tutor.id, seats: 5, priceTnd: 30, hoursFromNow: 5 });
     const me = await seedProfile({ role: "student", birthYear: 1995 });
     const booking = await seedBooking({ classId: klass.id, studentId: me.id, isFree: false });
+    await backdateBooking(booking.id); // live-fixes-3 · C: outside the 15-minute grace after booking
     const token = await mintSession(me.id);
 
     // A late cancellation, so there is a real retained amount on the ledger.

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { sql } from "./support/db";
 import { seedProfile, seedTutor, seedClass, seedBooking } from "./support/seed";
+import { backdateBooking } from "./support/seed"; // live-fixes-3 · C
 import { mintSession } from "./support/session";
 
 /* TUTOR CANCELS AND RESCHEDULES (Step 11).
@@ -191,6 +192,10 @@ test.describe("the tutor reschedules", () => {
 
     const late = await seedProfile({ role: "student", birthYear: 1995 });
     const booking = await seedBooking({ classId: s.klass.id, studentId: late.id, isFree: false });
+    /* live-fixes-3 · C: outside the 15-minute grace after booking — the move goes back
+       further still, so this booking is still the one made AFTER it. */
+    await sql`update classes set rescheduled_at = now() - interval '2 hours' where id = ${s.klass.id}`;
+    await backdateBooking(booking.id);
     const res = await post("/bookings/cancel", await mintSession(late.id), { bookingId: booking.id });
 
     expect(res.ok).toBe(true);

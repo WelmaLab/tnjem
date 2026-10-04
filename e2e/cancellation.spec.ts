@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { sql } from "./support/db";
 import { seedProfile, seedTutor, seedClass, seedBooking } from "./support/seed";
+import { backdateBooking } from "./support/seed"; // live-fixes-3 · C
 import { mintSession } from "./support/session";
 
 /* CANCELLATION — 48h free, 40% retained, and the ledger that records it.
@@ -78,6 +79,8 @@ async function scenario(opts: { hoursFromNow: number; priceTnd?: number; isFree?
     studentId: student.id,
     isFree: opts.isFree ?? false,
   });
+  // live-fixes-3 · C: a seat booked an hour ago — outside the 15-minute grace after booking.
+  await backdateBooking(booking.id);
   return { tutor, klass, student, booking, token: await mintSession(student.id) };
 }
 

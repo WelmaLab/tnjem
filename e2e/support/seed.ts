@@ -228,3 +228,12 @@ export async function seedFollow(studentId: string, tutorId: string): Promise<vo
   await sql`insert into tutor_follows (student_profile_id, tutor_id) values (${studentId}, ${tutorId})
             on conflict do nothing`;
 }
+
+// live-fixes-3 · C ────────────────────────────────────────────────────────────
+/* A cancellation within 15 minutes of booking is free (@tnajem/shared/cancellation;
+   the grace runs from bookings.created_at, which seedBooking leaves at now()). A spec
+   that means "a seat booked earlier, cancelled late" moves the booking back with
+   this — its SETUP, never its assertions. */
+export async function backdateBooking(bookingId: string, minutes = 60): Promise<void> {
+  await sql`update bookings set created_at = now() - ${minutes} * interval '1 minute' where id = ${bookingId}`;
+}

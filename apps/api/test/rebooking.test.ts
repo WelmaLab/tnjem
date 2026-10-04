@@ -1,6 +1,7 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { startApp, stopApp, seedProfile, seedTutor, seedClass, login, call, sql, type App } from "./support/fx";
+import { backdateBooking } from "./support/fx"; // live-fixes-3 · C
 
 /* phase-a lane L3 (A8) — re-booking a cancelled seat must not reuse the stale row.
 
@@ -89,6 +90,10 @@ describe("A8 · re-booking a cancelled seat", () => {
 
     // Re-booking AFTER the move is choosing the new time.
     await book(cookie, klass.id);
+    /* live-fixes-3 · C: outside the 15-minute grace after booking — the move goes back
+       further still, so the re-booking is still the one made AFTER it. */
+    await sql`update classes set rescheduled_at = now() - interval '2 hours' where id = ${klass.id}`;
+    await backdateBooking(bk.id);
     const late = await cancel(cookie, bk.id);
     assert.equal(late.body.late, true);
     assert.equal(late.body.retainedTnd, 16, `re-booked after the move → normal rule (40% of 40): ${late.raw}`);
@@ -106,9 +111,11 @@ describe("A8 · re-booking a cancelled seat", () => {
     await book(cookie, klass.id);
     const bk = await bookingOf(klass.id, student.id);
 
+    await backdateBooking(bk.id); // live-fixes-3 · C: outside the 15-minute grace after booking
     const one = await cancel(cookie, bk.id);
     assert.equal(one.body.late, true);
     await book(cookie, klass.id);
+    await backdateBooking(bk.id); // live-fixes-3 · C
     const two = await cancel(cookie, bk.id);
     assert.equal(two.body.late, true);
 

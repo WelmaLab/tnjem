@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 import { sql } from "./support/db";
 import { email, seedProfile, seedTutor, seedClass, seedBooking } from "./support/seed";
+import { backdateBooking } from "./support/seed"; // live-fixes-3 · C
 import { recoverOtp, resetRateLimits } from "./support/otp";
 import { fillOtp } from "./support/otp-ui";
 import { completePasswordStep } from "./support/password-ui"; // espace prof v2 · auth
@@ -118,6 +119,7 @@ test("student journey: minor signup → consent → explore → book → live ga
     const token = await browserSession(ctx);
     expect(await api("/bookings", token, { classId: soon.id })).toMatchObject({ ok: true });
     const soonBooking = (await sql<{ id: string }[]>`select id from bookings where class_id = ${soon.id} and student_id = ${studentId}`)[0].id;
+    await backdateBooking(soonBooking); // live-fixes-3 · C: booked an hour ago, outside the 15-minute grace
     expect(await api("/bookings/cancel", token, { bookingId: soonBooking })).toMatchObject({ ok: true, late: true });
     const [late] = await sql<{ late: boolean; retained_tnd: string }[]>`select late, retained_tnd from cancellations where booking_id = ${soonBooking}`;
     expect(late).toMatchObject({ late: true, retained_tnd: "12.00" });

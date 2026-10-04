@@ -1516,3 +1516,16 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   /* B3 · the live lobby (dark): the tutor's one line about the meet.jit.si moderator sign-in. */
   .lf3-mod-note{margin-block-start:14px;font-size:13px;line-height:1.55;color:var(--on-dark)}
 }
+
+/* ── live-fixes-3 · booking ── ──────────────────────────────────────────────
+   C · the « moins de 48 h » note before confirming (components/checkout/LateCancelNote.tsx):
+   a .note-info (blue = information), placed by where it is mounted. */
+@layer components {
+  /* Checkout: right under the cancellation rule, closer to it than to the errors below. */
+  .lcn-ck{margin-block:-8px 20px}
+  /* Storefront aside: between the price and « Réserver ». */
+  .lcn-sf{margin-block-start:16px}
+  /* Storefront phone bar: compact, above the price and the button. */
+  .lcn-bar{padding:8px 12px;gap:8px;margin-block-end:10px;border-radius:12px}
+  .lcn-bar>.ic{width:17px;height:17px}
+}

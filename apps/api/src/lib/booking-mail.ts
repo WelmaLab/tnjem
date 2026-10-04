@@ -414,7 +414,7 @@ export async function mailBookingCancelled(bookingId: string, outcome: CancelOut
         first: t.first,
         cls: mailClass(r, r.tutorFullName),
         student: publicDisplayName(studentProfile?.fullName) ?? BOOKING_MAIL[t.locale].someone,
-        late: outcome.late && !outcome.waived,
+        late: outcome.late && !outcome.waived && !outcome.grace, // live-fixes-3 · C: not « tardive » inside the grace
         dashboardUrl: mailLinks.tutorClasses(t.locale),
         unsubscribeUrl,
       }),

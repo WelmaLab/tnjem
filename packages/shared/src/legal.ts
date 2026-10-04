@@ -74,8 +74,9 @@ export const PRIVACY_POLICY_VERSION = "2026-10-02";
 /** LEGAL-REVIEW: version of /terms, recorded against every account created under it
     (profiles.terms_version). Re-acceptance of a new version is not built.
     phase-a lane L6 (A19): 2026-09-15 → 2026-09-24, same reason as above.
-    espace prof v2 · auth (phase 2): 2026-09-24 → 2026-10-01 — §3 signs in with a password or a code. */
-export const TERMS_VERSION = "2026-10-01";
+    espace prof v2 · auth (phase 2): 2026-09-24 → 2026-10-01 — §3 signs in with a password or a code.
+    live-fixes-3 · C: 2026-10-01 → 2026-10-04 — §5/§7 a cancellation within 15 min of booking is free. */
+export const TERMS_VERSION = "2026-10-04";
 
 /** Consents are recorded against the privacy policy they were given under. */
 export const CONSENT_POLICY_VERSION = PRIVACY_POLICY_VERSION;
@@ -96,6 +97,16 @@ export const SESSION_IDLE_DAYS = 14;
     payments are off; the ledger records what WOULD be retained. */
 export const CANCEL_FREE_WINDOW_HOURS = 48;
 export const LATE_CANCEL_RETAINED_PCT = 0.4;
+
+/** live-fixes-3 · C — THE GRACE AFTER BOOKING. A cancellation within this many minutes
+    of the booking (bookings.created_at, server time) is free whatever the time to the
+    class — UNLESS the class starts in less than CANCEL_GRACE_MIN_LEAD_MINUTES at the
+    moment of cancelling. Both boundaries are inclusive, like the 48 h one.
+    LEGAL-REVIEW: commercial terms published in /terms §7 (and §5 for the free first
+    session) from TERMS_VERSION 2026-10-04. Founder decision of 4 Oct 2026, after a
+    student cancelled 30 s after booking and 40 % was recorded. */
+export const CANCEL_GRACE_MINUTES = 15;
+export const CANCEL_GRACE_MIN_LEAD_MINUTES = 15;
 
 /* ── Décret n° 2015-1619 (private tutoring by serving public-school teachers) ─── */
 

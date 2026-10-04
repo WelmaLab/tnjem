@@ -365,6 +365,7 @@ export type CancelResult = ActionResult & {
   retainedTnd?: number;
   retainedPct?: number;
   paymentsEnabled?: boolean;
+  grace?: boolean; // live-fixes-3 · C: free because it came within 15 min of the booking
 };
 
 export async function cancelBooking(input: { bookingId: string }): Promise<CancelResult> {

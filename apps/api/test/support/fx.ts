@@ -241,3 +241,12 @@ export async function cleanupIp(ip: string): Promise<void> {
   await sql`delete from rate_limits where key like ${`%:${ip}`}`;
 }
 // end phase-a lane L2 ─────────────────────────────────────────────────────────
+
+// live-fixes-3 · C ────────────────────────────────────────────────────────────
+/* A cancellation within 15 minutes of booking is free (@tnajem/shared/cancellation,
+   the grace runs from bookings.created_at). A test that books and cancels at once
+   now lands inside it; one that means "a seat booked earlier, cancelled late" moves
+   the booking back with this — its SETUP, never its assertions. */
+export async function backdateBooking(bookingId: string, minutes = 60): Promise<void> {
+  await sql`update bookings set created_at = now() - ${minutes} * interval '1 minute' where id = ${bookingId}`;
+}
