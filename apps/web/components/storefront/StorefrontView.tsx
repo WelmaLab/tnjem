@@ -713,7 +713,7 @@ export function StorefrontView({
         /* Display font. No RTL overrides here on purpose: globals.css redefines the
            --fd token to --fa and zeroes letter-spacing under html[dir="rtl"], which
            covers every surface below. Duplicating it locally would only rot. */
-        .sf-h2,.sf-h3,.sf-amount,.sf-num,.sf-avg-n,.sf-panel-label,.sf-step-n{
+        .sf-h2,.sf-h3,.sf-num,.sf-avg-n,.sf-panel-label,.sf-step-n{
           font-family:var(--fd);
         }
 
@@ -789,7 +789,8 @@ export function StorefrontView({
 
         /* ── price ── */
         .sf-price-block{min-width:0}
-        .sf-amount{font-weight:700;font-size:17px;letter-spacing:-.3px;white-space:nowrap;line-height:1.15}
+        /* live-fixes-3 · F: a price — the figure face with tabular figures (C1), never --fd. */
+        .sf-amount{font-family:var(--fn);font-variant-numeric:tabular-nums;font-weight:700;font-size:17px;letter-spacing:-.3px;white-space:nowrap;line-height:1.15}
         .sf-amount-lg{font-size:30px;letter-spacing:-.9px}
         .sf-free{color:var(--green-ink)}
         /* max(13px, .72em): the relative size read 12.2px next to a 17px price. */

@@ -76,7 +76,7 @@ const copy = bilingual({
 const PAGE_CSS = `
   /* Display font. No RTL override here: globals.css redefines --fd → --fa and
      zeroes letter-spacing under html[dir="rtl"], which covers this. */
-  .cd-amount{font-family:var(--fd);font-weight:700;letter-spacing:-.3px}
+  .cd-amount{font-family:var(--fn);font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:-.3px} /* live-fixes-3 · F: a price — the figure face (C1), not --fd */
 
   .cd-back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);
     font-size:13.5px;font-weight:600;min-height:44px}

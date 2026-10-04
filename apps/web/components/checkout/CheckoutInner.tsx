@@ -336,7 +336,7 @@ export default function CheckoutInner() {
     <style dangerouslySetInnerHTML={{ __html: `
       /* Display font. No RTL override here: globals.css redefines --fd → --fa and
          zeroes letter-spacing under html[dir="rtl"], which covers all of these. */
-      .ck-h1,.ck-pay-amount,.ck-success-title{font-family:var(--fd)}
+      .ck-h1,.ck-success-title{font-family:var(--fd)}
 
       .ck-wrap{position:relative;width:100%;max-width:560px;margin-inline:auto}
       .ck-head{display:flex;align-items:center;gap:12px;margin-bottom:22px}
@@ -359,7 +359,9 @@ export default function CheckoutInner() {
       .ck-pay{margin-bottom:16px}
       .ck-pay-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
       .ck-pay-label{font-size:13.5px;color:var(--ink2);font-weight:600;min-width:0}
-      .ck-pay-amount{font-size:30px;font-weight:700;letter-spacing:-1px;color:var(--green-ink);white-space:nowrap;line-height:1.1}
+      /* live-fixes-3 · F: the figure face (--fn) with tabular figures — the LIVE_FIXES_1 C1 rule.
+         It was --fd (Space Grotesk), whose « 0 TND » reads as a monospace font. */
+      .ck-pay-amount{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:30px;font-weight:700;letter-spacing:-1px;color:var(--green-ink);white-space:nowrap;line-height:1.1}
       .ck-pay-note{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;font-weight:700;color:var(--green-ink)}
       .ck-pay-note .ic{width:16px;height:16px;color:var(--green);flex:none}
       .ck-pay-detail{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);

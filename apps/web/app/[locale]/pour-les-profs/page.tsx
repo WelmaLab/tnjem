@@ -510,7 +510,8 @@ function IncomePanel({ c }: { c: Copy }) {
           <div className={`lpp-split ${armed ? "lpp-armed" : ""}`}>
             <span className="lpp-split-you" />
           </div>
-          <div className="flex justify-between gap-2.5 flex-wrap mt-2 font-display font-bold text-[13px]">
+          {/* live-fixes-3 · F: « 100 % » / « 0 % » are figures — --fn, tabular (C1) */}
+          <div className="flex justify-between gap-2.5 flex-wrap mt-2 font-num tabular-nums font-bold text-[13px]">
             <span className="text-on-blue-soft inline-flex items-center gap-[5px]">
               <span aria-hidden="true" className="w-2 h-2 rounded-[999px] bg-mint flex-none" />
               {c.inYou}
@@ -529,8 +530,9 @@ function IncomePanel({ c }: { c: Copy }) {
             {c.inLaterLbl}
           </div>
           <div className="flex justify-between gap-2.5 flex-wrap mt-1 items-baseline">
-            <span className="font-display font-bold text-[19px] text-on-blue">{c.inLater}</span>
-            <span className="font-display font-bold text-[13px] text-on-blue-soft">
+            {/* live-fixes-3 · F: amounts — the figure face with tabular figures (C1), not --fd */}
+            <span className="font-num tabular-nums font-bold text-[19px] text-on-blue" data-e2e="lpp-later-net">{c.inLater}</span>
+            <span className="font-num tabular-nums font-bold text-[13px] text-on-blue-soft">
               {c.inLaterFee}
             </span>
           </div>
@@ -914,7 +916,7 @@ export default function PourLesProfsPage() {
                       style={{
                         display: "inline-flex", alignItems: "center", gap: 8, background: "var(--paper)",
                         border: "1px solid var(--line)", borderRadius: 12, padding: "10px 14px",
-                        fontFamily: "var(--fd)", fontWeight: 700, fontSize: 14.5, color: "var(--ink)",
+                        fontFamily: "var(--fn)", fontVariantNumeric: "tabular-nums", fontWeight: 700, fontSize: 14.5, color: "var(--ink)", // live-fixes-3 · F: « 20 TND / séance » (C1)
                         boxShadow: "var(--sh-s)", minWidth: 0,
                       }}
                     >

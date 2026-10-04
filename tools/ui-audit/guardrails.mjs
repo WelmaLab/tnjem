@@ -376,6 +376,44 @@ for (const f of FILES.filter((p) => p.endsWith(".tsx"))) {
 }
 if (!nativeHits) console.log(`  ok    0 native <select>; ${fileInputs} file input(s), every one .sr-only behind its own control`);
 
+/* ── 8. prices in the figure face, never --fd or a monospace ─────────────────── */
+section("8. Prices: the figure face (--fn), never --fd or a monospace");
+/* live-fixes-3 · F. LIVE_FIXES_1 C1: a price is set in --fn (the brand's text face —
+   the Arabic face in Arabic) with tabular figures. --fd is Space Grotesk, whose figures
+   come from Space Mono: « 0 TND » read as a monospace font on /checkout a whole run
+   after C1, because .ck-pay-amount sat in a `.ck-h1,.ck-pay-amount{font-family:var(--fd)}`
+   group. Two source rules:
+     a. no monospace anywhere (`monospace`, `ui-monospace`, Tailwind `font-mono`);
+     b. no CSS rule whose selector names a price (.…price…, .…amount…, .…amt…) sets
+        font-family to --fd.
+   Its runtime twin, which also sees prices whose class says nothing (a <b> in a row, a
+   Tailwind span), is e2e/lf3-f-price-font.spec.ts. */
+const PRICE_SELECTOR = /\.[a-z0-9_-]*(price|amount|amt)[a-z0-9_-]*/i;
+let priceHits = 0;
+let priceRules = 0;
+for (const f of FILES) {
+  /* stripComments keeps what sits inside a string — the CSS of a <style> template —
+     so the CSS comments are removed here as well: prose about monospace is not code. */
+  const src = stripComments(readFileSync(f, "utf8")).replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "));
+  const lineOf = (i) => src.slice(0, i).split("\n").length;
+  for (const m of src.matchAll(/\bui-monospace\b|\bmonospace\b|\bfont-mono\b/g)) {
+    priceHits++;
+    fail(`${rel(f)}:${lineOf(m.index)}  « ${m[0]} » — prices and figures use --fn with tabular-nums (C1)`);
+  }
+  for (const m of src.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const [, segment, body] = m;
+    // In a .tsx the text before a <style> template's first rule ends at its backtick.
+    const selectors = segment.slice(segment.lastIndexOf("`") + 1).replace(/\s+/g, " ").trim();
+    if (!PRICE_SELECTOR.test(selectors) || !/font-family\s*:/.test(body)) continue;
+    priceRules++;
+    if (/font-family\s*:[^;]*var\(--fd\)/.test(body)) {
+      priceHits++;
+      fail(`${rel(f)}:${lineOf(m.index + segment.length)}  ${selectors.slice(0, 60)} sets a price in --fd — use var(--fn) + tabular-nums`);
+    }
+  }
+}
+if (!priceHits) console.log(`  ok    0 monospace; ${priceRules} price rule(s) with a font-family, none in --fd`);
+
 console.log(`\n  ${fails} guardrail violation(s)\n`);
 if (fails) process.exit(1);
 console.log("  OK — RTL logical-only, FR/AR parity exact, no hardcoded French, no untokenised colour, no native select.\n");

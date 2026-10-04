@@ -377,7 +377,8 @@ html[dir="rtl"] .tf-price{font-family:var(--fa);letter-spacing:normal}
    be compared on a phone. Only the explanation wraps. */
 .tf-cmp-row{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;padding:14px 16px;
   border:1px solid var(--line);border-radius:var(--r-s);background:var(--paper);min-width:0;align-items:baseline}
-.tf-cmp-rate{font-family:var(--fd);font-weight:700;font-size:clamp(20px,3.4vw,26px);
+/* live-fixes-3 · F: rates and amounts are figures — --fn with tabular figures (C1), never --fd. */
+.tf-cmp-rate{font-family:var(--fn);font-variant-numeric:tabular-nums;font-weight:700;font-size:clamp(20px,3.4vw,26px);
   line-height:1.1;color:var(--ink);min-width:84px;white-space:nowrap}
 html[dir="rtl"] .tf-cmp-rate{font-family:var(--fa)}
 .tf-cmp-row.is-us .tf-cmp-rate{color:var(--blue)}
@@ -397,7 +398,7 @@ html[dir="rtl"] .tf-cmp-name{font-family:var(--fa)}
   padding:13px 0;font-size:14.5px;color:var(--on-blue-soft);
   border-block-end:1px solid var(--on-blue-hairline);min-width:0}
 .tf-ex-row:last-child{border-block-end:none}
-.tf-ex-row b{font-family:var(--fd);font-weight:700;color:var(--on-blue);white-space:nowrap}
+.tf-ex-row b{font-family:var(--fn);font-variant-numeric:tabular-nums;font-weight:700;color:var(--on-blue);white-space:nowrap} /* live-fixes-3 · F */
 html[dir="rtl"] .tf-ex-row b{font-family:var(--fa)}
 /* THE PAYOFF LINE. The one number on the page that says what a tutor RECEIVES,
    so it is the one number allowed to be large. */
