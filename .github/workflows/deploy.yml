@@ -58,6 +58,11 @@ jobs:
       #
       # NEXT_PUBLIC_* are BAKED INTO THE BUNDLE by `next build` on the server, which is
       # why this file must exist before deploy.sh runs — it does.
+      #
+      # NEXT_PUBLIC_DEFAULT_MEET_BASE has a literal fallback, so it is NEVER written
+      # empty: with no repo variable or secret it used to expand to "", the live rooms
+      # became bare tokens opened as relative links (« Aucun prof trouvé »), and a hand
+      # fix on the server lasted until the next deploy (live-fixes-3 · B1).
       - name: Write the environment file
         run: |
           cat > tnajem.env << 'EOF'
@@ -73,7 +78,7 @@ jobs:
           CRON_SECRET=${{ secrets.CRON_SECRET }}
 
           NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL || secrets.NEXT_PUBLIC_SITE_URL }}
-          NEXT_PUBLIC_DEFAULT_MEET_BASE=${{ vars.NEXT_PUBLIC_DEFAULT_MEET_BASE || secrets.NEXT_PUBLIC_DEFAULT_MEET_BASE }}
+          NEXT_PUBLIC_DEFAULT_MEET_BASE=${{ vars.NEXT_PUBLIC_DEFAULT_MEET_BASE || secrets.NEXT_PUBLIC_DEFAULT_MEET_BASE || 'https://meet.jit.si/tnajem-' }}
           NEXT_PUBLIC_SUPPORT_WHATSAPP=${{ vars.NEXT_PUBLIC_SUPPORT_WHATSAPP || secrets.NEXT_PUBLIC_SUPPORT_WHATSAPP }}
           CORS_ORIGINS=${{ vars.CORS_ORIGINS || secrets.CORS_ORIGINS }}
           TRUSTED_PROXIES=${{ vars.TRUSTED_PROXIES || secrets.TRUSTED_PROXIES }}

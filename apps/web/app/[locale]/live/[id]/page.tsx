@@ -12,12 +12,18 @@ import { canJoinClass, getClass, getStudentDashboard, getDashboard } from "@/app
 import { monthLabel, type ClassItem } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 import { classEndMs } from "@tnajem/shared/live"; // phase-a lane L3 (A16)
+import { isPublicJitsi } from "@tnajem/shared/live"; // live-fixes-3 · B3
+import { formatInTunis, tunisClock } from "@tnajem/shared"; // live-fixes-3 · B5
 
 /* Page-local copy (lib/i18n.ts is shared — don't touch it). */
 const copy = bilingual({
   fr: {
     liveNow: "EN DIRECT",
-    startsAt: "Démarre le",
+    // live-fixes-3 · B5: never a dangling « Démarre le » — the date and the time come with it.
+    startsAt: (when: string) => `Démarre le ${when}`,
+    upcoming: "À venir",
+    // live-fixes-3 · B3: meet.jit.si wants one signed-in moderator before anyone gets in.
+    moderatorNote: "Pour ouvrir la salle, connecte-toi une fois avec Google (ou Microsoft/Facebook) quand Jitsi le demande. Tes élèves entrent ensuite directement.",
     lockedTitle: "Cette séance est réservée aux élèves inscrits",
     lockedBody: "Réserve ta place sur la page du cours et le lien s'ouvrira ici.",
     lockedCta: "Voir le cours & réserver",
@@ -32,7 +38,9 @@ const copy = bilingual({
   },
   ar: {
     liveNow: "مباشر",
-    startsAt: "تبدا يوم",
+    startsAt: (when: string) => `تبدا يوم ${when}`, // live-fixes-3 · B5
+    upcoming: "جاية",
+    moderatorNote: "باش تحلّ القاعة، ادخل مرّة وحدة بـ Google (ولا Microsoft/Facebook) كي Jitsi يطلب منك. التلامذة متاعك يدخلو مباشرة من بعد.", // live-fixes-3 · B3
     lockedTitle: "الحصة هاذي للتلامذة اللي حاجزين برك", // phase-a lane L6 (A18.derija-2)
     lockedBody: "احجز مكانك من صفحة الحصة والرابط يتفتحلك هوني.",
     lockedCta: "شوف الحصة و احجز",
@@ -48,6 +56,11 @@ const copy = bilingual({
 });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** live-fixes-3 · B5: « 5 oct · 18:00 » / « 5 أكتوبر · 18:00 » — Tunis time, 24 h. */
+function startLabel(ms: number, locale: "fr" | "ar"): string {
+  return `${formatInTunis(ms, locale, { day: "numeric", month: "short" }).replace(/\.$/, "")} · ${tunisClock(ms)}`;
+}
 
 type Gate = { canJoin: boolean; role?: "tutor" | "student"; meetUrl?: string; reason?: string };
 type Props = { params: Promise<{ id: string }> };
@@ -254,7 +267,8 @@ export default function LiveLobbyPage(props: Props) {
               {/* Phase A+ (U3): the shared live pill (paper, ink, a rose dot) while live;
                   a neutral tag for the other states. */}
               <span className={isLive ? "tag tag-live" : "tag tag-neutral"}>
-                {isLive ? c.liveNow : ended ? c.ended : showCountdown ? t.live.tag : c.startsAt}
+                {isLive ? c.liveNow : ended ? c.ended : showCountdown ? t.live.tag
+                  : startMs !== null ? c.startsAt(startLabel(startMs, locale)) : c.upcoming /* live-fixes-3 · B5 */}
               </span>
             </div>
 
@@ -292,6 +306,11 @@ export default function LiveLobbyPage(props: Props) {
 
             {/* Teaching tools — one-tap launchers (whiteboard / quiz) */}
             <ClassTools cls={cls} dark />
+
+            {/* live-fixes-3 · B3: the tutor only, and only on meet.jit.si (one line above the button). */}
+            {gate.role === "tutor" && isPublicJitsi(meetUrl) && (
+              <p className="lf3-mod-note" data-e2e="live-moderator-note">{c.moderatorNote}</p>
+            )}
 
             <div className="mt-4">
               <Button variant="primary" onClick={handleJoin} disabled={!meetUrl}>

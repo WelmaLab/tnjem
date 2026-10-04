@@ -325,6 +325,7 @@ there, so the major on the box is whatever you put there. Both Dockerfiles pin 2
 | `APP_DIR` | `/var/www/tnajem` — **re-point it if you copied this environment from another project**; the deploy refuses to run in a checkout of a different repo, but get it right anyway |
 | `DATABASE_URL` `AUTH_SECRET` `DOC_ENCRYPTION_KEY` `CRON_SECRET` | §3. Losing `DOC_ENCRYPTION_KEY` makes every stored ID scan unreadable |
 | `NEXT_PUBLIC_SITE_URL` `CORS_ORIGINS` `TRUSTED_PROXIES` `COOKIE_DOMAIN` | §3. `NEXT_PUBLIC_SITE_URL` is **baked into the bundle at build time** |
+| `NEXT_PUBLIC_DEFAULT_MEET_BASE` | optional: the live-room base, e.g. `https://meet.jit.si/tnajem-`. Unset/empty → that default (the workflow writes the default when neither a variable nor a secret exists); set, it must be an absolute `https://` prefix or `db:check --production` stops the deploy. Baked in at build time |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | optional, empty by default: InnoviaBurst's support number, digits only, no `+`. Baked in at build time; empty or invalid hides the "Aide & support" row on `/account` |
 | `ALLOW_MINORS` | leave **unset/empty**: adults-only pilot (decision D6). Read by both the API and the web server; only `"1"` lets minors sign up and book (guardian consent still enforced). Don't set it before Phase D (parent accounts) |
 | `ADMIN_EMAILS` `OTP_CHANNEL` `LOG_LEVEL` `PAYMENTS_ENABLED` | leave `PAYMENTS_ENABLED` **unset** until counsel signs off |

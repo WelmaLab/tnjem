@@ -107,7 +107,10 @@ test.describe("live rooms", () => {
 
     expect(await get(`/classes/${s.derived.id}/join`, s.strangerToken)).toEqual({ canJoin: false, reason: "not-booked" });
     const join = await get(`/classes/${s.derived.id}/join`, s.bookedToken);
-    expect(join).toMatchObject({ canJoin: true, role: "student", meetUrl: `https://meet.jit.si/tnajem-${token}` });
+    expect(join).toMatchObject({ canJoin: true, role: "student" });
+    // live-fixes-3 · B2: the same token room, now with Jitsi's title/name settings in the fragment.
+    expect(String(join?.meetUrl).split("#")[0]).toBe(`https://meet.jit.si/tnajem-${token}`);
+    expect(String(join?.meetUrl)).toContain("#config.subject=");
 
     const dash = (await get("/student/dashboard", s.bookedToken)) as { upcoming: { classId: string; meetUrl: string }[] };
     const mine = dash.upcoming.find((u) => u.classId === s.derived.id);

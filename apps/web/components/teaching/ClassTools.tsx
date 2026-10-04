@@ -2,14 +2,19 @@
 import { useLocale } from "@/components/LocaleProvider";
 import { Video, Board, Quiz } from "@/components/icons";
 import type { ClassItem } from "@tnajem/shared";
+import { isDefaultRoom } from "@tnajem/shared/live"; // live-fixes-3 · B4
 
 /* Link-out teaching toolkit for a class: one-tap launchers for the tutor's
    video room (Jitsi/Meet), whiteboard (Bitpaper/Excalidraw) and quiz (Wooclap/Quizizz).
-   Opens each in a new tab. Hidden tools simply don't render. */
+   Opens each in a new tab. Hidden tools simply don't render.
+
+   live-fixes-3 · B4: no video tile for the DEFAULT (token) room — the lobby's
+   « Entrer dans la classe » opens that very room, titled and with the viewer's name
+   (B2); two buttons for one room was the bug. A tutor's own video link keeps its tile. */
 export function ClassTools({ cls, dark }: { cls: ClassItem; dark?: boolean }) {
   const { t } = useLocale();
   const items = [
-    cls.meet_url && { Icon: Video, label: t.tools.join, href: cls.meet_url, color: "var(--green)" },
+    cls.meet_url && !isDefaultRoom(cls.meet_url) && { Icon: Video, label: t.tools.join, href: cls.meet_url, color: "var(--green)" },
     cls.whiteboard_url && { Icon: Board, label: t.tools.whiteboard, href: cls.whiteboard_url, color: "var(--blue)" },
     cls.quiz_url && { Icon: Quiz, label: t.tools.quiz, href: cls.quiz_url, color: "var(--ochre)" },
   ].filter(Boolean) as { Icon: (p: { className?: string }) => React.JSX.Element; label: string; href: string; color: string }[];

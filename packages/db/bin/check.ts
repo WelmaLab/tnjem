@@ -22,6 +22,7 @@ loadEnv();
 
 import postgres from "postgres";
 import { verifyMail, closeMail } from "@tnajem/shared/mail";
+import { isValidMeetBase } from "@tnajem/shared/live"; // live-fixes-3 · B1
 import { describeS3Error, objectStore, storageDriverName, type ObjectStore } from "../src/storage";
 import { docEncryptionConfigured, openDoc, sealDoc } from "../src/doc-crypto";
 import * as schema from "../src/schema";
@@ -118,6 +119,20 @@ function checkEnv() {
     else fail("NODE_ENV", "not production. The API treats unset as production, but Next, npm and every other tool on the box read it too: set NODE_ENV=production.");
   }
   requireKey("NEXT_PUBLIC_SITE_URL", "production", "Canonical links and the sitemap fall back to https://tnajem.com.");
+
+  /* live-fixes-3 · B1: the live room base. Unset or empty is FINE — the built-in
+     default (meet.jit.si) is used. Set but not an absolute https:// URL prefix is
+     what shipped every room as a relative link, so production refuses it. The
+     check is the one the rooms themselves use (isValidMeetBase). */
+  const meetState = keyState("NEXT_PUBLIC_DEFAULT_MEET_BASE");
+  if (meetState !== "set") ok("NEXT_PUBLIC_DEFAULT_MEET_BASE", `${meetState} — the default room base (meet.jit.si) is used`);
+  else if (isValidMeetBase(process.env.NEXT_PUBLIC_DEFAULT_MEET_BASE!.trim())) ok("NEXT_PUBLIC_DEFAULT_MEET_BASE", "set, an absolute https:// base");
+  else {
+    (production ? fail : warn)(
+      "NEXT_PUBLIC_DEFAULT_MEET_BASE",
+      "set, but not an absolute https:// URL prefix (e.g. https://meet.jit.si/tnajem-). Live rooms fall back to the default; fix or empty it — it is baked into the web build.",
+    );
+  }
 
   /* Error tracking is optional everywhere, so this only ever reports — it must not
      fail a deploy. It is worth a line because "we thought errors were being

@@ -1512,4 +1512,7 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .lf3-owner-row{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:10px}
   .lf3-owner-row > *{flex:1 1 120px}
   @media (min-width:760px){.lf3-owner-mobile{display:none}}
+
+  /* B3 · the live lobby (dark): the tutor's one line about the meet.jit.si moderator sign-in. */
+  .lf3-mod-note{margin-block-start:14px;font-size:13px;line-height:1.55;color:var(--on-dark)}
 }

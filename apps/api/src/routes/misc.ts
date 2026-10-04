@@ -11,7 +11,8 @@ import {
   normalizeEmail, isValidEmail,
   CONSENT_TEXT, CONSENT_POLICY_VERSION,
 } from "@tnajem/shared";
-import { resolveMeetUrl } from "@tnajem/shared/live";
+import { resolveMeetUrl, jitsiJoinUrl } from "@tnajem/shared/live";
+import { publicDisplayName, publicTutorName } from "@tnajem/shared"; // live-fixes-3 · B2
 import { vOptionalPhone } from "@tnajem/shared"; // phase-a lane L5 (A18.2)
 import { db } from "../db";
 import { getSession } from "../lib/session";
@@ -328,9 +329,15 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
        booked students and its tutor alike. The gate handed the room out anyway. */
     if (cls.status === "cancelled") return { canJoin: false, reason: "cancelled" };
 
+    /* live-fixes-3 · B2: a Jitsi room opens titled with the class, and with the VIEWER's
+       own public name filled in — what the others in the room see of them: a tutor as
+       « Walid T. » (publicTutorName, from the storefront name), a student by first name
+       (publicDisplayName). Built here, behind the same gate as the room itself. */
+    const room = (displayName: string | null) => jitsiJoinUrl(resolveMeetUrl(cls), { subject: cls.title, displayName });
+
     const [tut] = await db.select().from(tutors).where(eq(tutors.id, cls.tutorId)).limit(1);
     if (tut?.profileId === uid) {
-      return { canJoin: true, role: "tutor" as const, meetUrl: resolveMeetUrl(cls) };
+      return { canJoin: true, role: "tutor" as const, meetUrl: room(publicTutorName(tut.fullName ?? session.profile.fullName)) };
     }
 
     const [bk] = await db
@@ -339,7 +346,7 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
       .where(and(eq(bookings.classId, cls.id), eq(bookings.studentId, uid)))
       .limit(1);
     if (bk && bk.status !== "cancelled") {
-      return { canJoin: true, role: "student" as const, meetUrl: resolveMeetUrl(cls) };
+      return { canJoin: true, role: "student" as const, meetUrl: room(publicDisplayName(session.profile.fullName)) };
     }
 
     /* meet_url is the ONLY thing protecting a live room full of minors, so anyone

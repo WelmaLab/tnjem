@@ -99,7 +99,10 @@ npm run build -w @tnajem/api
 step "Building the web app (next build --webpack -> standalone)"
 # NEXT_PUBLIC_SITE_URL and NEXT_PUBLIC_DEFAULT_MEET_BASE are BAKED IN HERE, from
 # the .env written above — setting them only at runtime ships production canonical
-# links and sitemap on a staging box.
+# links and sitemap on a staging box. The workflow never writes the meet base empty
+# (it falls back to https://meet.jit.si/tnajem-), the code reads empty as that same
+# default, and step 4's db:check refuses a value that is not an https:// URL prefix
+# — after this build, but before anything is restarted (live-fixes-3 · B1).
 npm run build -w @tnajem/web
 
 # The standalone entry point is nested in a monorepo: .next/standalone/apps/web/,
