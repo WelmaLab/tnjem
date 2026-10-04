@@ -414,6 +414,61 @@ for (const f of FILES) {
 }
 if (!priceHits) console.log(`  ok    0 monospace; ${priceRules} price rule(s) with a font-family, none in --fd`);
 
+/* ── 9. no interactive element inside another ──────────────────────────────── */
+section("9. No control inside a link or a button");
+/* live-fixes-3 · H. « Rejoindre le direct » was <Link><Button/></Link>: a <button>
+   inside an <a> — invalid HTML, a click that lands on either one, two controls
+   announced for one action. A link that should look like a button carries the button
+   classes itself (className="btn btn-primary"). This reads the JSX: for every <Link>,
+   <a>, <button> and <…Button> element, nothing between it and its closing tag may be a
+   link, a button (or a component named …Button), a Select, an InfoTip or a form field.
+   Its runtime twin, on every route for every role, is e2e/lf3-h-nesting.spec.ts. */
+const NEST_OUTER = [
+  { open: /<Link[\s>]/g, close: "</Link>" },
+  { open: /<a[\s>]/g, close: "</a>" },
+  { open: /<button[\s>]/g, close: "</button>" },
+  { open: /<Button[\s>]/g, close: "</Button>" },
+];
+const NEST_INNER = /<(Link|a|button|(?:[A-Z]\w*)?Button|Select|InfoTip|input|select|textarea|summary)[\s>/]/g;
+let nestHits = 0;
+let nestOuter = 0;
+for (const f of FILES.filter((p) => p.endsWith(".tsx"))) {
+  const src = stripComments(readFileSync(f, "utf8"));
+  const lineOf = (i) => src.slice(0, i).split("\n").length;
+  for (const o of NEST_OUTER) {
+    for (const m of src.matchAll(o.open)) {
+      // The end of the opening tag: the first ">" outside {…} (attributes hold arrows and JSX).
+      let i = m.index + 1;
+      for (let depth = 0; i < src.length; i++) {
+        if (src[i] === "{") depth++;
+        else if (src[i] === "}") depth--;
+        else if (src[i] === ">" && depth === 0) break;
+      }
+      if (src[i - 1] === "/") continue; // self-closing: nothing inside
+      // Its closing tag, counting the same tag nested inside it.
+      const again = new RegExp(o.open.source, "g");
+      let pos = i + 1;
+      let level = 1;
+      let end = -1;
+      while (level > 0) {
+        const close = src.indexOf(o.close, pos);
+        if (close === -1) break;
+        again.lastIndex = pos;
+        const open = again.exec(src);
+        if (open && open.index < close) { level++; pos = open.index + 2; }
+        else { level--; pos = close + o.close.length; if (!level) end = close; }
+      }
+      if (end === -1) continue;
+      nestOuter++;
+      for (const inner of src.slice(i + 1, end).matchAll(NEST_INNER)) {
+        nestHits++;
+        fail(`${rel(f)}:${lineOf(m.index)}  ${m[0].trim()}…> holds <${inner[1]}> — one control: put the button classes on the link itself`);
+      }
+    }
+  }
+}
+if (!nestHits) console.log(`  ok    ${nestOuter} link/button element(s), none holding another control`);
+
 console.log(`\n  ${fails} guardrail violation(s)\n`);
 if (fails) process.exit(1);
 console.log("  OK — RTL logical-only, FR/AR parity exact, no hardcoded French, no untokenised colour, no native select.\n");

@@ -205,9 +205,7 @@ export default function AdminModerationPage() {
             <div className="panel panel-pad grid place-items-center gap-3 text-center">
               <h2 className="font-display text-[22px]">{c.deniedTitle}</h2>
               <p className="muted leading-[1.6]">{c.deniedNote}</p>
-              <Link href="/auth" className="w-auto">
-                <Button variant="primary" sm>{c.signIn}</Button>
-              </Link>
+              <Link href="/auth" className="btn btn-primary btn-sm">{c.signIn}</Link>{/* live-fixes-3 · H: one link, not a <button> in an <a> */}
             </div>
           )}
 

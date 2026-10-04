@@ -233,10 +233,10 @@ export default function AdminPlansPage() {
             <div className="panel panel-pad text-center">
               <h2 className="font-display text-[20px] mb-2">{c.deniedTitle}</h2>
               <p className="text-[13px] text-muted leading-[1.6] mb-4">{c.deniedNote}</p>
-              <Link href="/auth" className="w-auto">
-                <Button variant="primary" sm>
-                  {c.signIn}
-                </Button>
+              {/* live-fixes-3 · H: one link, not a <button> in an <a>; inline-flex so it
+                  keeps the button's width in this text-centred panel. */}
+              <Link href="/auth" className="btn btn-primary btn-sm inline-flex">
+                {c.signIn}
               </Link>
             </div>
           )}

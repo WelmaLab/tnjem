@@ -374,10 +374,10 @@ function UpcomingCard({ item, hero, onChanged }: { item: StudentClass; hero: boo
       {!live && withinDay && <StartsIn ts={item.ts} />}
 
       <div className="flex gap-2.5 flex-wrap mt-3.5 items-center">
-        <Link href={`/live/${item.classId}`} className="block flex-[1_1_200px] max-w-[320px]">
-          <Button variant="primary">
-            <Video /> {t.student.join}
-          </Button>
+        {/* live-fixes-3 · H: ONE link styled as a button. It was a <button> inside this
+            <a> — invalid HTML, a click that lands on either, two controls announced. */}
+        <Link href={`/live/${item.classId}`} className="btn btn-primary flex-[1_1_200px] max-w-[320px]">
+          <Video /> {t.student.join}
         </Link>
 
         {/* Step 8b. The student's side of the same channel: the tutor's phone
