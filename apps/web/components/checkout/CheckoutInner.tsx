@@ -16,6 +16,7 @@ import { bilingual } from "@/lib/i18n";
 import { PaymentStory } from "@/components/PaymentStory"; // phase-a lane L3 (A22)
 import { LateCancelNote } from "@/components/checkout/LateCancelNote"; // live-fixes-3 · C
 import { publicTutorName } from "@tnajem/shared"; // live-fixes-3 · E
+import { useRef } from "react"; // live-fixes-3 · G
 
 
 /* Payments are OFF for the pilot (lib/payments.ts). This screen is a free
@@ -195,7 +196,7 @@ function Confetti() {
             borderRadius: 2,
             background: p.color,
             insetInlineStart: `${p.start}%`,
-            top: "35%",
+            top: 110, // live-fixes-3 · G: around the badge, now that the content starts at the top
             animationName: "confetti-pop",
             animationDuration: "0.95s",
             animationTimingFunction: "ease-out",
@@ -215,9 +216,22 @@ function SuccessOverlay({
 }: {
   show: boolean; okTitle: string; okBody: string; whenLabel: string; when: string; whenIso: string; okCta: string;
 }) {
+  /* live-fixes-3 · G: the confirm button sits at the BOTTOM of a long page, and the
+     success used to render with the page still scrolled there — « C'est réservé ! »
+     off-screen, focus on a now-disabled button. On success (new or already booked):
+     back to the top — instantly when the reader asked for reduced motion — and focus
+     on the heading, so a screen reader starts at the news and the next Tab reaches
+     « Voir mes cours ». preventScroll: the scroll above is the one that happens. */
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!show) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduce ? "instant" : "smooth" });
+    titleRef.current?.focus({ preventScroll: true });
+  }, [show]);
   if (!show) return null;
   return (
-    <div className="ck-success" role="status" aria-live="polite">
+    <div className="ck-success" role="status" aria-live="polite" data-e2e="checkout-success">
       <Confetti />
 
       <div className="ck-success-badge">
@@ -238,7 +252,7 @@ function SuccessOverlay({
         </svg>
       </div>
 
-      <h2 className="ck-success-title">{okTitle}</h2>
+      <h2 className="ck-success-title" ref={titleRef} tabIndex={-1} data-e2e="checkout-success-title">{okTitle}</h2>
       <p className="ck-success-body">{okBody}</p>
 
       {/* The one thing they need to remember when they close this screen. */}
@@ -394,7 +408,7 @@ export default function CheckoutInner() {
       /* ── success ── */
       .ck-success{
         position:absolute;inset:0;background:var(--cream);display:flex;flex-direction:column;
-        align-items:center;justify-content:center;text-align:center;
+        align-items:center;justify-content:flex-start;text-align:center;
         padding:40px clamp(20px,5vw,48px);z-index:40;border-radius:inherit;
         animation:rise .45s cubic-bezier(.2,.7,.2,1);
       }
@@ -407,6 +421,11 @@ export default function CheckoutInner() {
       .ck-success-badge{width:92px;height:92px;border-radius:50%;background:var(--green);
         display:grid;place-items:center;margin-bottom:20px;box-shadow:0 16px 32px -10px rgba(27,156,111,.75)}
       .ck-success-title{font-size:24px;letter-spacing:-.5px;margin-bottom:10px}
+      /* live-fixes-3 · G: the overlay covers the WHOLE page, which is long on a phone —
+         centred, its news sat mid-page, below the fold even at the top. It reads from the
+         top (justify-content above), and focus, moved to the heading by script after a
+         tap, is shown on :focus, not only :focus-visible. */
+      .ck-success-title:focus{outline:2px solid var(--blue);outline-offset:4px;border-radius:6px}
       .ck-success-body{color:var(--muted);font-size:14px;line-height:1.65;max-width:300px;margin-bottom:16px}
       .ck-success-when{display:flex;gap:8px;align-items:center;justify-content:center;
         background:var(--blue50);color:var(--ink2);border-radius:999px;padding:8px 14px;
