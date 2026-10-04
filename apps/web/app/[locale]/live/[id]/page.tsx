@@ -274,7 +274,8 @@ export default function LiveLobbyPage(props: Props) {
 
             {/* Stage */}
             <div style={{ textAlign: "center", margin: "clamp(20px,4vw,32px) 0 8px" }}>
-              {initials && <Avatar initials={initials} size={92} />}
+              {/* live-fixes-3 · I: centred like the rest of the stage (.avatar is a grid box: text-align never moved it). */}
+              {initials && <div className="flex justify-center"><Avatar initials={initials} size={92} /></div>}
               <UserText as="h1" className="font-display text-[clamp(18px,4vw,22px)] mt-4">{cls.title}</UserText>
               {cls.tutor_name && (
                 <div className="text-on-dark-soft text-[13px] mt-[5px]">

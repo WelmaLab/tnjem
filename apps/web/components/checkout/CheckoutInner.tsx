@@ -359,6 +359,9 @@ export default function CheckoutInner() {
 
       /* ── what you're booking ── */
       .ck-class{flex-direction:row;gap:13px;align-items:flex-start;margin-bottom:16px}
+      /* live-fixes-3 · I: the badge is solid blue with white text — the month follows it,
+         not .thumb span's grey (1.2:1 on --blue), as on the class page (.cd-when). */
+      .ck-class .thumb span{color:inherit}
       .ck-class-main{flex:1 1 0;min-width:0}
       .ck-class-title{
         font-weight:700;font-size:15px;line-height:1.35;margin-bottom:5px;overflow-wrap:anywhere;

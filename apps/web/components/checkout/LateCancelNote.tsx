@@ -29,18 +29,22 @@ const H = CANCEL_FREE_WINDOW_HOURS;
 const G = CANCEL_GRACE_MINUTES;
 const GL = CANCEL_GRACE_MIN_LEAD_MINUTES;
 const PCT = Math.round(LATE_CANCEL_RETAINED_PCT * 100);
+/* live-fixes-3 · I: no-break spaces inside « 48 h », « 15 min », « 40 % » and before
+   « : » — in the storefront's narrow aside a line began with « : », and the phone bar
+   split « 15 / min ». */
+const NB = String.fromCharCode(0xa0); // U+00A0 NO-BREAK SPACE
 
 const copy = bilingual({
   fr: {
-    note: `Cette séance est dans moins de ${H} h : après ${G} min, une annulation compte ${PCT} % pour le prof.`,
+    note: `Cette séance est dans moins de ${H}${NB}h${NB}: après ${G}${NB}min, une annulation compte ${PCT}${NB}% pour le prof.`,
     /* Within 30 min of the start the grace is cut short (it never reaches into the last
        15 min), so « après 15 min » would overstate it. */
-    soon: `Cette séance commence bientôt : à partir de ${GL} min avant le début, une annulation compte ${PCT} % pour le prof.`,
+    soon: `Cette séance commence bientôt${NB}: à partir de ${GL}${NB}min avant le début, une annulation compte ${PCT}${NB}% pour le prof.`,
     pilot: "Rien n'est prélevé pendant le pilote.",
   },
   ar: {
-    note: `الحصة هاذي في أقل من ${H} ساعة : بعد ${G} دقيقة، الإلغاء يتحسب ⁦${PCT} %⁩ للأستاذ.`,
-    soon: `الحصة هاذي قريب تبدا : من ${GL} دقيقة قبل البداية، الإلغاء يتحسب ⁦${PCT} %⁩ للأستاذ.`,
+    note: `الحصة هاذي في أقل من ${H}${NB}ساعة${NB}: بعد ${G}${NB}دقيقة، الإلغاء يتحسب ⁦${PCT}${NB}%⁩ للأستاذ.`,
+    soon: `الحصة هاذي قريب تبدا${NB}: من ${GL}${NB}دقيقة قبل البداية، الإلغاء يتحسب ⁦${PCT}${NB}%⁩ للأستاذ.`,
     pilot: "ما يتخصم حتى مليم في فترة التجربة.",
   },
 });

@@ -24,14 +24,17 @@ import { api } from "./support/journey";
    [role=button|link|checkbox|switch|tab|menuitem|radio], [tabindex≥0]) found INSIDE a
    link, a button, a [role=button|link] or a <summary>.
 
-   TO EXTEND: add a { path, who } to EXTRA (the room team's « Démarrer la séance » links
-   on Mes classes and Accueil are on /dashboard/classes and /dashboard, already crawled
-   as the tutor with classes). A positive control proves the check sees a nesting.
+   TO EXTEND: add a { path, who, must? } to EXTRA. The gate (I) added the rows and routes
+   A–D brought — Accueil and Mes classes with upcoming classes, the owner's class page,
+   the live lobby, the owner's checkout, the « moins de 48 h » note, the draft button —
+   each with a `must` selector, so a visit fails if its state was not on screen when
+   checked. A positive control proves the check sees a nesting.
    ADDED as its own spec. The static twin is guardrail 9 (tools/ui-audit/guardrails.mjs).
    ════════════════════════════════════════════════════════════════════════════ */
 
 type Who = "anon" | "tutor" | "draft" | "student" | "newcomer" | "admin";
-type Visit = { path: string; who: Who };
+/** must (live-fixes-3 · I): a selector that has to be on the page — the state it is visited for. */
+type Visit = { path: string; who: Who; must?: string };
 type Route = { path: string; name: string; auth?: boolean | "student" | "admin" };
 
 const ROUTES: Route[] = JSON.parse(
@@ -47,7 +50,7 @@ const ROUTES: Route[] = JSON.parse(
   ),
 );
 
-type Ids = { classId: string; liveClassId: string; draftSlug: string; tutorSlug: string; threadId: string };
+type Ids = { classId: string; liveClassId: string; nearClassId: string; draftSlug: string; tutorSlug: string; threadId: string };
 
 /** Routes the harness list cannot name, or the same route as another identity. Extend freely. */
 const EXTRA = (ids: Ids): Visit[] => [
@@ -69,6 +72,25 @@ const EXTRA = (ids: Ids): Visit[] => [
   { path: "/admin/plans", who: "tutor" },
   { path: "/admin/accounts", who: "tutor" },
   { path: "/admin/moderation", who: "tutor" },
+  /* live-fixes-3 · I — the rows and routes A–D added, each with the proof it was on screen
+     when it was checked: « Démarrer la séance » on Accueil and Mes classes (before the
+     window and inside it), « Modifier » (the date dialog), the owner's own class page in
+     both states, the lobby before and during the class, the owner's checkout (A4 → the
+     lobby), the « moins de 48 h » note on the checkout and the storefront, the draft
+     prof's « Enregistrer le brouillon ». */
+  { path: "/dashboard", who: "tutor", must: "[data-e2e=home-class-row] [data-e2e=class-start]" },
+  { path: "/dashboard/classes", who: "tutor", must: "[data-e2e=class-row] [data-e2e=class-start][data-state=open]" },
+  { path: "/dashboard/classes", who: "tutor", must: "[data-e2e=class-row] [data-e2e=class-start][data-state=soon]" },
+  { path: `/dashboard/classes?edit=${ids.classId}`, who: "tutor", must: "dialog[open]" },
+  { path: `/class/${ids.classId}`, who: "tutor", must: "[data-e2e=owner-panel] [data-e2e=class-start][data-state=soon]" },
+  { path: `/class/${ids.liveClassId}`, who: "tutor", must: "[data-e2e=owner-panel] [data-e2e=class-start][data-state=open]" },
+  { path: `/live/${ids.classId}`, who: "tutor", must: "[data-e2e=live-moderator-note]" },
+  { path: `/live/${ids.liveClassId}`, who: "tutor", must: "[data-e2e=live-moderator-note]" },
+  { path: `/checkout?class=${ids.classId}`, who: "tutor", must: "[data-e2e=live-moderator-note]" },
+  { path: `/checkout?class=${ids.nearClassId}`, who: "student", must: "[data-e2e=late-cancel-note]" },
+  { path: `/${ids.tutorSlug}`, who: "anon", must: "[data-e2e=late-cancel-note]" },
+  { path: "/student", who: "student", must: 'a.btn[href*="/live/"]' },
+  { path: "/dashboard/new-class", who: "draft", must: "[data-e2e=save-draft]" },
 ];
 
 /** The harness's routes, each with the identity it is meant for. */
@@ -110,6 +132,8 @@ async function world() {
   const klass = await seedClass({ tutorId: tutor.id, hoursFromNow: 72 });
   // Started ten minutes ago: the « live now » states (student hero card, the lobby).
   const live = await seedClass({ tutorId: tutor.id, at: new Date(Date.now() - 10 * 60_000) });
+  // live-fixes-3 · I: paid and inside 48 h — the « moins de 48 h » note (checkout, storefront).
+  const near = await seedClass({ tutorId: tutor.id, hoursFromNow: 30, isFreeFirst: false, priceTnd: 10 });
   const draftP = await seedProfile({ role: "tutor", birthYear: 1985, fullName: "Karim Draft" });
   const draft = await seedTutor({ profileId: draftP.id, status: "draft", fullName: "Karim Draft" });
   const student = await seedProfile({ role: "student", birthYear: 1995, fullName: "Amine Karoui" });
@@ -121,7 +145,7 @@ async function world() {
   expect(thread.threadId, "a conversation to visit").toBeTruthy();
   return {
     ids: { tutor: tutorP.id, draft: draftP.id, student: student.id, newcomer: newcomer.id, admin: admin.id } as Record<Exclude<Who, "anon">, string>,
-    route: { classId: klass.id, liveClassId: live.id, draftSlug: draft.slug, tutorSlug: tutor.slug, threadId: thread.threadId as string },
+    route: { classId: klass.id, liveClassId: live.id, nearClassId: near.id, draftSlug: draft.slug, tutorSlug: tutor.slug, threadId: thread.threadId as string },
   };
 }
 
@@ -166,6 +190,8 @@ for (const vp of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
         await page.waitForLoadState("networkidle", { timeout: 6_000 }).catch(() => {});
         const at = `${url} as ${v.who}`;
         if (v.who !== "anon") expect(new URL(page.url()).pathname, `${at}: still signed in`).not.toMatch(/\/(fr|ar)\/auth$/);
+        // live-fixes-3 · I: the state this visit is for is on the page BEFORE it is checked.
+        if (v.must) await expect(page.locator(v.must).first(), `${at}: ${v.must}`).toBeAttached({ timeout: 15_000 });
         for (const n of await nested(page)) offenders.push(`${at}: ${n}`);
         controls += await page.locator("main a[href], main button").count();
         seen.push(at);
