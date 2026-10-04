@@ -1482,3 +1482,34 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   /* The signup birth date: month and year side by side, one field. */
   .lf-bd{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px}
 }
+
+/* ── live-fixes-3 · room ── ──────────────────────────────────────────────────
+   A · the tutor's way into their own class. « Démarrer la séance »
+   (components/dashboard/classes/StartSessionLink.tsx) is ONE link styled as a
+   button: ochre with a pulsing dot from 30 min before the start, outline before.
+   The dot reuses the « En direct » pulse (live-pulse) and pulses only for visitors
+   who have not asked for reduced motion — the global backstop stills it too. */
+@media (prefers-reduced-motion: no-preference){.lf3-live-dot{animation:live-pulse 1.4s ease-in-out infinite}}
+@layer components {
+  .lf3-start{gap:8px;white-space:nowrap}
+  .lf3-live-dot{width:8px;height:8px;border-radius:999px;background:var(--paper);flex:none}
+
+  /* A2 · Accueil › Prochaines séances: the row is no longer one link. The title is
+     the link (to /live/<id>), with a 44px target that takes no extra room; the
+     button wraps under the text, at the end, when the card is narrow. */
+  .lf3-hp-row{flex-wrap:wrap}
+  .hp-list li.lf3-hp-row:last-child{border-block-end:0}
+  .lf3-hp-row:hover .hp-row-t{color:var(--ink)}
+  .lf3-hp-main{flex:1 1 170px}
+  .lf3-hp-title{display:block;padding-block:12px;margin-block:-12px;color:inherit}
+  .lf3-hp-title:hover .hp-row-t{color:var(--blue)}
+  .lf3-hp-start{margin-inline-start:auto}
+
+  /* A3 · the owner's panel on their own class page (components/class/OwnerPanel.tsx). */
+  .lf3-owner-t{font-family:var(--fd);font-size:17px;font-weight:700;color:var(--ink);line-height:1.3}
+  .lf3-owner-sub{font-size:13.5px;color:var(--muted);line-height:1.55;margin-block:4px 16px}
+  .lf3-owner-start{min-height:52px}
+  .lf3-owner-row{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:10px}
+  .lf3-owner-row > *{flex:1 1 120px}
+  @media (min-width:760px){.lf3-owner-mobile{display:none}}
+}

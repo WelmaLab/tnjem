@@ -16,6 +16,7 @@ import { PromoPrice } from "@/components/pricing/PromoPrice"; // espace prof v2 
 import { PromoCodeBanner } from "@/components/pricing/PromoCodeBanner"; // espace prof v2 · growth (P5)
 import { getTutorPricing } from "@/app/actions-growth"; // espace prof v2 · growth (P5)
 import type { PublicPromotion } from "@tnajem/shared";
+import { OwnerPanel } from "@/components/class/OwnerPanel"; // live-fixes-3 · A3
 
 
 /* Page-local copy (lib/i18n.ts is shared). One shared key is deliberately unused:
@@ -250,6 +251,9 @@ export function ClassDetail({ id }: { id: string }) {
   const closed = !isOpenForBooking(cls);
   const soldOut = !closed && cls.seats_left <= 0;
   const blocked = closed || soldOut;
+  /* live-fixes-3 · A3: the signed-in OWNER never gets the booking CTA (the API refuses a
+     self-booking) — their panel instead. Same payload as the class itself: no flash. */
+  const owner = Boolean(cls.viewer_is_owner);
 
   /* One price renderer, so "1ère gratuite" and "15 TND" can never sit side by side
      as if both applied to the session being booked. */
@@ -391,9 +395,15 @@ export function ClassDetail({ id }: { id: string }) {
               {/* Sold out, mobile: the booking panel that carries this message is
                   desktop-only, and the sticky bar is suppressed — without this the
                   small screen would just lose the CTA with no explanation. */}
-              {blocked && (
+              {blocked && !owner && (
                 <div className="u-card u-card-pad cd-soldout-mobile mt-4">
                   {soldOutBox}
+                </div>
+              )}
+              {/* live-fixes-3 · A3: the owner's panel, on phones (the panel column is desktop-only). */}
+              {owner && (
+                <div className="u-card u-card-pad lf3-owner-mobile mt-4">
+                  <OwnerPanel cls={cls} />
                 </div>
               )}
             </div>
@@ -401,7 +411,9 @@ export function ClassDetail({ id }: { id: string }) {
             {/* RIGHT col — sticky booking panel */}
             <div className="cd-panel-col">
               <div className="panel panel-pad cd-panel">
-                {blocked ? (
+                {owner ? (
+                  <OwnerPanel cls={cls} />
+                ) : blocked ? (
                   soldOutBox
                 ) : (
                   <>
@@ -470,7 +482,7 @@ export function ClassDetail({ id }: { id: string }) {
           {tutorSlug && <VitrineBeacon slug={tutorSlug} classId={cls.id} />}
 
           {/* Mobile-only sticky bottom CTA */}
-          {!blocked && (
+          {!blocked && !owner && (
             <div className="cd-mobile-cta">
               <div className="cd-mcta-row">
                 <div className="cd-mcta-price">

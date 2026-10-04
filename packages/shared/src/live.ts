@@ -44,3 +44,26 @@ export function resolveMeetUrl(cls: { roomToken: string; meetUrl?: string | null
   const own = (cls.meetUrl ?? "").trim();
   return own || liveRoomUrl(cls.roomToken);
 }
+
+/* live-fixes-3 · A1 — THE TUTOR'S WAY INTO THEIR OWN CLASS: « Démarrer la séance ».
+
+   Nothing in the prof space linked to /live/<id>, so a tutor had no way into the
+   class they were about to teach. Every surface that offers the button (Mes
+   classes, Accueil › Prochaines séances, the owner's class page) asks this one rule:
+
+     soon  more than 30 min before the start — offered, as a secondary button
+     open  from 30 min before the start until the real end — THE main action
+     over  ended, cancelled or done — no button at all */
+export const START_WINDOW_MIN = 30;
+export type StartState = "soon" | "open" | "over";
+
+export function startState(
+  cls: { starts_at: string; duration_min?: number | null; status?: string | null },
+  now: number = Date.now(),
+): StartState {
+  if (cls.status === "cancelled" || cls.status === "done") return "over";
+  const start = Date.parse(cls.starts_at);
+  if (!Number.isFinite(start)) return "over";
+  if (now >= classEndMs({ scheduledAt: start, durationMin: cls.duration_min })) return "over";
+  return now >= start - START_WINDOW_MIN * 60_000 ? "open" : "soon";
+}

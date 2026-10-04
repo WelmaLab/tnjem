@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@/components/Link";
 import { useLocale } from "@/components/LocaleProvider";
 import { UserText } from "@/components/UserText";
@@ -7,13 +7,15 @@ import { Copy as CopyIcon } from "@/components/icons";
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 import { DateTimeField } from "@/components/app/DatePicker";
 import { ShareButton } from "@/components/share/ShareButton"; // espace prof v2 · growth (P3, C3)
+import { StartSessionLink } from "./StartSessionLink"; // live-fixes-3 · A1
 import { cancelClass, rescheduleClass } from "@/app/actions";
 import { monthLabel, toWallInput, type DashboardClass } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 
 /* espace prof v2 · shell — one row of « Mes classes », with its actions:
 
-     Dupliquer        → the new-class form, prefilled from this class (?from=<id>)
+     Démarrer         → the live lobby /live/<id> (live-fixes-3 · A1, StartSessionLink)
+     Dupliquer       → the new-class form, prefilled from this class (?from=<id>)
      Modifier la date → move it (POST /classes/:id/reschedule): nobody is dropped,
                         everyone is told, and those who booked may cancel free
      Annuler          → POST /classes/:id/cancel, behind a confirmation dialog:
@@ -97,7 +99,11 @@ function PhaseTag({ k, c }: { k: DashboardClass; c: Copy }) {
   return <span className={cls} data-e2e="class-phase" data-phase={phase}>{label}</span>;
 }
 
-export function ClassRow({ k, onChanged, notify }: { k: DashboardClass; onChanged: () => void; notify: (msg: string) => void }) {
+export function ClassRow({ k, onChanged, notify, autoEdit = false }: {
+  k: DashboardClass; onChanged: () => void; notify: (msg: string) => void;
+  /** live-fixes-3 · A3: « Modifier » on the owner's class page lands here, this row's date dialog open. */
+  autoEdit?: boolean;
+}) {
   const { t, locale } = useLocale();
   const c = copy[locale];
   const [dialog, setDialog] = useState<"none" | "cancel" | "move">("none");
@@ -107,6 +113,14 @@ export function ClassRow({ k, onChanged, notify }: { k: DashboardClass; onChange
 
   const actionable = k.status === "scheduled" && k.phase === "upcoming";
   const shareable = k.status !== "cancelled" && (k.phase === "upcoming" || k.phase === "live");
+
+  // live-fixes-3 · A3: opened once, from the class page's « Modifier » (?edit=<id>).
+  useEffect(() => {
+    if (!autoEdit || !actionable) return;
+    setWhen(toWallInput(k.starts_at));
+    setErr(null);
+    setDialog("move");
+  }, [autoEdit, actionable, k.starts_at]);
 
   function messageFor(code: string | undefined): string {
     if (code === "already-started") return c.errStarted;
@@ -169,6 +183,8 @@ export function ClassRow({ k, onChanged, notify }: { k: DashboardClass; onChange
         </div>
       </div>
       <div className="mc-actions" role="group" aria-label={c.actions(k.title)}>
+        {/* live-fixes-3 · A1: the way into the class — ochre from 30 min before the start. */}
+        <StartSessionLink cls={k} />
         <Link href={`/dashboard/new-class?from=${encodeURIComponent(k.id)}`} className="btn btn-ghost btn-sm" data-e2e="class-duplicate">
           <CopyIcon />
           {c.duplicate}

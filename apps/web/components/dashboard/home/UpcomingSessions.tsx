@@ -4,10 +4,12 @@ import { useLocale } from "@/components/LocaleProvider";
 import { UserText } from "@/components/UserText";
 import { monthLabel, type DashboardClass } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
+import { StartSessionLink } from "@/components/dashboard/classes/StartSessionLink"; // live-fixes-3 · A2
 
 /* espace prof v2 · shell — « Prochaines séances » on the home: the next three
-   classes still ahead, each a link to its page, and the way to all of them. The
-   full list (past ones, duplicate, edit, cancel, share) is « Mes classes ». */
+   classes still ahead, each a link to its live lobby with « Démarrer la séance »
+   (live-fixes-3 · A2), and the way to all of them. The full list (past ones,
+   duplicate, edit, cancel, share) is « Mes classes ». */
 
 const copy = bilingual({
   fr: {
@@ -58,25 +60,29 @@ export function UpcomingSessions({ classes, everHadClass }: { classes: Dashboard
         </p>
       ) : (
         <ul className="hp-list">
+          {/* live-fixes-3 · A2: the row is no longer one link to the PUBLIC page — the
+              title goes to the tutor's own lobby (/live/<id>), and « Démarrer la
+              séance » sits beside it (a sibling link, never nested). */}
           {next.map((k) => (
-            <li key={k.id}>
-              <Link href={`/class/${k.id}`} className="hp-row">
-                <span className="thumb hp-thumb" aria-hidden="true">
-                  <b>{k.day}</b>
-                  <span>{monthLabel(k.month, locale)}</span>
-                </span>
-                <span className="min-w-0 flex-1">
+            <li key={k.id} className="hp-row lf3-hp-row" data-e2e="home-class-row" data-class-id={k.id}>
+              <span className="thumb hp-thumb" aria-hidden="true">
+                <b>{k.day}</b>
+                <span>{monthLabel(k.month, locale)}</span>
+              </span>
+              <span className="min-w-0 lf3-hp-main">
+                <Link href={`/live/${k.id}`} className="lf3-hp-title" data-e2e="home-class-title">
                   <UserText as="span" className="hp-row-t">{k.title}</UserText>
-                  <span className="hp-row-m">
-                    <time dateTime={k.starts_at}>{k.day} {monthLabel(k.month, locale)} · {k.time}</time>
-                    {/* phase 6: translated unit — AR showed « min 90 » */}
-                    {k.duration_min ? ` · ${k.duration_min} ${t.common.min}` : ""}
-                    {" · "}
-                    <span className="hp-num">{c.seats(Math.max(0, k.seats - k.seats_left), k.seats)}</span>
-                  </span>
+                </Link>
+                <span className="hp-row-m">
+                  <time dateTime={k.starts_at}>{k.day} {monthLabel(k.month, locale)} · {k.time}</time>
+                  {/* phase 6: translated unit — AR showed « min 90 » */}
+                  {k.duration_min ? ` · ${k.duration_min} ${t.common.min}` : ""}
+                  {" · "}
+                  <span className="hp-num">{c.seats(Math.max(0, k.seats - k.seats_left), k.seats)}</span>
                 </span>
-                {k.phase === "live" && <span className="tag tag-live" data-e2e="class-phase" data-phase="live">{c.live}</span>}
-              </Link>
+              </span>
+              {k.phase === "live" && <span className="tag tag-live" data-e2e="class-phase" data-phase="live">{c.live}</span>}
+              <StartSessionLink cls={k} className="lf3-hp-start" />
             </li>
           ))}
         </ul>

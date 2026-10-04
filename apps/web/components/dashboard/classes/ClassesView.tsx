@@ -8,6 +8,7 @@ import { getDashboard } from "@/app/actions";
 import { AppPage, Blocker, EmptyState, ErrorState, PageSkeleton } from "@/components/app/AppShell";
 import { WrongRoleNotice } from "@/components/WrongRoleNotice";
 import type { DashboardClass, DashboardData, DashboardResult } from "@tnajem/shared";
+import { startState } from "@tnajem/shared/live"; // live-fixes-3 · A1
 import { bilingual } from "@/lib/i18n";
 import { ClassRow } from "./ClassRow";
 
@@ -102,9 +103,22 @@ export function ClassesView() {
     load();
   }, [load]);
 
+  /* live-fixes-3 · A3: « Modifier » on the owner's class page is /dashboard/classes?edit=<id>
+     — there is no other edit screen: a published class changes by its date. Read once,
+     then dropped from the address bar so a reload does not reopen the dialog. */
+  const [editId, setEditId] = useState<string | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("edit");
+    if (!id) return;
+    setEditId(id);
+    window.history.replaceState(window.history.state, "", window.location.pathname);
+  }, []);
+
   const data = result && !("wrongRole" in result) ? result : null;
   const blocker = data ? blockerOf(data, c) : null;
   const { upcoming, past } = splitClasses(data?.classes ?? []);
+  // live-fixes-3 · A1: one ochre per view — while a class can be started, that is the main action.
+  const startable = upcoming.some((k) => startState(k) === "open");
 
   let body: React.ReactNode;
   if (failed) body = <ErrorState onRetry={load} />;
@@ -138,7 +152,7 @@ export function ClassesView() {
             <p className="hp-muted">{c.none}</p>
           ) : (
             <ul className="mc-list" data-e2e="classes-upcoming">
-              {upcoming.map((k) => <ClassRow key={k.id} k={k} onChanged={load} notify={showToast} />)}
+              {upcoming.map((k) => <ClassRow key={k.id} k={k} onChanged={load} notify={showToast} autoEdit={k.id === editId} />)}
             </ul>
           )}
         </section>
@@ -164,7 +178,7 @@ export function ClassesView() {
       subtitle={c.sub}
       actions={
         data && data.classes.length > 0 ? (
-          <Link href="/dashboard/new-class" className={`btn ${blocker ? "btn-outline" : "btn-primary"} btn-sm aps-hide-mobile`}>
+          <Link href="/dashboard/new-class" className={`btn ${blocker || startable ? "btn-outline" : "btn-primary"} btn-sm aps-hide-mobile`}>
             <Plus />
             {c.newClass}
           </Link>

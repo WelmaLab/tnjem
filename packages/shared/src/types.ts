@@ -70,6 +70,10 @@ export type ClassItem = {
   tutor_levels?: LevelCode[];
   // phase-a lane L5 (A18.7): the one level this class is for, if the tutor set it.
   level?: LevelCode | null;
+  /* live-fixes-3 · A3: true only when the SIGNED-IN viewer is the tutor who owns the
+     class (GET /classes/:id with a session). The class page swaps the booking CTA
+     for the owner's panel on it; anonymous reads (ISR, JSON-LD) always get false. */
+  viewer_is_owner?: boolean;
 };
 
 export type Pack = {

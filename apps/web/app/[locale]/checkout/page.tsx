@@ -1,38 +1,27 @@
-"use client";
-import { Suspense } from "react";
-import { Spinner } from "@/components/ui";
-import { SiteShell } from "@/components/SiteShell";
-import { useLocale } from "@/components/LocaleProvider";
-import CheckoutInner from "@/components/checkout/CheckoutInner";
+import { redirect } from "next/navigation";
+import { isUuid } from "@tnajem/shared";
+import { getClass } from "@/app/actions";
+import { localeOf, localePath } from "@/lib/page-guard";
+import { CheckoutShell } from "@/components/checkout/CheckoutShell";
 
-/* Shell only. Everything about the reservation — copy, states, layout — lives in
-   CheckoutInner, which needs useSearchParams and therefore a Suspense boundary. */
-export default function CheckoutPage() {
-  const { t } = useLocale();
-  return (
-    <SiteShell>
-      <section className="web-section tight">
-        <div className="container container-narrow">
-          <Suspense
-            fallback={
-              /* A bare spinner tells the user nothing. Label it, and announce it so
-                 a screen reader isn't left on a silent screen. */
-              <div
-                role="status"
-                aria-live="polite"
-                className="grid place-items-center min-h-[240px] text-center"
-              >
-                <div>
-                  <Spinner />
-                  <p className="text-muted text-[13.5px]">{t.common.loading}</p>
-                </div>
-              </div>
-            }
-          >
-            <CheckoutInner />
-          </Suspense>
-        </div>
-      </section>
-    </SiteShell>
-  );
+/* /checkout?class=<id> — live-fixes-3 · A4: a SERVER page, so the tutor who owns the
+   class never reaches a « Confirmer ma place » the API would refuse (`own-class`):
+   they are sent straight to their own room, /live/<id>.
+
+   The route is request-time already (./layout.tsx, force-dynamic), so reading the
+   session here caches nothing: getClass() calls the API WITH the visitor's cookie,
+   and viewer_is_owner is true for the owning tutor only. Anyone else — a student, a
+   guest, a missing class, an API that does not answer — gets the checkout exactly
+   as before (CheckoutShell → CheckoutInner, which reads the class itself). */
+export default async function CheckoutPage(props: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [{ locale: raw }, sp] = await Promise.all([props.params, props.searchParams]);
+  const classId = typeof sp.class === "string" ? sp.class : "";
+  if (isUuid(classId)) {
+    const cls = await getClass(classId).catch(() => null);
+    if (cls?.viewer_is_owner) redirect(localePath(localeOf(raw), `/live/${classId}`));
+  }
+  return <CheckoutShell />;
 }

@@ -325,6 +325,8 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
       // level; the page translates them. Never the legacy tutors.level ('Bac' default).
       tutor_levels: sortLevels(tut?.levels),
       level: isLevelCode(c.level) ? c.level : null,
+      // live-fixes-3 · A3: the owner gets their panel, never « Réserver » (no self-booking).
+      viewer_is_owner: isOwner,
     };
   });
 

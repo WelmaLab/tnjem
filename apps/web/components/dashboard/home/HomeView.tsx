@@ -10,6 +10,7 @@ import { StorefrontLinkCard } from "@/components/dashboard/StorefrontLinkCard";
 import { buildTutorSteps } from "@/lib/onboarding-steps";
 import { publicDisplayName, type DashboardData, type DashboardResult } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
+import { startState } from "@tnajem/shared/live"; // live-fixes-3 · A1
 import { SetupProgress } from "./SetupProgress";
 import { KpiTiles } from "./KpiTiles";
 import { UpcomingSessions } from "./UpcomingSessions";
@@ -156,6 +157,8 @@ export function HomeView() {
   );
   const setupDone = steps.every((s) => s.state === "done");
   const blocker = blockerOf(d, c);
+  // live-fixes-3 · A1: a class that can be started now is the main action — one ochre per view.
+  const startable = d.classes.some((k) => startState(k) === "open");
 
   return (
     <AppPage
@@ -167,7 +170,7 @@ export function HomeView() {
       actions={
         <Link
           href="/dashboard/new-class"
-          className={`btn ${blocker ? "btn-outline" : "btn-primary"} btn-sm aps-hide-mobile`}
+          className={`btn ${blocker || startable ? "btn-outline" : "btn-primary"} btn-sm aps-hide-mobile`}
           data-e2e="home-new-class"
         >
           <Plus />

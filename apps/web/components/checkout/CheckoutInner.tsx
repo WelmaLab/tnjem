@@ -87,6 +87,10 @@ const copy = bilingual({
     // phase-a lane L2 (A24): the server refuses a minor's booking while the pilot is adults only.
     errAdultsOnly: "Le pilote est réservé aux 18 ans et plus : ce compte ne peut pas réserver pour l'instant.",
     // end phase-a lane L2
+    // live-fixes-3 · A5: every refusal POST /bookings can send has its own sentence.
+    errOwnClass: "C'est ta propre séance.",
+    errOwnClassCta: "Démarrer la séance",
+    errTooMany: "Trop d'essais d'un coup. Attends une minute, puis réessaie.",
     // espace prof v2 · growth (P5): a promotion on this seat, or a seat covered by the monthly subscription.
     paidPromo: (p: number, was: number, pct: number, end: string) => `Cette séance est à ${p} TND au lieu de ${was} TND (−${pct} % jusqu'au ${end}).`,
     covered: (used: number, n: number) => `Comprise dans ton abonnement mensuel (${used} / ${n} séances utilisées ce mois).`,
@@ -145,6 +149,10 @@ const copy = bilingual({
     // phase-a lane L2 (A24): the server refuses a minor's booking while the pilot is adults only.
     errAdultsOnly: "فترة التجربة كان للي عندهم 18 سنة ولا أكثر : الحساب هذا ما ينجّمش يحجز توّا.",
     // end phase-a lane L2
+    // live-fixes-3 · A5
+    errOwnClass: "هاذي حصتك إنت.",
+    errOwnClassCta: "ابدا الحصة",
+    errTooMany: "برشا محاولات في مرّة. استنّى دقيقة وعاود.",
     paidPromo: (p: number, was: number, pct: number, end: string) => `الحصة هاذي بـ ${p} د.ت عوض ${was} د.ت (\u2066−${pct} %\u2069 حتى لـ ${end}).`,
     covered: (used: number, n: number) => `محسوبة في الاشتراك الشهري متاعك (${used} / ${n} حصص استعملتهم هالشهر).`,
     okCovered: "محسوبة في الاشتراك متاعك.",
@@ -283,7 +291,7 @@ export default function CheckoutInner() {
     }).catch(() => {});
     getMySubscription(tutorSlug).then((r) => setSub(r.ok ? (r.subscription ?? null) : null)).catch(() => {});
   }, [tutorSlug, searchParams]);
-  const [err, setErr] = useState<"auth" | "full" | "unavailable" | "consent" | "adults" | "generic" | null>(null); // phase-a lane L2 (A24): "adults"
+  const [err, setErr] = useState<"auth" | "full" | "unavailable" | "consent" | "adults" | "own" | "toomany" | "generic" | null>(null); // phase-a lane L2 (A24): "adults" · live-fixes-3 · A5: "own", "toomany"
 
   const handleConfirm = useCallback(async () => {
     setErr(null);
@@ -308,7 +316,10 @@ export default function CheckoutInner() {
     }
     if (res.error === "not-authenticated") setErr("auth");
     else if (res.error === "full") setErr("full");
-    else if (res.error === "unavailable") setErr("unavailable");
+    else if (res.error === "unavailable" || res.error === "not-found") setErr("unavailable");
+    // live-fixes-3 · A5: the tutor's own class (no self-booking) — not « réessaie ».
+    else if (res.error === "own-class") setErr("own");
+    else if (res.error === "too-many-requests") setErr("toomany");
     // Guardian consent (INPDP) is enforced server-side in reserveSeat. Retrying
     // can never fix it — send them to the consent form and back to this class.
     else if (res.error === "needs-consent") setErr("consent");
@@ -553,7 +564,17 @@ export default function CheckoutInner() {
                   ? c.errConsent
                   : err === "adults" // phase-a lane L2 (A24)
                     ? c.errAdultsOnly
-                    : c.errGeneric}
+                    : err === "own" // live-fixes-3 · A5
+                      ? c.errOwnClass
+                      : err === "toomany"
+                        ? c.errTooMany
+                        : c.errGeneric}
+          {err === "own" && (
+            <>
+              {" "}
+              <Link href={`/live/${cls.id}`}>{c.errOwnClassCta}</Link>
+            </>
+          )}
           {err === "auth" && (
             <>
               {" "}

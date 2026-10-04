@@ -397,7 +397,9 @@ export async function getClass(id: string): Promise<ClassItem | null> {
      This is safe to make session-dependent because getClass is invoked from CLIENT
      components only. If anyone ever renders it from a server component on a cached
      route, the entitlement decision gets baked into cached HTML. That invariant is
-     currently held by convention; e2e asserts the anonymous case. */
+     currently held by convention; e2e asserts the anonymous case. The one server
+     caller, app/[locale]/checkout/page.tsx (live-fixes-3 · A4), is force-dynamic and
+     only reads viewer_is_owner to redirect — it renders nothing from the payload. */
   return call<ClassItem | null>(`/classes/${encodeURIComponent(id)}`, undefined, "GET");
 }
 
