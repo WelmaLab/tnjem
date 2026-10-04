@@ -1528,4 +1528,14 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   /* Storefront phone bar: compact, above the price and the button. */
   .lcn-bar{padding:8px 12px;gap:8px;margin-block-end:10px;border-radius:12px}
   .lcn-bar>.ic{width:17px;height:17px}
+
+  /* D1 · a toast never sits under a bar (components/useToast.tsx, <Toast>): 16px above
+     whatever is pinned to the bottom of the screen — the action bar, the phone tab bar,
+     the storefront's and the class page's sticky « Réserver » bars. --toast-bar is that
+     bar's measured height from its top edge to the bottom of the screen, so it already
+     holds the safe-area inset the bar pads itself with. With no bar: 28px as before. */
+  .toast{bottom:max(calc(28px + env(safe-area-inset-bottom)),calc(var(--toast-bar,0px) + 16px))}
+  /* In the prof space the frame already knows what it pins (--aps-bottom: --aps-bar-h or the
+     tab bar, + 16px and the safe area), so the first frame is right before anything is measured. */
+  .aps .toast{bottom:max(var(--aps-bottom),calc(var(--toast-bar,0px) + 16px))}
 }

@@ -110,6 +110,11 @@ const copy = bilingual({
     draftSaved: "Brouillon enregistré",
     draftRestored: "Brouillon repris",
     draftClear: "Repartir de zéro",
+    /* live-fixes-3 · D2: an unverified prof SAVES (the API refuses to publish: not-verified). */
+    saveDraft: "Enregistrer le brouillon",
+    draftSavedToast: "Brouillon enregistré sur cet appareil. Tu pourras publier ta classe dès que ton compte est vérifié.",
+    draftEmpty: "Rien à enregistrer pour l'instant : commence par le titre.",
+    draftFailed: "Le brouillon n'a pas pu être enregistré sur cet appareil.",
     publishedT: "Ta classe est publiée",
     publishedB: "Elle apparaît sur ta page. Partage-la pour remplir les places.",
     shareClass: "Partager cette classe",
@@ -158,6 +163,10 @@ const copy = bilingual({
     draftSaved: "المسودة تسجّلت",
     draftRestored: "رجّعنا المسودة",
     draftClear: "ابدا من جديد",
+    saveDraft: "سجّل المسودة",
+    draftSavedToast: "المسودة تسجّلت في الجهاز هذا. تنجّم تنشر حصتك أوّل ما حسابك يتثبّت.",
+    draftEmpty: "ما فما شي باش يتسجّل توّا : ابدا بالعنوان.",
+    draftFailed: "المسودة ما تسجّلتش في الجهاز هذا.",
     publishedT: "الحصة متاعك تنشرت",
     publishedB: "تبان في صفحتك. شاركها باش تتعمّر البلايص.",
     shareClass: "شارك الحصة هاذي",
@@ -367,9 +376,28 @@ export function NewClassForm() {
     requestAnimationFrame(() => refs[field].current?.focus());
   }
 
+  /* live-fixes-3 · D2 — a draft / pending / rejected prof cannot publish (POST /classes
+     answers not-verified, whatever this page sends). Their primary button SAVES the local
+     draft instead, and says so; the blocker at the top says how to get verified. */
+  const unverified = status === "draft" || status === "pending" || status === "rejected";
+  function saveDraftNow() {
+    if (isBlank(f)) {
+      showToast(c.draftEmpty);
+      return;
+    }
+    if (draftKey && writeDraft(draftKey, f)) {
+      setDraftState("saved");
+      showToast(c.draftSavedToast);
+    } else showToast(c.draftFailed);
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setFieldError(null);
+    if (unverified) {
+      saveDraftNow(); // live-fixes-3 · D2: Enter in a field saves too
+      return;
+    }
     if (!f.datetime) {
       refuse("date", "invalid-date");
       return;
@@ -741,9 +769,16 @@ export function NewClassForm() {
           }
         >
           <Link href="/dashboard/classes" className="btn btn-ghost btn-sm">{c.cancel}</Link>
-          <Button type="submit" variant="primary" sm disabled={submitted}>
-            {t.createClass.create}
-          </Button>
+          {unverified ? (
+            /* live-fixes-3 · D2: formNoValidate — a half-filled draft is still worth keeping. */
+            <button type="submit" formNoValidate className="btn btn-primary btn-sm" data-e2e="save-draft">
+              {c.saveDraft}
+            </button>
+          ) : (
+            <Button type="submit" variant="primary" sm disabled={submitted}>
+              {t.createClass.create}
+            </Button>
+          )}
         </ActionBar>
       </form>
       <DuplicateDialog open={dupOpen} onClose={() => setDupOpen(false)} onPick={(id) => void prefillFrom(id)} />

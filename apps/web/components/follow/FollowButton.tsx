@@ -6,6 +6,7 @@ import { Link, useLocalizedRouter } from "@/components/Link";
 import { useLocale } from "@/components/LocaleProvider";
 import { bilingual } from "@/lib/i18n";
 import { followTutor, getFollowStatus, unfollowTutor, type FollowStatus } from "@/app/actions-growth";
+import { Toast } from "@/components/useToast"; // live-fixes-3 · D1: above the sticky « Réserver » bars
 
 /* SUIVRE / ABONNÉ ✓ — Espace prof v2 · Phase 4 · contract C4.
 
@@ -163,7 +164,7 @@ export function FollowButton({
           {note.consent && <Link href={`/auth/consent?next=${encodeURIComponent(pathname)}`}>{c.consentCta}</Link>}
         </p>
       )}
-      {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}
+      {toast && <Toast>{toast}</Toast>}
       <style dangerouslySetInnerHTML={{ __html: FB_CSS }} />
     </div>
   );

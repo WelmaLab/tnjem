@@ -8,6 +8,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { Apps, Copy, Check, QrCode, Share } from "@/components/icons";
 import { pageUrl } from "@/components/app/links";
 import { bilingual } from "@/lib/i18n";
+import { Toast } from "@/components/useToast"; // live-fixes-3 · D1: never under a bar
 
 /** The origin of the links the tutor copies (NEXT_PUBLIC_SITE_URL, via links.ts). */
 const SITE_ORIGIN = new URL(pageUrl("x")).origin;
@@ -338,7 +339,7 @@ export function ShareSheet({ open, onClose, ...props }: ShareSheetProps & { open
         )}
       </div>
 
-      {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}
+      {toast && <Toast>{toast}</Toast>}
 
       <style dangerouslySetInnerHTML={{ __html: SHEET_CSS }} />
     </dialog>

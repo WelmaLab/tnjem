@@ -27,6 +27,13 @@ import { bilingual } from "@/lib/i18n";
    ORDER: the file goes up first, then the pack. A refused file stops everything
    (nothing half-published); a refused pack after an accepted file keeps the
    uploaded id, so « Publier » again does not upload the same file twice.
+
+   live-fixes-3 · D2 — the SAME GATE as « Nouvelle classe »: a draft / pending /
+   rejected prof cannot publish (POST /packs and POST /materials answer not-verified).
+   Their primary button reads « Enregistrer le brouillon » and keeps the title, the
+   detail and the price in this browser (localStorage, every access in try/catch),
+   restored on return and cleared once the fiche is published. The FILE is not kept —
+   a browser cannot store it — and the confirmation says so.
    ══════════════════════════════════════════════════════════════════════════════ */
 
 const copy = bilingual({
@@ -69,6 +76,16 @@ const copy = bilingual({
     doneFile: "Le fichier est dans Mes fiches, réservé à tes élèves inscrits.",
     seeLibrary: "Voir Mes fiches",
     another: "Créer une autre fiche",
+    // live-fixes-3 · D2
+    saveDraft: "Enregistrer le brouillon",
+    draftSavedToast: (withFile: boolean): string =>
+      withFile
+        ? "Brouillon enregistré sur cet appareil, sans le fichier : tu l'ajouteras au moment de publier, dès que ton compte est vérifié."
+        : "Brouillon enregistré sur cet appareil. Tu pourras publier ta fiche dès que ton compte est vérifié.",
+    draftEmpty: "Rien à enregistrer pour l'instant : commence par le titre.",
+    draftFailed: "Le brouillon n'a pas pu être enregistré sur cet appareil.",
+    draftSaved: "Brouillon enregistré",
+    draftRestored: "Brouillon repris",
   },
   ar: {
     title: "ملخّص جديد",
@@ -109,6 +126,15 @@ const copy = bilingual({
     doneFile: "الملف في ملخّصاتي، كان لتلامذتك المسجّلين.",
     seeLibrary: "شوف ملخّصاتي",
     another: "اعمل ملخّص آخر",
+    saveDraft: "سجّل المسودة",
+    draftSavedToast: (withFile: boolean): string =>
+      withFile
+        ? "المسودة تسجّلت في الجهاز هذا، بلاش الملف : تزيدو وقت النشر، أوّل ما حسابك يتثبّت."
+        : "المسودة تسجّلت في الجهاز هذا. تنجّم تنشر الملخّص أوّل ما حسابك يتثبّت.",
+    draftEmpty: "ما فما شي باش يتسجّل توّا : ابدا بالعنوان.",
+    draftFailed: "المسودة ما تسجّلتش في الجهاز هذا.",
+    draftSaved: "المسودة تسجّلت",
+    draftRestored: "رجّعنا المسودة",
   },
 });
 
@@ -121,6 +147,35 @@ function fieldOf(code: string | undefined): PackField | null {
   if (!code) return null;
   const name = code.replace(/^(invalid|negative)-/, "").replace(/-(too-long|too-high|too-short)$/, "");
   return (PACK_FIELDS as readonly string[]).includes(name) ? (name as PackField) : null;
+}
+
+/* live-fixes-3 · D2: the local draft. Storage that never throws — private mode, a full
+   disk or a blocked origin degrade to "no draft", never to a broken form. */
+type PackDraft = { title: string; meta: string; price: string };
+function readPackDraft(key: string): PackDraft | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as Partial<PackDraft>;
+    return { title: String(d.title ?? ""), meta: String(d.meta ?? ""), price: String(d.price ?? "") };
+  } catch {
+    return null;
+  }
+}
+function writePackDraft(key: string, d: PackDraft): boolean {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(d));
+    return true;
+  } catch {
+    return false;
+  }
+}
+function clearPackDraft(key: string): void {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    /* nothing to clear */
+  }
 }
 
 export function NewPackForm() {
@@ -154,11 +209,24 @@ export function NewPackForm() {
 
   // The verification state, for the blocker at the top (rule 4).
   const [status, setStatus] = useState<TutorVerifStatus | null>(null);
+  // live-fixes-3 · D2: the local draft's key (per page address) and what the bar says about it.
+  const [draftKey, setDraftKey] = useState<string | null>(null);
+  const [draftNote, setDraftNote] = useState<"saved" | "restored" | null>(null);
   useEffect(() => {
     let alive = true;
     getOnboardingState()
       .then((s) => {
-        if (alive) setStatus(s?.status ?? null);
+        if (!alive) return;
+        setStatus(s?.status ?? null);
+        const key = `tnajem:new-pack:${s?.draft?.slug || "me"}`;
+        setDraftKey(key);
+        const d = readPackDraft(key);
+        if (d && (d.title || d.meta || d.price)) {
+          setTitle((v) => v || d.title);
+          setMeta((v) => v || d.meta);
+          setPrice((v) => v || d.price);
+          setDraftNote("restored");
+        }
       })
       .catch(() => {});
     return () => {
@@ -189,10 +257,28 @@ export function NewPackForm() {
     }
   }
 
+  // live-fixes-3 · D2 — see the header: an unverified prof saves, never uploads or publishes.
+  const unverified = status === "draft" || status === "pending" || status === "rejected";
+  function saveDraftNow() {
+    const d = { title, meta, price };
+    if (!d.title.trim() && !d.meta.trim() && !d.price) {
+      showToast(c.draftEmpty);
+      return;
+    }
+    if (draftKey && writePackDraft(draftKey, d)) {
+      setDraftNote("saved");
+      showToast(c.draftSavedToast(Boolean(file)));
+    } else showToast(c.draftFailed);
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (phase !== "idle") return;
     setFieldError(null);
+    if (unverified) {
+      saveDraftNow();
+      return;
+    }
     if (title.trim().length < 3) {
       refuse("title", c.errTitle);
       return;
@@ -234,6 +320,8 @@ export function NewPackForm() {
     setPhase("idle");
     if (res?.ok) {
       setDemo(Boolean(res.demo));
+      if (draftKey) clearPackDraft(draftKey); // live-fixes-3 · D2: published — the draft is done
+      setDraftNote(null);
       setDone({ withFile: Boolean(file) });
       showToast(res.demo ? `${t.extra.packPublished} · ${t.common.demoMode}` : t.extra.packPublished);
       window.scrollTo({ top: 0 });
@@ -382,11 +470,24 @@ export function NewPackForm() {
           </aside>
         </div>
 
-        <ActionBar status={phase === "uploading" ? <span role="status">{c.uploading}</span> : null}>
+        <ActionBar
+          status={
+            phase === "uploading" ? <span role="status">{c.uploading}</span>
+              : draftNote ? <span className="nc-draft" data-e2e="draft-status">{draftNote === "saved" ? c.draftSaved : c.draftRestored}</span>
+              : null
+          }
+        >
           <Link href="/dashboard/materials" className="btn btn-ghost btn-sm">{c.cancel}</Link>
-          <Button type="submit" variant="primary" sm disabled={phase !== "idle"}>
-            {t.createPack.create}
-          </Button>
+          {unverified ? (
+            /* live-fixes-3 · D2: formNoValidate — a half-filled draft is still worth keeping. */
+            <button type="submit" formNoValidate className="btn btn-primary btn-sm" data-e2e="save-draft">
+              {c.saveDraft}
+            </button>
+          ) : (
+            <Button type="submit" variant="primary" sm disabled={phase !== "idle"}>
+              {t.createPack.create}
+            </Button>
+          )}
         </ActionBar>
       </form>
       {toast}
