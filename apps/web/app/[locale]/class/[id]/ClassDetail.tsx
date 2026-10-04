@@ -17,6 +17,7 @@ import { PromoCodeBanner } from "@/components/pricing/PromoCodeBanner"; // espac
 import { getTutorPricing } from "@/app/actions-growth"; // espace prof v2 · growth (P5)
 import type { PublicPromotion } from "@tnajem/shared";
 import { OwnerPanel } from "@/components/class/OwnerPanel"; // live-fixes-3 · A3
+import { publicTutorName } from "@tnajem/shared"; // live-fixes-3 · E
 
 
 /* Page-local copy (lib/i18n.ts is shared). One shared key is deliberately unused:
@@ -225,7 +226,7 @@ export function ClassDetail({ id }: { id: string }) {
     );
   }
 
-  const tutorName = cls.tutor_name ?? "—";
+  const tutorName = publicTutorName(cls.tutor_name) ?? "—"; // live-fixes-3 · E: « Walid T. », whoever reads (idempotent on the API's)
   const tutorInits = tutorName.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
   /* phase-a lane L4 (A9): the tutor comes from the class itself, BY SLUG. This page
      used to search Explore for the tutor's name and take the first exact match, so

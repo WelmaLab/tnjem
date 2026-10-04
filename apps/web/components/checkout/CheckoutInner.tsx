@@ -15,6 +15,7 @@ import { storedPromoCode } from "@/components/pricing/promo-store";
 import { bilingual } from "@/lib/i18n";
 import { PaymentStory } from "@/components/PaymentStory"; // phase-a lane L3 (A22)
 import { LateCancelNote } from "@/components/checkout/LateCancelNote"; // live-fixes-3 · C
+import { publicTutorName } from "@tnajem/shared"; // live-fixes-3 · E
 
 
 /* Payments are OFF for the pilot (lib/payments.ts). This screen is a free
@@ -497,7 +498,7 @@ export default function CheckoutInner() {
           </div>
           {cls.tutor_name && (
             <div className="ck-class-who">
-              {c.who} <UserText>{cls.tutor_name}</UserText>
+              {c.who} <UserText>{publicTutorName(cls.tutor_name)}</UserText>{/* live-fixes-3 · E: « Walid T. » */}
             </div>
           )}
         </div>

@@ -133,10 +133,14 @@ describe("A23 · no student-facing endpoint sends the tutor's last name", () => 
 });
 
 describe("A23 · the tutor still sees their own full name", () => {
-  test("GET /classes/:id as the owner, and GET /dashboard", async () => {
+  /* live-fixes-3 · E: GET /classes/:id feeds the class page, the checkout and the live
+     lobby — pages that name the tutor to OTHERS — so the owner gets the public name
+     there too (« walid tester » on their own class page was the bug). Their own full
+     name stays on what is about them: GET /dashboard (and Réglages). */
+  test("GET /dashboard as the owner; GET /classes/:id gives the owner the public name", async () => {
     const cookie = await login(tutor.profileId);
     const cls = await call(app, "GET", `/classes/${klass.id}`, cookie);
-    assert.equal(cls.body.tutor_name, FULL, cls.raw);
+    assert.equal(cls.body.tutor_name, SHOWN, cls.raw);
     const dash = await call(app, "GET", "/dashboard", cookie);
     assert.equal(dash.body.name, FULL, dash.raw);
   });

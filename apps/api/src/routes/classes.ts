@@ -300,7 +300,11 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
     return {
       id: c.id,
       tutor_id: c.tutorId,
-      tutor_name: isOwner ? (tut?.fullName ?? "") : (publicTutorName(tut?.fullName) ?? ""), // phase-a lane L2 (A23): D1, the owner sees their own full name
+      /* live-fixes-3 · E: the PUBLIC name for every reader, the owner included. This
+         payload feeds pages that name the tutor to others (class page, checkout, live
+         lobby); the owner seeing « walid tester » there was the bug. Their own full
+         name stays where it is about them: GET /dashboard, Réglages. */
+      tutor_name: publicTutorName(tut?.fullName) ?? "", // phase-a lane L2 (A23)
       title: c.title,
       description: c.description ?? undefined,
       ...classWhen(d), // Tunis time

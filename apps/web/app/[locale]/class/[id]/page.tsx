@@ -4,6 +4,7 @@ import { isLocale, DEFAULT_LOCALE, type AppLocale } from "@/lib/locale";
 import { displaySubject, formatNumericDate, isUuid, tunisClock, type ClassItem } from "@tnajem/shared";
 import { courseJsonLd, priceWithPromotion, type TutorPricing } from "@tnajem/shared"; // espace prof v2 · pro (P7)
 import { JsonLd } from "@/components/JsonLd";
+import { publicTutorName } from "@tnajem/shared"; // live-fixes-3 · E
 import { ClassDetail } from "./ClassDetail";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.com";
@@ -53,7 +54,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const cls = isUuid(id) ? await callAnonymous<ClassItem | null>(`/classes/${encodeURIComponent(id)}`, 60).catch(() => null) : null;
   if (!cls) return { title: c.notFound, robots: { index: false, follow: false } };
 
-  const who = cls.tutor_name ?? "";
+  const who = publicTutorName(cls.tutor_name) ?? ""; // live-fixes-3 · E
   const subpath = `/class/${cls.id}`;
   const canonical = `/${locale}${subpath}`;
   const title = who ? `${cls.title} — ${who}` : cls.title;
@@ -103,7 +104,7 @@ async function courseMarkup(locale: AppLocale, id: string) {
     priceTnd: cls.price_tnd,
     quotedPriceTnd: quoted,
     seatsLeft: cls.seats_left,
-    tutor: { name: cls.tutor_name ?? "", slug: cls.tutor_slug },
+    tutor: { name: publicTutorName(cls.tutor_name) ?? "", slug: cls.tutor_slug }, // live-fixes-3 · E
   });
 }
 

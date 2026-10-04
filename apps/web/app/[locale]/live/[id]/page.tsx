@@ -13,7 +13,7 @@ import { monthLabel, type ClassItem } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 import { classEndMs } from "@tnajem/shared/live"; // phase-a lane L3 (A16)
 import { isPublicJitsi } from "@tnajem/shared/live"; // live-fixes-3 · B3
-import { formatInTunis, tunisClock } from "@tnajem/shared"; // live-fixes-3 · B5
+import { formatInTunis, tunisClock, publicTutorName } from "@tnajem/shared"; // live-fixes-3 · B5, E
 
 /* Page-local copy (lib/i18n.ts is shared — don't touch it). */
 const copy = bilingual({
@@ -278,7 +278,7 @@ export default function LiveLobbyPage(props: Props) {
               <UserText as="h1" className="font-display text-[clamp(18px,4vw,22px)] mt-4">{cls.title}</UserText>
               {cls.tutor_name && (
                 <div className="text-on-dark-soft text-[13px] mt-[5px]">
-                  {t.live.with} <UserText>{cls.tutor_name}</UserText>
+                  {t.live.with} <UserText>{publicTutorName(cls.tutor_name)}</UserText>{/* live-fixes-3 · E: « Walid T. » */}
                 </div>
               )}
 
