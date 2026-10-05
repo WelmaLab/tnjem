@@ -1,6 +1,7 @@
 import type { LevelCode } from "./levels"; // phase-a lane L5 (A18.7)
 import type { ClassPhase } from "./class-phase"; // phase-a lane L5 (A18.10)
 import type { PublicOffer, PublicPromotion } from "./offers"; // espace prof v2 · growth (P5)
+import type { ViewerBooking } from "./class-state"; // student-space-v1 · fixes (H1)
 
 export type Locale = "fr" | "ar";
 export type Role = "tutor" | "student" | "guardian";
@@ -74,6 +75,10 @@ export type ClassItem = {
      class (GET /classes/:id with a session). The class page swaps the booking CTA
      for the owner's panel on it; anonymous reads (ISR, JSON-LD) always get false. */
   viewer_is_owner?: boolean;
+  /* student-space-v1 · H1: the signed-in STUDENT's own live seat on this class (GET
+     /classes/:id with a session): the class page shows « Tu es inscrit » instead of
+     « Réserver ». null for everyone else; anonymous reads never carry it. */
+  viewer_booking?: ViewerBooking | null;
 };
 
 export type Pack = {

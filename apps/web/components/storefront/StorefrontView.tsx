@@ -46,6 +46,7 @@ import { LEVEL_LABELS } from "@tnajem/shared"; // phase-a lane L5 (A18.7)
 import { nextSessionOf } from "@tnajem/shared"; // phase-a lane L5 (A18.11)
 import { displaySubject } from "@tnajem/shared"; // live-fixes-1 · C2
 import { LateCancelNote } from "@/components/checkout/LateCancelNote"; // live-fixes-3 · C: a client island (it reads the clock)
+import { StorefrontBooked, StorefrontBookedTag } from "@/components/class/StorefrontBooked"; // student-space-v1 · H1: client islands (the session)
 
 
 /* Component-local copy (FR + Tunisian Derija). lib/i18n.ts is owned elsewhere, so
@@ -434,6 +435,7 @@ export function StorefrontView({
                           </div>
 
                           <div className="sf-row-end">
+                            <StorefrontBookedTag slug={tutor.slug} classId={cls.id} />{/* student-space-v1 · H1 */}
                             <PriceBlock cls={cls} />
                             <Forward className="sf-chev" />
                           </div>
@@ -573,6 +575,9 @@ export function StorefrontView({
                 below the main column on phones, where the aside is otherwise hidden. */}
             <aside data-sf-aside="true" data-sf-empty={!firstClass ? "true" : undefined}>
               <div className="panel panel-pad sf-panel">
+                {/* student-space-v1 · H1: a student who already holds the seat sees « ✓ Tu es inscrit »
+                    here instead, after hydration — this HTML stays the same for everyone. */}
+                <StorefrontBooked slug={tutor.slug} variant="panel" eyebrow={c.nextSession} classIds={[nextClass?.id, firstClass?.id].filter((x): x is string => Boolean(x))}>
                 {/* No published class → nothing to book. Say so, and send the
                     student somewhere that works. NEVER a /checkout link without a
                     class id: it resolves no class, no price, no seat.
@@ -652,6 +657,7 @@ export function StorefrontView({
                     </div>
                   </>
                 )}
+                </StorefrontBooked>
               </div>
             </aside>
           </div>
@@ -670,6 +676,8 @@ export function StorefrontView({
           guaranteed "Plus de places") is worse than no bar at all. The in-page
           states above already offer /explore. */}
       {firstClass && !allFull && (
+        /* student-space-v1 · H1: the same swap on a phone, where this bar is the booking CTA. */
+        <StorefrontBooked slug={tutor.slug} variant="bar" classIds={[nextClass?.id, firstClass.id].filter((x): x is string => Boolean(x))}>
         <div data-sf-mobilecta="true" className="sf-mcta">
           {/* live-fixes-3 · C: the same note on a phone, where this bar is the way to the checkout. */}
           <LateCancelNote startsAt={firstClass.starts_at} priceTnd={firstClass.price_tnd} locale={locale} pilotLine={!paymentsEnabled()} className="lcn-bar" />
@@ -704,6 +712,7 @@ export function StorefrontView({
             <span>{c.noCard}</span>
           </div>
         </div>
+        </StorefrontBooked>
       )}
 
       {/* Page-scoped styles. Everything below is layout that has to survive

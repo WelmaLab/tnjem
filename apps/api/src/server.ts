@@ -171,6 +171,7 @@ export async function buildServer(opts: { logStream?: { write(line: string): voi
   await app.register((await import("./routes/fiches")).ficheRoutes); // live-fixes-1 · pages (B): Mes fiches
   await app.register((await import("./routes/student-shell")).studentShellRoutes); // student-space-v1 · A: the student shell
   await app.register((await import("./routes/student-space")).studentSpaceRoutes); // student-space-v1 · pages (B–F)
+  await app.register((await import("./routes/student-booked")).studentBookedRoutes); // student-space-v1 · fixes (H1)
 
   app.get("/health", async (req) => {
     let dbOk = false;

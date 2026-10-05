@@ -18,6 +18,8 @@ import { getTutorPricing } from "@/app/actions-growth"; // espace prof v2 · gro
 import type { PublicPromotion } from "@tnajem/shared";
 import { OwnerPanel } from "@/components/class/OwnerPanel"; // live-fixes-3 · A3
 import { publicTutorName } from "@tnajem/shared"; // live-fixes-3 · E
+import { BookedPanel } from "@/components/class/BookedPanel"; // student-space-v1 · H1
+import { Toast } from "@/components/useToast"; // student-space-v1 · H1
 
 
 /* Page-local copy (lib/i18n.ts is shared). One shared key is deliberately unused:
@@ -182,6 +184,20 @@ export function ClassDetail({ id }: { id: string }) {
 
   useEffect(() => { getClass(params.id).then(setCls).catch(() => setCls(null)); }, [params.id]);
 
+  /* student-space-v1 · H1: after « Annuler » on the booked panel, what the server says
+     happened — inline in the desktop panel, as a toast above the phone bar — and the
+     class read again (the seat is back on sale, the panel back to « Réserver »). */
+  const [cancelled, setCancelled] = useState<{ text: string; where: "panel" | "bar" } | null>(null);
+  useEffect(() => {
+    if (cancelled?.where !== "bar") return;
+    const t = setTimeout(() => setCancelled(null), 9000);
+    return () => clearTimeout(t);
+  }, [cancelled]);
+  const onCancelled = (where: "panel" | "bar") => (text: string) => {
+    setCancelled({ text, where });
+    getClass(params.id).then(setCls).catch(() => {});
+  };
+
   // espace prof v2 · growth (P5): the tutor's live public promotions, read in the browser.
   const [promos, setPromos] = useState<PublicPromotion[]>([]);
   const slugForPricing = cls?.tutor_slug ?? null;
@@ -255,6 +271,10 @@ export function ClassDetail({ id }: { id: string }) {
   /* live-fixes-3 · A3: the signed-in OWNER never gets the booking CTA (the API refuses a
      self-booking) — their panel instead. Same payload as the class itself: no flash. */
   const owner = Boolean(cls.viewer_is_owner);
+  /* student-space-v1 · H1: the signed-in student already holds a seat — « ✓ Tu es inscrit »,
+     « Rejoindre », « Annuler » instead of « Réserver » (or of « plus ouverte » once it is on).
+     From the same session-bound read as the class itself: no flash of the wrong CTA. */
+  const booked = !owner ? (cls.viewer_booking ?? null) : null;
 
   /* One price renderer, so "1ère gratuite" and "15 TND" can never sit side by side
      as if both applied to the session being booked. */
@@ -396,7 +416,7 @@ export function ClassDetail({ id }: { id: string }) {
               {/* Sold out, mobile: the booking panel that carries this message is
                   desktop-only, and the sticky bar is suppressed — without this the
                   small screen would just lose the CTA with no explanation. */}
-              {blocked && !owner && (
+              {blocked && !owner && !booked && (
                 <div className="u-card u-card-pad cd-soldout-mobile mt-4">
                   {soldOutBox}
                 </div>
@@ -414,10 +434,13 @@ export function ClassDetail({ id }: { id: string }) {
               <div className="panel panel-pad cd-panel">
                 {owner ? (
                   <OwnerPanel cls={cls} />
+                ) : booked ? (
+                  <BookedPanel booking={booked} variant="panel" onCancelled={onCancelled("panel")} />
                 ) : blocked ? (
                   soldOutBox
                 ) : (
                   <>
+                    {cancelled?.where === "panel" && <p className="bk-done" role="status" data-e2e="booked-cancelled">{cancelled.text}</p>}
                     {/* Mini summary — which session this button books. */}
                     <div className="mb-4">
                       <UserText as="div" className="cd-panel-title">{cls.title}</UserText>
@@ -482,8 +505,16 @@ export function ClassDetail({ id }: { id: string }) {
           {/* espace prof v2 · growth (P3): a click on a shared class link, for Ma vitrine. */}
           {tutorSlug && <VitrineBeacon slug={tutorSlug} classId={cls.id} />}
 
+          {/* student-space-v1 · H1: the booked student's bar, on phones (same place as « Réserver »). */}
+          {booked && (
+            <div className="cd-mobile-cta" data-e2e="booked-bar">
+              <BookedPanel booking={booked} variant="bar" onCancelled={onCancelled("bar")} />
+            </div>
+          )}
+          {cancelled?.where === "bar" && <Toast>{cancelled.text}</Toast>}
+
           {/* Mobile-only sticky bottom CTA */}
-          {!blocked && !owner && (
+          {!blocked && !owner && !booked && (
             <div className="cd-mobile-cta">
               <div className="cd-mcta-row">
                 <div className="cd-mcta-price">

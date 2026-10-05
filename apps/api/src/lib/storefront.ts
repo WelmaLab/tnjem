@@ -12,6 +12,7 @@ import {
   type TutorVerifStatus, // espace prof v2 · shell
   type TutorVisibility, // espace prof v2 · shell
 } from "@tnajem/shared";
+import { effectiveClassStatus } from "@tnajem/shared"; // student-space-v1 · fixes (H2, C7)
 import { db } from "../db";
 import { onSaleClassSql } from "./class-sale";
 import { storefrontGrowthExtras } from "./storefront-growth"; // espace prof v2 · growth (P5)
@@ -120,7 +121,7 @@ async function buildStorefront(t: typeof tutors.$inferSelect): Promise<Storefron
          page; it used to carry the tutor's own meet/whiteboard/quiz/replay URLs to
          anyone who opened the storefront. They ship only from GET /classes/:id and
          /classes/:id/join, to the owning tutor or a student with a live booking. */
-      status: c.status ?? "scheduled",
+      status: effectiveClassStatus({ scheduledAt: c.scheduledAt, durationMin: c.durationMin, status: c.status }), // student-space-v1 · H2 (C7)
       level: isLevelCode(c.level) ? c.level : null, // phase-a lane L5 (A18.7)
     };
   };

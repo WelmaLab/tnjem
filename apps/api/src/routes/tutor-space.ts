@@ -18,6 +18,7 @@ import {
   type TutorVisibility,
 } from "@tnajem/shared";
 import { paymentsEnabled } from "@tnajem/shared/payments";
+import { classEndMs } from "@tnajem/shared/live"; // student-space-v1 · fixes (H2)
 import { db } from "../db";
 import { getSession } from "../lib/session";
 import { checkRateLimit } from "../lib/rate-limit";
@@ -135,6 +136,7 @@ export async function tutorSpaceRoutes(app: FastifyInstance): Promise<void> {
         classId: classes.id,
         classTitle: classes.title,
         scheduledAt: classes.scheduledAt,
+        durationMin: classes.durationMin, // student-space-v1 · H2
         isFree: bookings.isFree,
         status: bookings.status,
         bookedAt: bookings.createdAt,
@@ -154,6 +156,7 @@ export async function tutorSpaceRoutes(app: FastifyInstance): Promise<void> {
         classId: r.classId,
         classTitle: r.classTitle,
         classTs: new Date(r.scheduledAt).getTime(),
+        classEndTs: classEndMs(r), // student-space-v1 · H2 (C7): past once it has ENDED
         status: r.status ?? "reserved",
         isFree: Boolean(r.isFree),
         bookedAt: new Date(r.bookedAt).toISOString(),

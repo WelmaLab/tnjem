@@ -16,6 +16,8 @@ import {
   BOOKING_GRACE_REASON, // live-fixes-3 · C
 } from "@tnajem/shared";
 import { resolveMeetUrl } from "@tnajem/shared/live";
+import { effectiveClassStatus } from "@tnajem/shared"; // student-space-v1 · fixes (H2, C7)
+import { classEndMs } from "@tnajem/shared/live"; // student-space-v1 · fixes (H2)
 import { rotateRoomToken } from "../lib/room-rotation";
 import { publicDisplayName } from "@tnajem/shared";
 import { isAdult, minorsAllowed } from "@tnajem/shared"; // phase-a lane L2 (A24)
@@ -562,6 +564,7 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
         classId: classes.id,
         title: classes.title,
         scheduledAt: classes.scheduledAt,
+        durationMin: classes.durationMin, // student-space-v1 · H2: the END decides upcoming vs past
         status: classes.status,
         roomToken: classes.roomToken,
         meetUrl: classes.meetUrl,
@@ -598,7 +601,8 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
         }),
         // live-fixes-3 · C: the confirm box states the 15-minute grace from it.
         bookedAt: r.bookedAt ? new Date(r.bookedAt).getTime() : undefined,
-        status: r.status ?? "scheduled",
+        // student-space-v1 · H2 (C7): `done` once start + duration has passed, before the cron writes it.
+        status: effectiveClassStatus({ scheduledAt: r.scheduledAt, durationMin: r.durationMin, status: r.status }),
         // Never blank: falls back to the class's private token room. This list is the
         // student's own live bookings, so the room is theirs to have.
         meetUrl: resolveMeetUrl({ roomToken: r.roomToken, meetUrl: r.meetUrl }),
@@ -606,12 +610,18 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
       };
     });
 
-    /* Keep a class "upcoming" for ~2h past its start: one that began 40 minutes ago
-       is still the one the student is IN, and moving it to "past" mid-session takes
-       the Join button away from someone sitting in the room. */
-    const cutoff = Date.now() - 2 * 60 * 60 * 1000;
-    const upcoming = items.filter((i) => i.ts >= cutoff).sort((a, b) => a.ts - b.ts);
-    const past = items.filter((i) => i.ts < cutoff).sort((a, b) => b.ts - a.ts);
+    /* A class stays "upcoming" until it ENDS (start + duration): one that began 40
+       minutes ago is still the one the student is IN, and moving it to "past"
+       mid-session takes the Join button away from someone sitting in the room.
+       student-space-v1 · H2 (C7): this used to be a flat "start + 2 h", which kept a
+       45-minute class upcoming an hour after it ended and moved a 3-hour one to the
+       past while it was still on. */
+    const now = Date.now();
+    const ended = new Set(
+      rows.filter((r) => r.status === "done" || now >= classEndMs(r)).map((r) => r.bookingId),
+    );
+    const upcoming = items.filter((i) => !ended.has(i.bookingId)).sort((a, b) => a.ts - b.ts);
+    const past = items.filter((i) => ended.has(i.bookingId)).sort((a, b) => b.ts - a.ts);
     return { upcoming, past };
   });
 }

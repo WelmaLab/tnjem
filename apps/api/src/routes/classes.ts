@@ -20,6 +20,8 @@ import {
 } from "@tnajem/shared";
 import { parseClassLevel, sortLevels, isLevelCode } from "@tnajem/shared"; // phase-a lane L5 (A18.7)
 import { classPhase } from "@tnajem/shared"; // phase-a lane L5 (A18.10)
+import { effectiveClassStatus } from "@tnajem/shared"; // student-space-v1 · fixes (H2, C7)
+import { viewerBookings } from "../lib/viewer-booking"; // student-space-v1 · fixes (H1)
 import { checkClassLimits } from "@tnajem/shared/class-input"; // phase-a lane L5 (A18.16): the ONE limits schema
 import { paymentsEnabled, tutorBalanceTnd } from "@tnajem/shared/payments";
 import { resolveMeetUrl } from "@tnajem/shared/live";
@@ -319,7 +321,8 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
       whiteboard_url: entitled ? (c.whiteboardUrl ?? undefined) : undefined,
       quiz_url: entitled ? (c.quizUrl ?? undefined) : undefined,
       replay_url: entitled ? (c.replayUrl ?? undefined) : undefined,
-      status: c.status ?? "scheduled",
+      // student-space-v1 · H2 (C7): `done` once start + duration has passed, before the cron writes it.
+      status: effectiveClassStatus({ scheduledAt: c.scheduledAt, durationMin: c.durationMin, status: c.status }),
       // phase-a lane L4 (A9): the tutor by SLUG — the page no longer searches by name.
       // Only a storefront that is actually public: a link to a suspended, erased or
       // unverified tutor's page would 404 for the booked student who can still see this.
@@ -331,6 +334,9 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
       level: isLevelCode(c.level) ? c.level : null,
       // live-fixes-3 · A3: the owner gets their panel, never « Réserver » (no self-booking).
       viewer_is_owner: isOwner,
+      /* student-space-v1 · H1: the viewer's own live seat — « Tu es inscrit », never
+         « Réserver » again. Only when they hold one; null for a guest, a stranger, the owner. */
+      viewer_booking: hasBooking && uid && !isOwner ? ((await viewerBookings(uid, { classId: c.id }))[0] ?? null) : null,
     };
   });
 
@@ -517,6 +523,7 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
 
     const mapped = rows.map((c) => {
       const d = new Date(c.scheduledAt);
+      const status = effectiveClassStatus({ scheduledAt: c.scheduledAt, durationMin: c.durationMin, status: c.status }); // student-space-v1 · H2 (C7)
       return {
         id: c.id,
         title: c.title,
@@ -524,10 +531,10 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
         price_tnd: Number(c.priceTnd),
         seats: c.seats ?? 0,
         seats_left: Math.max(0, (c.seats ?? 0) - (c.seatsTaken ?? 0)),
-        status: c.status ?? "scheduled",
+        status,
         // phase-a lane L5 (A18.10): real end time + where the class stands (À venir · En direct · Terminée · Annulée).
         duration_min: c.durationMin ?? 90,
-        phase: classPhase({ starts_at: d.toISOString(), duration_min: c.durationMin, status: c.status }),
+        phase: classPhase({ starts_at: d.toISOString(), duration_min: c.durationMin, status }),
       };
     });
 

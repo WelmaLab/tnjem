@@ -32,6 +32,8 @@ export type TutorStudentBooking = {
   classId: string;
   classTitle: string;
   classTs: number; // epoch ms of the class start
+  /** student-space-v1 · H2 (C7): epoch ms of the class END (classEndMs) — a class in progress is not past yet. */
+  classEndTs?: number;
   status: DashboardBooking["status"];
   isFree: boolean;
   bookedAt: string; // ISO
@@ -55,11 +57,11 @@ export type TutorStudent = {
 };
 
 /** Where a student stands, from their bookings alone. Upcoming wins over past; all-cancelled is "cancelled". */
-export function studentStatusOf(bookings: Pick<TutorStudentBooking, "status" | "classTs">[], now = Date.now()): TutorStudentStatus {
+export function studentStatusOf(bookings: Pick<TutorStudentBooking, "status" | "classTs" | "classEndTs">[], now = Date.now()): TutorStudentStatus {
   if (!bookings.length) return "none";
   const live = bookings.filter((b) => b.status !== "cancelled");
   if (!live.length) return "cancelled";
-  return live.some((b) => b.classTs > now) ? "upcoming" : "past";
+  return live.some((b) => (b.classEndTs ?? b.classTs) > now) ? "upcoming" : "past";
 }
 
 /** The answer to "what does /{slug} show?" — GET /tutors/:slug/visibility (anonymous, cached). */

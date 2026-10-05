@@ -87,3 +87,5 @@ export * from "./student-shell";
 export * from "./student-space";
 // student-space-v1 · G — one conversation per (student, prof) pair: DTOs and two pure helpers.
 export * from "./conversations";
+// student-space-v1 · fixes (H2, C7) — a class is over at start + duration, whatever classes.status says. Pure.
+export * from "./class-state";

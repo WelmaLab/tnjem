@@ -1900,3 +1900,38 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   /* A spinner conveys state: exempt from the reduced-motion backstop, like .spin. */
   @media (prefers-reduced-motion: reduce){.msg-link-spin{animation-duration:.8s !important;animation-iteration-count:infinite !important}}
 }
+/* ── student-space-v1 · fixes ──────────────────────────────────────────────────
+   H1 · « ✓ Tu es inscrit à cette séance » (components/class/BookedPanel.tsx), in place
+   of « Réserver » on the class page and the storefront: `panel` in the desktop aside,
+   `bar` inside the phone's sticky bar (.sf-mcta / .cd-mobile-cta keep placing it).
+   Green = success (the seat is held); ochre = the one main action (« Rejoindre »). */
+@layer components {
+  .bk{min-width:0}
+  .bk-eyebrow{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-block-end:6px}
+  .bk-title{font-weight:700;font-size:15.5px;line-height:1.35;margin-block-end:6px;overflow-wrap:anywhere}
+  .bk-meta{margin-block-end:14px}
+  .bk-badge{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin:0;padding:10px 12px;border-radius:12px;
+    background:var(--green50);color:var(--green-ink);font-size:13.5px;font-weight:700;line-height:1.4}
+  .bk-badge .ic{width:16px;height:16px;flex:none}
+  .bk-live{display:inline-flex;align-items:center;gap:6px;margin-inline-start:auto;font-weight:700}
+  .bk-live::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;animation:bk-blink 1.1s infinite}
+  /* « Rejoindre (dans 12 h) » never breaks inside: in a narrow aside « Annuler » wraps below instead. */
+  .bk-actions{display:flex;flex-wrap:wrap;gap:10px;margin-block-start:12px}
+  .bk-join{flex:999 1 auto;width:auto;min-height:50px;min-width:0;gap:7px;padding-inline:14px;font-size:14.5px;white-space:nowrap}
+  .bk-join .ic{width:14px;height:14px}
+  .bk-cancel{flex:1 0 auto;width:auto;min-height:50px;padding-inline:16px;font-size:14.5px}
+  .bk-locked{margin:10px 0 0;font-size:13px;color:var(--muted);line-height:1.5}
+  .bk-err{margin:10px 0 0;padding:9px 12px;border-radius:12px;background:var(--rose50);color:var(--rose700);font-size:13px;line-height:1.5}
+  /* After a cancel, above the « Réserver » the panel shows again: what the server did. */
+  .bk-done{margin:0 0 14px;padding:10px 12px;border-radius:12px;background:var(--green50);color:var(--green-ink);font-size:13px;line-height:1.5}
+  /* The phone bar: one line of status, then the two buttons — no title (the page says it). */
+  .bk-bar .bk-badge{padding:7px 11px;font-size:13px}
+  .bk-bar .bk-actions{margin-block-start:9px}
+  .bk-bar .bk-join,.bk-bar .bk-cancel{min-height:48px}
+  /* A storefront row the viewer holds a seat on. */
+  .bk-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;
+    background:var(--green50);color:var(--green-ink);font-size:13px;font-weight:700;white-space:nowrap}
+  .bk-tag .ic{width:13px;height:13px}
+  @keyframes bk-blink{50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){.bk-live::before{animation:none}}
+}
