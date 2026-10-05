@@ -1786,3 +1786,117 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   }
 }
 @media (prefers-reduced-motion: no-preference){.ssv-badge.is-live .ssv-dot{animation:live-pulse 1.4s ease-in-out infinite}}
+/* ── student-space-v1 · messages ── ─────────────────────────────────────────
+   G · one conversation per prof / per student (components/messages/, mockup 3b).
+   One frame, two columns from 900px (the list, the open conversation); below it
+   each column is its own screen — [data-open] (set on /messages/with/<id>) shows
+   the conversation, its absence the list. The frame is as tall as the screen
+   minus its chrome; only the message flow scrolls. Logical properties only. */
+@layer components {
+  .msg-section{--msg-chrome:calc(64px + 2 * clamp(18px,3vw,32px) + 2px)}
+  .msg-page{--msg-chrome-in:var(--msg-chrome,180px);display:grid;grid-template-columns:minmax(0,1fr);
+    height:max(460px,calc(100dvh - var(--msg-chrome-in)));background:var(--paper);border:1px solid var(--line);
+    border-radius:var(--r-l,18px);overflow:hidden;min-width:0}
+  /* In the prof space (and any shell built on .aps-main): the top bar, the main's padding, and what is pinned below. */
+  .aps-main .msg-page{--msg-chrome-in:calc(var(--aps-top-h) + 1px + clamp(16px,3vw,32px) + var(--aps-bottom))}
+  .msg-list,.msg-conv{min-width:0;min-height:0;display:flex;flex-direction:column}
+  .msg-page[data-open] .msg-list{display:none}
+  .msg-page:not([data-open]) .msg-conv{display:none}
+  @media (min-width:900px){
+    .msg-page{grid-template-columns:minmax(260px,320px) minmax(0,1fr)}
+    .msg-page[data-open] .msg-list,.msg-page:not([data-open]) .msg-conv{display:flex}
+    .msg-list{border-inline-end:1px solid var(--line)}
+  }
+
+  /* ── the list ── */
+  .msg-list{overflow-y:auto;padding:14px 12px;gap:8px}
+  .msg-list-empty{padding:4px}
+  .msg-search{position:relative;flex:none}
+  .msg-search input{width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);
+    padding-block:10px;padding-inline:38px 12px;font:inherit;font-size:14px;color:var(--ink)}
+  .msg-search input::placeholder{color:var(--muted)}
+  .msg-search-ic{position:absolute;inset-inline-start:12px;inset-block-start:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--muted);pointer-events:none}
+  .msg-items{list-style:none;display:flex;flex-direction:column;gap:2px}
+  .msg-item{display:flex;align-items:center;gap:11px;min-height:56px;padding:10px;border-radius:14px;color:var(--ink);text-decoration:none}
+  .msg-item:hover{background:var(--bg)}
+  .msg-item.is-current{background:var(--blue50)}
+  .msg-av{width:38px;height:38px;border-radius:12px;font-size:14px;font-weight:700;border-width:0}
+  .msg-item-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+  .msg-item-top{display:flex;align-items:center;gap:6px;min-width:0}
+  .msg-item-name{font-weight:700;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msg-item-tag{flex:none;font-size:13px;font-weight:700;color:var(--ink2)}
+  .msg-item-last{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msg-item-last.is-first{font-style:italic}
+  .msg-item-end{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  .msg-item-time{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .msg-unread{display:inline-grid;place-items:center;min-width:22px;height:22px;padding-inline:6px;border-radius:999px;
+    background:var(--ochre-tint);color:var(--ochre-ink);font-size:13px;font-weight:700}
+  .msg-nomatch{font-size:13px;color:var(--muted);padding:10px}
+  .msg-wait{display:grid;place-items:center;flex:1;min-height:160px}
+  .msg-pick{margin:auto;padding:24px;font-size:14px;color:var(--muted);text-align:center}
+  .msg-gone{margin:auto;padding:24px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;font-size:14px}
+
+  /* ── one conversation ── */
+  .msg-conv{background:var(--bg)}
+  .msg-conv-in{display:flex;flex-direction:column;min-height:0;flex:1}
+  .msg-head{flex:none;display:flex;align-items:center;gap:11px;padding:12px 16px;background:var(--paper);border-block-end:1px solid var(--line)}
+  .msg-back{display:grid;place-items:center;flex:none;width:44px;height:44px;margin-inline-start:-10px;border-radius:12px;color:var(--ink)}
+  @media (min-width:900px){.msg-back{display:none}}
+  .msg-head-txt{min-width:0;flex:1}
+  .msg-head-name{font-family:var(--fd);font-size:15.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msg-head-sub{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msg-head-cta{flex:none}
+  /* A phone: the line under the name may take two lines rather than vanish behind the button. */
+  @media (max-width:599px){
+    .msg-head{padding-inline:12px;gap:9px}
+    .msg-head-sub{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+    .msg-head-cta{padding-inline:10px}
+  }
+  .msg-scroll{flex:1;min-height:0;overflow-y:auto;padding:16px clamp(12px,2.4vw,22px);display:flex;flex-direction:column;gap:12px}
+  .msg-note{align-self:center;display:flex;gap:8px;align-items:flex-start;max-width:min(100%,520px);padding:8px 14px;
+    border-radius:14px;background:var(--blue50);color:var(--blue700);font-size:13px;line-height:1.5}
+  .msg-note>.ic{flex:none;width:16px;height:16px;margin-block-start:1px;color:var(--blue)}
+  .msg-none{margin:auto;font-size:13.5px;color:var(--muted);text-align:center}
+  .msg-flow{list-style:none;display:flex;flex-direction:column;gap:10px;margin-block-start:auto}
+  .msg-row{display:flex;flex-direction:column}
+  .msg-marker{align-self:center;margin-block:8px 6px;font-size:13px;color:var(--muted);text-align:center}
+  .msg-bubble{max-width:min(78%,560px);align-self:flex-start;padding:10px 14px;background:var(--paper);border:1px solid var(--line);
+    border-radius:16px;border-end-start-radius:6px;color:var(--ink)}
+  .msg-bubble.is-mine{align-self:flex-end;background:var(--blue);border-color:var(--blue);color:#fff;border-end-start-radius:16px;border-end-end-radius:6px}
+  .msg-text{font-size:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+  .msg-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-block-start:3px;padding-inline:4px;font-size:13px;color:var(--muted)}
+  .msg-meta.is-mine{justify-content:flex-end}
+  .msg-meta time{font-variant-numeric:tabular-nums}
+  .msg-masked{font-weight:700;color:var(--ochre-ink)}
+  /* 44px to tap without taking 44px of room: padding, then the same negative margin. */
+  .msg-report{background:none;border:0;padding-block:14px;margin-block:-14px;padding-inline:0;min-inline-size:44px;
+    font:inherit;font-size:13px;color:var(--muted);text-decoration:underline;cursor:pointer}
+  .msg-report:disabled{text-decoration:none;cursor:default}
+  .msg-flash{flex:none;margin:0 16px 10px;padding:10px 14px;border-radius:12px;background:var(--paper);border:1px solid var(--line);font-size:13px;line-height:1.55;color:var(--ink2)}
+  .msg-flash.is-err{color:var(--rose)}
+  .msg-compose{flex:none;display:flex;gap:10px;align-items:flex-end;padding:12px 16px;background:var(--paper);border-block-start:1px solid var(--line)}
+  .msg-compose textarea{flex:1;min-width:0;min-height:44px;max-height:160px;resize:none;border:1.5px solid var(--line);border-radius:12px;
+    background:var(--paper);padding:10px 12px;font:inherit;font-size:14px;line-height:1.5;color:var(--ink);field-sizing:content}
+  .msg-compose textarea::placeholder{color:var(--muted)}
+  .msg-compose .btn{flex:none}
+  .msg-closed{flex:none;display:flex;gap:10px;align-items:flex-start;padding:14px 16px;background:var(--paper);border-block-start:1px solid var(--line);font-size:13px;line-height:1.55}
+  .msg-closed>.ic{flex:none;width:17px;height:17px;margin-block-start:2px;color:var(--muted)}
+  .msg-closed-t{font-weight:700;color:var(--ink)}
+  .msg-closed-b{color:var(--muted);margin-block-start:2px}
+  .msg-book-next{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-block-start:10px;
+    padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+  .msg-book-k{font-size:13px;color:var(--muted)}
+  .msg-book-title{font-weight:700;color:var(--ink);overflow-wrap:anywhere}
+  .msg-book-when{font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .msg-link{color:var(--blue);font-weight:700;text-decoration:underline}
+
+  /* « Message » (MessageLink / MessageBookingButton): a spinner the moment it is pressed. */
+  .msg-link-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+  .msg-link-btn[aria-busy=true],.msg-link-btn:disabled{cursor:progress}
+  .msg-link-spin{width:15px;height:15px;flex:none;border:2px solid currentColor;border-block-start-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+  /* On the live lobby's dark card: secondary to « Rejoindre », same frame as the student card's buttons. */
+  .msg-link-dark{background:transparent;color:var(--on-dark);border:1px solid var(--on-blue-rule)}
+  .msg-link-dark:hover{background:var(--on-blue-fill)}
+  /* A spinner conveys state: exempt from the reduced-motion backstop, like .spin. */
+  @media (prefers-reduced-motion: reduce){.msg-link-spin{animation-duration:.8s !important;animation-iteration-count:infinite !important}}
+}

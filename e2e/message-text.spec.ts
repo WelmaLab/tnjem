@@ -36,7 +36,8 @@ test("a maths message reaches the student's thread page intact", async ({ browse
   const page = await ctx.newPage();
   await page.goto(`/fr/messages/${threadId}`);
 
-  const main = page.locator("main");
+  // student-space-v1 · G: the conversation pane (the list beside it previews the last message too).
+  const main = page.locator("main [data-e2e=conv]");
   await expect(main.getByText("si x < 5 alors y > 2", { exact: true })).toBeVisible();
   await expect(main.getByText("si x < 5 alors", { exact: true })).toBeVisible();
   // Neither double-escaped nor shown as an entity.

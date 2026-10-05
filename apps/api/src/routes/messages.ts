@@ -14,8 +14,11 @@ import {
   shownThreadState,
   vUuid,
   vOptionalText,
+  conversationHref, // student-space-v1 · G
   type MessageThreadSummary,
   type MessageThreadDetail,
+  type ConversationSummary, // student-space-v1 · G
+  type ConversationDetail, // student-space-v1 · G
 } from "@tnajem/shared";
 import { db } from "../db";
 import { getSession } from "../lib/session";
@@ -23,6 +26,7 @@ import { maskAndFlag } from "../lib/contact-guard";
 import { checkRateLimit } from "../lib/rate-limit";
 import { threadState } from "../lib/thread-state";
 import { visibleMessageBody } from "../lib/moderation-hide"; // phase-a lane L4 (A28)
+import { viewerOf, listConversations, getConversation, sendTarget, ensureThread } from "../lib/conversations"; // student-space-v1 · G
 
 /* MESSAGING (Step 8b) — the channel that replaces the contact details Step 8
    closed.
@@ -79,6 +83,8 @@ type Participant = {
   otherProfileId: string | null;
   studentIsMinor: boolean;
   classTitle: string;
+  /** student-space-v1 · G: the class's tutors.id, so a thread maps onto its pair's conversation. */
+  tutorId: string;
 };
 
 /** Resolve a thread the caller is actually in. Null means "not yours".
@@ -94,6 +100,7 @@ async function participantIn(threadId: string, uid: string): Promise<Participant
       studentProfileId: messageThreads.studentProfileId,
       studentIsMinor: messageThreads.studentIsMinor,
       classTitle: classes.title,
+      tutorId: classes.tutorId,
     })
     .from(messageThreads)
     .innerJoin(classes, eq(messageThreads.classId, classes.id))
@@ -107,6 +114,7 @@ async function participantIn(threadId: string, uid: string): Promise<Participant
       otherProfileId: row.studentProfileId,
       studentIsMinor: row.studentIsMinor,
       classTitle: row.classTitle,
+      tutorId: row.tutorId,
     };
   }
   if (row.studentProfileId === uid) {
@@ -116,6 +124,7 @@ async function participantIn(threadId: string, uid: string): Promise<Participant
       otherProfileId: row.tutorProfileId,
       studentIsMinor: row.studentIsMinor,
       classTitle: row.classTitle,
+      tutorId: row.tutorId,
     };
   }
   return null;
@@ -139,6 +148,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         status: bookings.status,
         studentId: bookings.studentId,
         classId: classes.id,
+        tutorId: tutors.id,
         tutorProfileId: tutors.profileId,
       })
       .from(bookings)
@@ -153,6 +163,9 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     const isStudent = bk.studentId === uid;
     const isTutor = bk.tutorProfileId === uid;
     if (!isStudent && !isTutor) return { ok: false, error: "not-found" };
+    /* student-space-v1 · G: the pair's merged conversation (contract C2) — the OTHER
+       person, as the caller addresses them. « Message » opens that, not this thread. */
+    const withId = isStudent ? bk.tutorId : bk.studentId;
 
     /* A CANCELLED booking opens nothing. The seat is the reason the channel
        exists; give it up and the channel goes with it. An EXISTING thread is
@@ -165,7 +178,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         .where(eq(messageThreads.bookingId, bk.id))
         .limit(1);
       if (!existing) return { ok: false, error: "booking-cancelled" };
-      return { ok: true, threadId: existing.id };
+      return { ok: true, threadId: existing.id, withId };
     }
 
     const [student] = await db
@@ -194,7 +207,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       .from(messageThreads)
       .where(eq(messageThreads.bookingId, bk.id))
       .limit(1);
-    return { ok: true, threadId: thread?.id ?? null };
+    return { ok: true, threadId: thread?.id ?? null, withId };
   });
 
   /* ── GET /threads — my conversations ─────────────────────────────────────── */
@@ -359,7 +372,8 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       await notify(db, me.otherProfileId, {
         key: "messageNew",
         params: { classTitle: me.classTitle },
-        href: `/messages/${me.threadId}`,
+        // student-space-v1 · G: the reader's merged conversation with the sender.
+        href: conversationHref(me.role === "student" ? session.profile.id : me.tutorId),
       });
     }
 
@@ -373,6 +387,105 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
          trust problem. */
       masked: scrubbed.masked,
     };
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     student-space-v1 · G — ONE CONVERSATION PER (STUDENT, PROF) PAIR.
+     The threads above stay the model; these read them merged per pair and write
+     into the pair's most recent non-cancelled booking (lib/conversations.ts).
+     `:withId` is the OTHER person (contract C2): tutors.id for a student caller,
+     the student's profiles.id for a tutor caller. Students and tutors only.
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  /* ── GET /conversations — one row per pair, with 0 messages too ──────────── */
+  app.get("/conversations", async (req): Promise<ConversationSummary[] | null> => {
+    const session = await getSession(req);
+    if (!session) return null;
+    const viewer = await viewerOf(session.profile);
+    if (!viewer) return null;
+    return listConversations(viewer);
+  });
+
+  /* ── GET /conversations/:withId — the merged conversation (reads it) ─────── */
+  app.get<{ Params: { withId: string } }>("/conversations/:withId", async (req): Promise<ConversationDetail | null> => {
+    const session = await getSession(req);
+    if (!session) return null;
+    if (!isUuid(req.params.withId)) return null;
+    const viewer = await viewerOf(session.profile);
+    if (!viewer) return null;
+    return getConversation(viewer, req.params.withId);
+  });
+
+  /* ── POST /conversations/:withId/messages ────────────────────────────────── */
+  app.post<{ Params: { withId: string } }>("/conversations/:withId/messages", async (req, reply) => {
+    const parsed = sendBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "bad-request" });
+
+    const session = await getSession(req);
+    if (!session) return { ok: false, error: "not-authenticated" };
+    if (!isUuid(req.params.withId)) return { ok: false, error: "not-found" };
+    const viewer = await viewerOf(session.profile);
+    if (!viewer) return { ok: false, error: "not-found" };
+
+    /* The SAME gate as POST /threads/:id/messages: the target booking's verdict
+       (bookingState = threadState before the row exists). Its thread is created
+       only once that verdict is "open". */
+    const resolved = await sendTarget(viewer, req.params.withId);
+    if (!resolved.ok) return { ok: false, error: resolved.error };
+    const t = resolved.target;
+
+    // Same key, same ceiling as the per-thread send: one budget per sender.
+    const rl = await checkRateLimit(`msg:send:${session.profile.id}`, SEND_LIMIT, SEND_WINDOW_MS);
+    if (!rl.ok) return { ok: false, error: "too-many-requests" };
+
+    // 1. SANITISE · 2 + 3. MASK and FLAG — see the top of this file.
+    const text = parseMessageBody(parsed.data.body);
+    if (!text.ok) return { ok: false, error: text.error };
+    const scrubbed = await maskAndFlag(session.profile.id, "message", text.value);
+    const body = scrubbed.text ?? "";
+    if (!body) return { ok: false, error: "message-empty" };
+
+    const threadId = await ensureThread(t);
+    if (!threadId) return { ok: false, error: "not-found" };
+
+    const [row] = await db
+      .insert(messages)
+      .values({ threadId, senderProfileId: session.profile.id, body, masked: scrubbed.masked })
+      .returning({ id: messages.id, createdAt: messages.createdAt });
+    await db
+      .update(messageThreads)
+      .set({ lastMessageAt: raw`now()` })
+      .where(eq(messageThreads.id, threadId));
+
+    // The other side, pointed at THEIR conversation with the sender.
+    const toProfile = viewer.role === "student" ? t.tutorProfileId : t.studentId;
+    if (toProfile) {
+      await notify(db, toProfile, {
+        key: "messageNew",
+        params: { classTitle: t.classTitle },
+        href: conversationHref(viewer.role === "student" ? t.studentId : t.tutorId),
+      });
+    }
+
+    return {
+      ok: true,
+      id: row.id,
+      threadId,
+      at: new Date(row.createdAt).toISOString(),
+      body: messageBodyText(body),
+      masked: scrubbed.masked,
+    };
+  });
+
+  /* ── GET /threads/:id/conversation — where an old thread link now leads ──── */
+  app.get<{ Params: { id: string } }>("/threads/:id/conversation", async (req): Promise<{ withId: string } | null> => {
+    const session = await getSession(req);
+    if (!session) return null;
+    if (!isUuid(req.params.id)) return null;
+    const me = await participantIn(req.params.id, session.profile.id);
+    if (!me) return null;
+    if (me.role === "student") return { withId: me.tutorId };
+    return me.otherProfileId ? { withId: me.otherProfileId } : null;
   });
 
   /* ── POST /messages/:id/report ───────────────────────────────────────────── */

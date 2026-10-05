@@ -515,8 +515,12 @@ test.describe("A5 — one width for the prof space, one for single-column forms"
     "/dashboard/storefront", "/dashboard/promotions", "/dashboard/plan", "/dashboard/settings",
     "/dashboard/new-class", "/dashboard/new-pack", "/messages", "/onboarding", "THREAD",
   ];
-  // Single-column forms (and the one reading column, a conversation): 760. Everything else: 1080.
-  const NARROW = ["/dashboard/settings", "/onboarding/verify", "THREAD"];
+  // Single-column forms: 760. Everything else: 1080.
+  const NARROW = ["/dashboard/settings", "/onboarding/verify"];
+  /* student-space-v1 · G: Messages is two panes (the list, the open conversation —
+     mockup 3b) in the same 1080 frame, with no visible title: its h1 is for screen
+     readers, so it has no start to line up. The frame is still measured. */
+  const NO_TITLE = ["/messages", "THREAD"];
   for (const locale of LOCALES as readonly Locale[]) {
     test(`/${locale} at 1440×900: every title starts at the same place; pages are 1080 wide, forms 760`, async ({ browser }) => {
       const { profile, tutor } = await verifiedTutor();
@@ -552,9 +556,14 @@ test.describe("A5 — one width for the prof space, one for single-column forms"
       for (const key of PAGES) {
         const path = key === "THREAD" ? threadPath : key;
         await page.goto(`/${locale}${path}`);
-        await expect(page.locator("main h1")).toBeVisible();
+        if (NO_TITLE.includes(key)) {
+          await expect(page.locator("main [data-e2e=messages]")).toBeVisible();
+          await expect(page.locator("main h1")).toHaveCount(1);
+        } else {
+          await expect(page.locator("main h1")).toBeVisible();
+        }
         const m = await measure(page);
-        starts.set(key, m.start);
+        if (!NO_TITLE.includes(key)) starts.set(key, m.start);
         expect(m.frame, `${key}: the prof-space width`).toBe(1080);
         expect(m.column, `${key}: its column`).toBe(NARROW.includes(key) ? 760 : 1080);
       }

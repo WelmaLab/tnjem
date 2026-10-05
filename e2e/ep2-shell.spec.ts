@@ -183,7 +183,8 @@ test.describe("the bell and the messages count", () => {
     await expect(page.locator("[data-e2e=shell-messages]")).toHaveAttribute("aria-label", /1 message non lu/);
     await page.goto(`/fr/messages/${threadId}`);
     await expect(page.locator("main")).toContainText("Bonjour, à jeudi !");
-    await expect(page.locator("[data-e2e=shell-crumbs] li").last()).toContainText(klass.title.slice(0, 12));
+    // student-space-v1 · G: one conversation per student — the crumb names the student, not a class.
+    await expect(page.locator("[data-e2e=shell-crumbs] li").last()).toContainText("Yosra A.");
     await page.goto("/fr/dashboard");
     await expect(page.locator("[data-e2e=shell-bell]")).toBeVisible();
     await expect(page.locator("[data-e2e=shell-messages-count]")).toHaveCount(0);

@@ -85,3 +85,5 @@ export * from "./display";
 export * from "./student-shell";
 // student-space-v1 · pages — the student space payloads (Accueil, Mes cours, Mes profs, Mes fiches). Pure.
 export * from "./student-space";
+// student-space-v1 · G — one conversation per (student, prof) pair: DTOs and two pure helpers.
+export * from "./conversations";

@@ -248,6 +248,18 @@ const PAIRS = [
   ["Phase 6", "--rose700", "--rose50", "normal", ".vf-alert · .vf-reason b · .st-danger-btn:hover", "globals.css .vf-alert"],
   ["Phase 6", "--rose", "--paper", "normal", ".st-danger-btn · .vf-err · .vf-remove", "globals.css .st-danger-btn"],
   ["Phase 6", "--ochre-ink", "--ochre-tint", "ui", ".vf-status-ic pending clock", "globals.css .vf-status-ic"],
+  // student-space-v1 · messages (G): the merged conversations (components/messages/).
+  ["SSV1 messages", W, "--blue", "normal", ".msg-bubble.is-mine (my message)", "globals.css .msg-bubble"],
+  ["SSV1 messages", "--ink", "--paper", "normal", ".msg-bubble (their message) · .msg-item name", "globals.css .msg-bubble"],
+  ["SSV1 messages", "--muted", "--bg", "normal", ".msg-meta · .msg-marker (« Séance « … » · date »)", "globals.css .msg-meta"],
+  ["SSV1 messages", "--ochre-ink", "--bg", "normal", ".msg-masked (Coordonnées retirées)", "globals.css .msg-masked"],
+  ["SSV1 messages", "--blue700", "--blue50", "normal", ".msg-note (numéros, e-mails et liens retirés)", "globals.css .msg-note"],
+  ["SSV1 messages", "--ink", "--blue50", "normal", ".msg-item.is-current name", "globals.css .msg-item"],
+  ["SSV1 messages", "--muted", "--blue50", "normal", ".msg-item.is-current last message · time", "globals.css .msg-item"],
+  ["SSV1 messages", "--ochre-ink", "--ochre-tint", "normal", ".msg-unread count", "globals.css .msg-unread"],
+  ["SSV1 messages", "--rose", "--paper", "normal", ".msg-flash.is-err", "globals.css .msg-flash"],
+  ["SSV1 messages", "--ink2", "--bg", "normal", ".msg-book-when", "globals.css .msg-book-when"],
+  ["SSV1 messages", "--on-dark", "--ink900", "normal", ".msg-link-dark (live lobby « Message »)", "globals.css .msg-link-dark"],
 
   // ── non-text UI (1.4.11) — ADVISORY, see NOTE ──
   ["UI (advisory)", "--blue", "--cream", "ui", ":focus-visible ring", "globals.css:49"],

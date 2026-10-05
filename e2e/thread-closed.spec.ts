@@ -10,7 +10,12 @@ import { api } from "./support/journey";
    reason). This proves the page says so, in both languages, and takes the
    composer away, while the history stays on screen.
 
-   ADDED as its own spec (lane L1). Written for the orchestrator's run after merge. */
+   ADDED as its own spec (lane L1). Written for the orchestrator's run after merge.
+
+   student-space-v1 · G: /messages/<threadId> now opens the pair's ONE conversation
+   (/messages/with/<tutorId>). The thread here ended long ago and is the pair's only
+   booking, so nothing is open to write into: the composer gives way to « Réserve
+   une séance pour écrire à ce prof » (the way to reopen it); the history stays. */
 
 async function closedThread() {
   const tutorProfile = await seedProfile({ role: "tutor", birthYear: 1985 });
@@ -29,7 +34,7 @@ async function closedThread() {
   return { threadId, studentToken };
 }
 
-for (const [locale, title] of [["fr", "Conversation fermée"], ["ar", "المحادثة تسكّرت"]] as const) {
+for (const [locale, title] of [["fr", "Réserve une séance pour écrire à ce prof"], ["ar", "احجز حصة باش تنجّم تكتب للأستاذ هذا"]] as const) {
   test(`/${locale}: a closed thread shows the banner, keeps the history, disables the composer`, async ({ browser }) => {
     const { threadId, studentToken } = await closedThread();
 
@@ -44,9 +49,11 @@ for (const [locale, title] of [["fr", "Conversation fermée"], ["ar", "المح�
     const banner = page.getByTestId("thread-closed");
     await expect(banner).toBeVisible();
     await expect(banner).toContainText(title);
-    await expect(page.locator("main").getByText("Merci pour la séance !")).toBeVisible();
-    await expect(page.locator("textarea#msg")).toBeDisabled();
-    await expect(page.locator("form button[type=submit]")).toBeDisabled();
+    // In the conversation (the list beside it previews the same last message).
+    await expect(page.locator("[data-e2e=conv]").getByText("Merci pour la séance !")).toBeVisible();
+    // No composer at all: nothing is open to write into (before G it was shown disabled).
+    await expect(page.locator("textarea#msg")).toHaveCount(0);
+    await expect(page.locator("[data-e2e=conv-compose]")).toHaveCount(0);
 
     await ctx.close();
     await sql`delete from messages where thread_id = ${threadId}`;

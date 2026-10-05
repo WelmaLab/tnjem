@@ -14,6 +14,7 @@ import { bilingual } from "@/lib/i18n";
 import { classEndMs } from "@tnajem/shared/live"; // phase-a lane L3 (A16)
 import { isPublicJitsi } from "@tnajem/shared/live"; // live-fixes-3 · B3
 import { formatInTunis, tunisClock, publicTutorName } from "@tnajem/shared"; // live-fixes-3 · B5, E
+import { MessageLink } from "@/components/messages/MessageLink"; // student-space-v1 · G
 
 /* Page-local copy (lib/i18n.ts is shared — don't touch it). */
 const copy = bilingual({
@@ -317,6 +318,10 @@ export default function LiveLobbyPage(props: Props) {
               <Button variant="primary" onClick={handleJoin} disabled={!meetUrl}>
                 <Video /> {t.live.join}
               </Button>
+              {/* student-space-v1 · G: the student's way to the prof — the pair's one conversation. */}
+              {gate.role === "student" && cls.tutor_id && (
+                <MessageLink withId={cls.tutor_id} name={publicTutorName(cls.tutor_name ?? null)} className="btn msg-link-dark mt-2.5" />
+              )}
             </div>
           </div>
         </div>

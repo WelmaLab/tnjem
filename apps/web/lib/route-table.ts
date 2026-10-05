@@ -43,6 +43,7 @@ export const ROUTE_PATTERNS: readonly string[] = [
   "live/[id]",
   "messages",
   "messages/[id]",
+  "messages/with/[id]", // student-space-v1 · G
   "onboarding",
   "onboarding/upgrade",
   "onboarding/verify",

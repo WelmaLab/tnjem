@@ -23,43 +23,45 @@ import { db } from "../db";
      booking-cancelled  the seat was given up (the rule that was already here)
      class-ended        THREAD_CLOSE_DAYS (FOUNDER default 7) after start + duration
 
-   CLOSED IS NOT DELETED: reading and reporting do not consult this. */
-export async function threadState(threadId: string): Promise<ThreadState> {
-  const [row] = await db
-    .select({
-      bookingStatus: bookings.status,
-      blocked: raw<boolean>`(
-        ${tutors.suspendedAt} is not null
-        or exists (
-          select 1 from profiles p
-          where p.blocked_at is not null
-            and p.id in (${messageThreads.tutorProfileId}, ${messageThreads.studentProfileId})
-        )
-      )`,
-      consentWithdrawn: raw<boolean>`(
-        exists (
-          select 1 from consents k
-          where k.minor_id = ${messageThreads.studentProfileId} and k.withdrawn_at is not null
-        )
-        and not exists (
-          select 1 from consents k
-          where k.minor_id = ${messageThreads.studentProfileId} and k.withdrawn_at is null
-        )
-      )`,
-      ended: raw<boolean>`(
-        ${classes.scheduledAt}
-          + make_interval(mins => coalesce(${classes.durationMin}, 90))
-          + make_interval(days => ${THREAD_CLOSE_DAYS}::int)
-        <= now()
-      )`,
-    })
-    .from(messageThreads)
-    .innerJoin(bookings, eq(bookings.id, messageThreads.bookingId))
-    .innerJoin(classes, eq(classes.id, messageThreads.classId))
-    .innerJoin(tutors, eq(tutors.id, classes.tutorId))
-    .where(eq(messageThreads.id, threadId))
-    .limit(1);
+   CLOSED IS NOT DELETED: reading and reporting do not consult this.
 
+   student-space-v1 · G: bookingState(bookingId) gives the same verdict for a
+   booking before its thread exists (the merged conversation's first send). */
+/** The four verdicts as SQL over the pair's two profiles. Shared by threadState (the
+    thread's own participant columns) and bookingState (the booking's two people,
+    before any thread row exists), so the two can never disagree. */
+function verdictColumns(tutorProfileId: Pair, studentProfileId: Pair) {
+  return {
+    bookingStatus: bookings.status,
+    blocked: raw<boolean>`(
+      ${tutors.suspendedAt} is not null
+      or exists (
+        select 1 from profiles p
+        where p.blocked_at is not null
+          and p.id in (${tutorProfileId}, ${studentProfileId})
+      )
+    )`,
+    consentWithdrawn: raw<boolean>`(
+      exists (
+        select 1 from consents k
+        where k.minor_id = ${studentProfileId} and k.withdrawn_at is not null
+      )
+      and not exists (
+        select 1 from consents k
+        where k.minor_id = ${studentProfileId} and k.withdrawn_at is null
+      )
+    )`,
+    ended: raw<boolean>`(
+      ${classes.scheduledAt}
+        + make_interval(mins => coalesce(${classes.durationMin}, 90))
+        + make_interval(days => ${THREAD_CLOSE_DAYS}::int)
+      <= now()
+    )`,
+  };
+}
+type Pair = typeof messageThreads.tutorProfileId | typeof messageThreads.studentProfileId | typeof bookings.studentId | typeof tutors.profileId;
+
+function verdict(row: { bookingStatus: string | null; blocked: boolean; consentWithdrawn: boolean; ended: boolean } | undefined): ThreadState {
   /* No row: the booking or the class is gone. Nothing to send into — the same
      answer the cancelled-booking check gave before this function existed. */
   if (!row) return "closed:booking-cancelled";
@@ -68,4 +70,33 @@ export async function threadState(threadId: string): Promise<ThreadState> {
   if (row.bookingStatus === "cancelled") return "closed:booking-cancelled";
   if (row.ended) return "closed:class-ended";
   return "open";
+}
+
+export async function threadState(threadId: string): Promise<ThreadState> {
+  const [row] = await db
+    .select(verdictColumns(messageThreads.tutorProfileId, messageThreads.studentProfileId))
+    .from(messageThreads)
+    .innerJoin(bookings, eq(bookings.id, messageThreads.bookingId))
+    .innerJoin(classes, eq(classes.id, messageThreads.classId))
+    .innerJoin(tutors, eq(tutors.id, classes.tutorId))
+    .where(eq(messageThreads.id, threadId))
+    .limit(1);
+  return verdict(row);
+}
+
+/* student-space-v1 · G — the SAME verdict for a booking whose thread may not exist
+   yet. The merged conversation (one per student–prof pair) writes into the pair's
+   most recent non-cancelled booking and creates that booking's thread row on the
+   first send — only when this says "open", so a closed booking never grows a
+   thread because someone pressed Envoyer. The two people are the booking's: the
+   class's tutor and the booking's student. */
+export async function bookingState(bookingId: string): Promise<ThreadState> {
+  const [row] = await db
+    .select(verdictColumns(tutors.profileId, bookings.studentId))
+    .from(bookings)
+    .innerJoin(classes, eq(classes.id, bookings.classId))
+    .innerJoin(tutors, eq(tutors.id, classes.tutorId))
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  return verdict(row);
 }
