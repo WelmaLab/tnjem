@@ -270,7 +270,8 @@ test("Réglages › Sécurité: a password-less account creates one with a fresh
   const ctx = await browser.newContext({ reducedMotion: "reduce" });
   await ctx.addCookies([sessionCookie(await mintSession(me.id))]);
   const page = await ctx.newPage();
-  await page.goto("/fr/account", { waitUntil: "networkidle" });
+  // student-space-v1 · F: a student's /account is Profil; the password lives in its « Sécurité » tab.
+  await page.goto("/fr/account?tab=securite", { waitUntil: "networkidle" });
   const panel = page.locator('[data-e2e="security-panel"]');
   await expect(panel.locator('[data-e2e="password-state"]')).toHaveText("Pas encore de mot de passe : tu te connectes avec un code par email.", { timeout: 20_000 });
   await panel.getByRole("button", { name: "Créer un mot de passe" }).click();

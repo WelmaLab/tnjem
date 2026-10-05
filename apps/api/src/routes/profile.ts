@@ -31,6 +31,9 @@ const studentProfileBody = z.object({
   level: z.string().nullable().optional(),
   subjects: z.array(z.string()).optional(),
   phone: z.string().nullable().optional(),
+  /* student-space-v1 · F (Profil › Moi): the student emptied the field on purpose, so the
+     number on file goes. Without it an empty phone keeps the stored one (the welcome screen). */
+  phoneClear: z.boolean().optional(),
 });
 
 export async function profileRoutes(app: FastifyInstance): Promise<void> {
@@ -109,7 +112,7 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
           level: v.level,
           subjects: v.subjects.length ? v.subjects.join(",") : null,
           // Never null out a number already on file just because this submit omitted it.
-          ...(v.phone ? { phone: v.phone } : {}),
+          ...(v.phone ? { phone: v.phone } : parsed.data.phoneClear ? { phone: null } : {}),
         })
         .where(eq(profiles.id, session.profile.id));
     } catch (e) {

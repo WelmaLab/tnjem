@@ -194,8 +194,9 @@ test.describe("Réglages (/dashboard/settings, image 4)", () => {
     const ctx = await browser.newContext();
     await loginAs(ctx, student.id);
     const page = await ctx.newPage();
-    await page.goto("/fr/account");
-    await expect(page).toHaveURL(/\/fr\/account$/);
+    // student-space-v1 · F: Profil, with the password and sessions in its « Sécurité » tab.
+    await page.goto("/fr/account?tab=securite");
+    await expect(page).toHaveURL(/\/fr\/account\?tab=securite$/);
     await expect(page.locator("main")).toContainText("Sarra Mejri");
     await expect(page.locator("[data-e2e=security-panel]")).toBeVisible();
     await ctx.close();

@@ -1759,6 +1759,26 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .ssv-nomatch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:8px}
   .ssv-fnote{display:flex;align-items:center;gap:6px;margin-block-start:12px;font-size:13px;color:var(--muted)}
   .ssv-fnote .ic{width:15px;height:15px;flex:none}
+  /* ── Profil (mockup 4a): who is signed in, the tabs, Moi ── */
+  .ssv-id{display:flex;align-items:center;gap:12px 14px;margin-block-end:14px;min-width:0}
+  .ssv-id-av{display:grid;place-items:center;width:56px;height:56px;border-radius:16px;flex:none;
+    background:linear-gradient(150deg,var(--blue),var(--blue900));color:#fff;font-family:var(--fd);font-size:20px;font-weight:700}
+  .ssv-moi{gap:0}
+  .ssv-moi-names{display:grid;grid-template-columns:minmax(0,1fr);gap:0 14px}
+  @media (min-width:600px){.ssv-moi-names{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .ssv-moi-help{margin-block:-6px 14px}
+  .ssv-pills{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:4px}
+  .ssv-pill{min-height:44px;padding-inline:14px;border-radius:999px;border:1.5px solid var(--line);background:var(--paper);
+    font:inherit;font-size:13.5px;font-weight:600;color:var(--ink2);cursor:pointer}
+  .ssv-pill:hover:not(:disabled){border-color:var(--blue)}
+  .ssv-pill.is-on{background:var(--blue50);border-color:var(--blue);color:var(--blue700)}
+  .ssv-pill:disabled{opacity:.5;cursor:not-allowed}
+  .ssv-pill:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+  .ssv-moi-actions{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;margin-block-start:6px}
+  .ssv-moi-feeds{margin-block-start:14px;padding-block-start:12px;border-block-start:1px solid var(--line)}
+  .ssv-wa{color:var(--ink);min-height:44px}
+  .ssv-wa .ic{width:18px;height:18px}
+
   @media (max-width:599px){
     /* A phone: the tag steps aside, the row keeps its title and its button. */
     .ssv-fgroup .ssv-ftag{display:none}

@@ -8,6 +8,7 @@
    Demo mode (no API, dev only) answers with the empty state — never invented data. */
 import { call } from "@/lib/api";
 import { demoFallback } from "@/lib/backend";
+import { parseStudentProfile } from "@tnajem/shared";
 import type { StudentClassDetail, StudentClasses, StudentFiches, StudentHome, StudentProfs } from "@tnajem/shared";
 
 /** A refusal from the student space: no session, not a student, or the budget. */
@@ -59,6 +60,19 @@ export async function getFichesNewCount(): Promise<number> {
   if (demoFallback) return 0;
   const r = await call<{ count?: number }>("/student/fiches/new-count", undefined, "GET").catch(() => null);
   return typeof r?.count === "number" ? r.count : 0;
+}
+
+/** Profil › Moi (/account): the student's own profile — POST /profile/student, the SAME
+    endpoint and validator (parseStudentProfile) as the welcome screen. An emptied phone
+    field clears the number on file (phoneClear); the welcome screen never does. */
+export async function saveMyProfile(input: {
+  fullName: string; level: string | null; subjects: string[]; phone: string | null;
+}): Promise<{ ok: boolean; error?: string; demo?: boolean }> {
+  if (demoFallback) {
+    const check = parseStudentProfile(input);
+    return check.ok ? { ok: true, demo: true } : { ok: false, error: check.error };
+  }
+  return call<{ ok: boolean; error?: string }>("/profile/student", { ...input, phoneClear: !input.phone });
 }
 
 /** Mes cours (/student/cours): every booking, by tab. */

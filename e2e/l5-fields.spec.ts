@@ -204,10 +204,11 @@ test.describe("A18.13 — /account names the role", () => {
       const me = await seedProfile({ role, birthYear: 1990 });
       const ctx = await contextAs(browser, me.id);
       const page = await ctx.newPage();
-      await page.goto("/fr/account", { waitUntil: "networkidle" });
+      // student-space-v1 · F: the role moved to Profil › Sécurité (a tutor's /account is Réglages, unchanged).
+      await page.goto("/fr/account?tab=securite", { waitUntil: "networkidle" });
       await expect(page.locator("main")).toContainText(fr);
       await expect(page.locator("main")).not.toContainText("Je suis");
-      await page.goto("/ar/account", { waitUntil: "networkidle" });
+      await page.goto("/ar/account?tab=securite", { waitUntil: "networkidle" });
       await expect(page.locator("main")).toContainText(ar);
       await ctx.close();
     });
