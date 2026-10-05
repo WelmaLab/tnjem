@@ -1741,5 +1741,28 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .ssv-other-ic{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--blue50);color:var(--blue)}
   .ssv-other-t{font-family:var(--fd);font-size:16px;font-weight:700;color:var(--ink)}
   .ssv-pcard-other .btn{margin-block-start:6px}
+
+  /* ── Mes fiches (mockup 3a): chips + search, groups by prof, the privacy line ── */
+  .ssv-ftools{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;margin-block-end:14px}
+  .ssv-chips{display:flex;gap:8px;flex-wrap:wrap}
+  .ssv-chip{display:inline-flex;align-items:center;gap:4px;min-height:44px;padding-inline:14px;border-radius:999px;border:1.5px solid var(--line);
+    background:var(--paper);font:inherit;font-size:13.5px;font-weight:700;color:var(--ink2);cursor:pointer}
+  .ssv-chip:hover{border-color:var(--blue)}
+  .ssv-chip.is-on{background:var(--blue50);border-color:var(--blue);color:var(--blue700)}
+  .ssv-chip:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+  .ssv-search{flex:1 1 220px;max-width:320px;min-height:44px}
+  .ssv-search .ic{width:17px;height:17px;color:var(--muted);flex:none}
+  .ssv-fgroups{padding-block:6px}
+  .ssv-fgroup + .ssv-fgroup{margin-block-start:10px;padding-block-start:10px;border-block-start:1px solid var(--line)}
+  .ssv-fgroup-t{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);padding-block:8px 2px}
+  .ssv-ftag{flex:none}
+  .ssv-nomatch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:8px}
+  .ssv-fnote{display:flex;align-items:center;gap:6px;margin-block-start:12px;font-size:13px;color:var(--muted)}
+  .ssv-fnote .ic{width:15px;height:15px;flex:none}
+  @media (max-width:599px){
+    /* A phone: the tag steps aside, the row keeps its title and its button. */
+    .ssv-fgroup .ssv-ftag{display:none}
+    .ssv-search{max-width:none}
+  }
 }
 @media (prefers-reduced-motion: no-preference){.ssv-badge.is-live .ssv-dot{animation:live-pulse 1.4s ease-in-out infinite}}

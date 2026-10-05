@@ -51,6 +51,7 @@ const SAMPLE: { [K in NotificationKey]: NotificationParams[K] } = {
   subscriptionEndingTutor: { who: "Amine", offerTitle: "Suivi Bac", until: UNTIL },
   subscriptionExpiredStudent: { who: "Mohamed B.", offerTitle: "Suivi Bac" },
   subscriptionExpiredTutor: { who: "Amine", offerTitle: "Suivi Bac" },
+  materialAdded: { classTitle: "Intégrales", materialTitle: "Corrigé — série 3", tutorName: "Mohamed B." }, // student-space-v1 · E
 };
 const KEYS = Object.keys(SAMPLE) as NotificationKey[];
 const ARABIC = /[؀-ۿ]/;

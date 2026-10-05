@@ -26,6 +26,7 @@ import { checkRateLimit, ipBucket } from "../lib/rate-limit";
 import { requireAdmin } from "../lib/admin";
 import { auditAdmin } from "../lib/audit";
 import { canRead, canReadWith, materialAccessContext } from "../lib/material-access"; // student-space-v1 · pages (C6)
+import { notifyFicheAdded } from "../lib/student-fiche-notify"; // student-space-v1 · pages (E)
 
 /* phase-a lane L4 (A11): delete the three stored sizes of ONE photo version.
    Best-effort: the row has already moved on, so a failure here leaves an orphan
@@ -251,6 +252,8 @@ export async function materialRoutes(app: FastifyInstance): Promise<void> {
           youtubeId,
         })
         .returning({ id: materials.id });
+      // student-space-v1 · E: the booked students of that class get a bell item.
+      await notifyFicheAdded({ classId, visibility, title: title.value, kind: "youtube" });
       return { ok: true, id: row.id };
     }
 
@@ -279,6 +282,8 @@ export async function materialRoutes(app: FastifyInstance): Promise<void> {
       })
       .returning({ id: materials.id });
 
+    // student-space-v1 · E: the booked students of that class get a bell item.
+    await notifyFicheAdded({ classId, visibility, title: title.value, kind: "file" });
     return { ok: true, id: row.id };
   });
 

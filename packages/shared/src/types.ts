@@ -482,7 +482,8 @@ export type NotificationKind =
   | "subscription_resumed"    // the student
   | "subscription_cancelled"  // the other party
   | "subscription_ending"     // both: 3 days before period_end
-  | "subscription_expired";   // both: the nightly job closed it
+  | "subscription_expired"    // both: the nightly job closed it
+  | "material_added";         // student-space-v1 · E: the student: a prof added a fiche to a class they booked
 
 export type NotificationItem = {
   id: string;

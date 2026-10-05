@@ -8,7 +8,7 @@
    Demo mode (no API, dev only) answers with the empty state — never invented data. */
 import { call } from "@/lib/api";
 import { demoFallback } from "@/lib/backend";
-import type { StudentClassDetail, StudentClasses, StudentHome, StudentProfs } from "@tnajem/shared";
+import type { StudentClassDetail, StudentClasses, StudentFiches, StudentHome, StudentProfs } from "@tnajem/shared";
 
 /** A refusal from the student space: no session, not a student, or the budget. */
 export type StudentSpaceError = { ok: false; error: string };
@@ -34,6 +34,31 @@ export type StudentProfsResult = ({ ok: true } & StudentProfs) | StudentSpaceErr
 export async function getStudentProfs(): Promise<StudentProfsResult> {
   if (demoFallback) return { ok: true, profs: [], subscriptions: [] };
   return call<StudentProfsResult>("/student/profs", undefined, "GET");
+}
+
+export type StudentFichesResult = ({ ok: true } & StudentFiches) | StudentSpaceError;
+
+/** Mes fiches (/student/fiches): every fiche the student may open. */
+export async function getStudentFiches(): Promise<StudentFichesResult> {
+  if (demoFallback) return { ok: true, fiches: [], lastSeenAt: null };
+  return call<StudentFichesResult>("/student/fiches", undefined, "GET");
+}
+
+/** The student opened Mes fiches: « Nouveau » starts again from now. Never throws. */
+export async function markFichesSeen(): Promise<{ ok: boolean; error?: string }> {
+  if (demoFallback) return { ok: true };
+  try {
+    return await call<{ ok: boolean; error?: string }>("/student/fiches/seen", {});
+  } catch {
+    return { ok: false, error: "unavailable" };
+  }
+}
+
+/** CONTRACT C4 — the « Mes fiches » badge: fiches added since the last visit. 0 on any failure. */
+export async function getFichesNewCount(): Promise<number> {
+  if (demoFallback) return 0;
+  const r = await call<{ count?: number }>("/student/fiches/new-count", undefined, "GET").catch(() => null);
+  return typeof r?.count === "number" ? r.count : 0;
 }
 
 /** Mes cours (/student/cours): every booking, by tab. */

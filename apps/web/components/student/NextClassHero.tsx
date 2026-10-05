@@ -23,7 +23,7 @@ const copy = bilingual({
   fr: {
     liveNow: "En direct maintenant",
     liveIn: (s: string) => `En direct dans ${s}`,
-    with: (n: string, s: string) => (s ? `avec ${n} · ${s}` : `avec ${n}`),
+    with: "avec",
     fichesN: (n: number) => (n === 1 ? "1 fiche jointe" : `${n} fiches jointes`),
     join: "Rejoindre le direct",
     fiches: (n: number) => `Fiches (${n})`,
@@ -36,7 +36,7 @@ const copy = bilingual({
   ar: {
     liveNow: "الدايركت بدا توّا",
     liveIn: (s: string) => `الدايركت بعد ${s}`,
-    with: (n: string, s: string) => (s ? `مع ${n} · ${s}` : `مع ${n}`),
+    with: "مع",
     fichesN: (n: number) => `${n} ملفات مرفوقة`,
     join: "ادخل للدايركت",
     fiches: (n: number) => `الملفات (${n})`,
@@ -84,7 +84,7 @@ export function NextClassHero({ row, onCancelled }: { row: StudentClassRow; onCa
           {live ? c.liveNow : c.liveIn(shortIn(left, locale))}
         </span>
         <span className="ssv-hero-with">
-          <UserText>{c.with(row.tutor.name, subjectOf(row.tutor.subject, locale))}</UserText>
+          {c.with} <UserText>{row.tutor.name}</UserText>{subjectOf(row.tutor.subject, locale) ? ` · ${subjectOf(row.tutor.subject, locale)}` : ""}
         </span>
       </div>
 

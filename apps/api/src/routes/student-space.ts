@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { and, desc, eq, gt, inArray, isNull, ne, sql as raw, classes, profiles, reviews, tutors } from "@tnajem/db";
 import {
   displayName, isUuid, priceWithPromotion, studentToLevel, subjectCodeFrom,
-  type StudentClassDetail, type StudentClasses, type StudentProfCard, type StudentProfs,
+  type StudentClassDetail, type StudentClasses, type StudentFiches, type StudentProfCard, type StudentProfs,
   type StudentHome, type StudentHomeProf, type StudentOpenClass, type StudentTutorRef, type StudentWeekItem,
 } from "@tnajem/shared";
 import { db } from "../db";
@@ -20,6 +20,9 @@ import {
      GET /student/home        Accueil: the next class, this week, my profs, new fiches,
                               and — when there is nothing at all — suggested profs
      GET /student/profs       Mes profs: followed ∪ had-a-class, + « Abonnements mensuels »
+     GET /student/fiches      Mes fiches: every fiche the student may open (the one rule)
+     POST /student/fiches/seen   the page was opened: « Nouveau » starts again from now (0042)
+     GET /student/fiches/new-count   the shell's badge (contract C4)
      GET /student/classes     Mes cours: every booking, by tab (À venir · Passées · Annulées)
      GET /student/classes/:bookingId
                               one booking: its fiches, my review, the prof's next class
@@ -201,6 +204,45 @@ export async function studentSpaceRoutes(app: FastifyInstance): Promise<void> {
     });
     const body: StudentProfs = { profs, subscriptions };
     return { ok: true, ...body };
+  });
+
+  /* ── GET /student/fiches — Mes fiches (letter E) ──────────────────────────── */
+  app.get("/student/fiches", async (req) => {
+    const gate = await studentGate(req);
+    if (!gate.ok) return gate;
+    const uid = gate.session.profile.id;
+    const [access, followed, lastSeen] = await Promise.all([materialAccessContext(uid), followedTutorIds(uid), lastSeenFiches(uid)]);
+    const rows = await studentBookings(uid, Date.now(), access);
+    const profIds = await studentTutorIds(uid, rows, followed);
+    const body: StudentFiches = {
+      fiches: await studentFiches(uid, profIds, { lastSeen, access }),
+      lastSeenAt: lastSeen ? lastSeen.toISOString() : null,
+    };
+    return { ok: true, ...body };
+  });
+
+  /* ── POST /student/fiches/seen — the student opened « Mes fiches » (0042) ─────
+     Everything they may open is now seen: the « Nouveau » dots and the shell's badge
+     start again from here. Idempotent; a write, so a tighter budget. */
+  app.post("/student/fiches/seen", async (req) => {
+    const gate = await studentGate(req, { key: "seen", max: 120, windowMs: 60 * 60_000 });
+    if (!gate.ok) return gate;
+    await db.update(profiles).set({ lastSeenFichesAt: raw`now()` }).where(eq(profiles.id, gate.session.profile.id));
+    return { ok: true };
+  });
+
+  /* ── GET /student/fiches/new-count — the badge of « Mes fiches » (contract C4) ──
+     Fiches the student may open, added after their last visit. Never opened the page
+     (last_seen_fiches_at NULL) → every fiche they may open counts: none of it has been
+     seen there yet. Always carries `count` (0 on a refusal), the shape the shell reads. */
+  app.get("/student/fiches/new-count", async (req) => {
+    const gate = await studentGate(req);
+    if (!gate.ok) return { ...gate, count: 0 };
+    const uid = gate.session.profile.id;
+    const [access, followed, lastSeen] = await Promise.all([materialAccessContext(uid), followedTutorIds(uid), lastSeenFiches(uid)]);
+    const rows = await studentBookings(uid, Date.now(), access);
+    const fiches = await studentFiches(uid, await studentTutorIds(uid, rows, followed), { lastSeen, access });
+    return { ok: true, count: fiches.filter((f) => f.isNew).length };
   });
 
   /* ── GET /student/classes — Mes cours (letter C) ──────────────────────────── */

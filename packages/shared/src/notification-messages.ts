@@ -53,6 +53,8 @@ export type NotificationParams = {
   subscriptionEndingTutor: Who & { offerTitle: string; until: string };
   subscriptionExpiredStudent: Who & { offerTitle: string };
   subscriptionExpiredTutor: Who & { offerTitle: string };
+  // student-space-v1 · E: a prof added a material to a class the student booked.
+  materialAdded: { classTitle: string; materialTitle: string; tutorName?: string | null; video?: boolean };
 };
 
 export type NotificationKey = keyof NotificationParams;
@@ -85,6 +87,7 @@ export const NOTIFICATION_KIND_OF: Record<NotificationKey, NotificationKind> = {
   subscriptionEndingTutor: "subscription_ending",
   subscriptionExpiredStudent: "subscription_expired",
   subscriptionExpiredTutor: "subscription_expired",
+  materialAdded: "material_added", // student-space-v1 · E
 };
 
 export type NotificationText = { title: string; body: string; sms?: string };
@@ -266,6 +269,11 @@ export const NOTIFICATION_MESSAGES = {
       body: "L'abonnement de " + f.who(p, "ton élève") + " (« " + f.v(p.offerTitle)
         + " ») est arrivé à son terme. Renouvelle-le en un clic quand tu as reçu le paiement.",
     }),
+    // student-space-v1 · E
+    materialAdded: (p, f) => ({
+      title: p.video ? "Nouvelle vidéo pour ta séance" : "Nouvelle fiche pour ta séance",
+      body: (p.tutorName ? f.v(p.tutorName) : "Ton prof") + " a ajouté « " + f.v(p.materialTitle) + " » à la séance « " + f.v(p.classTitle) + " ». Elle est dans Mes fiches.",
+    }),
   },
   ar: {
     bookingConfirmed: (p, f) => ({
@@ -382,6 +390,11 @@ export const NOTIFICATION_MESSAGES = {
     subscriptionExpiredTutor: (p, f) => ({
       title: "الاشتراك وفى",
       body: "الاشتراك متاع " + f.who(p, "تلميذك") + " (« " + f.v(p.offerTitle) + " ») وفى. جدّدو بكليك وحدة كيف توصل بالخلاص.",
+    }),
+    // student-space-v1 · E
+    materialAdded: (p, f) => ({
+      title: p.video ? "فيديو جديد لحصّتك" : "ملف جديد لحصّتك",
+      body: (p.tutorName ? f.v(p.tutorName) : "أستاذك") + " زاد « " + f.v(p.materialTitle) + " » للحصة « " + f.v(p.classTitle) + " ». تلقاه في ملفّاتي.",
     }),
   },
 } satisfies Record<Locale, Catalog>;

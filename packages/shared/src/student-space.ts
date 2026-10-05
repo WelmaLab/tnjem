@@ -192,3 +192,10 @@ export type StudentSubscriptionRow = {
 
 /** GET /student/profs. */
 export type StudentProfs = { profs: StudentProfCard[]; subscriptions: StudentSubscriptionRow[] };
+
+/* ── Mes fiches (letter E) ────────────────────────────────────────────────── */
+
+/** GET /student/fiches — every fiche of the student's profs that they may open
+    (lib/material-access.ts, the file endpoint's own rule), newest first. `isNew` is
+    against `lastSeenAt` as it was BEFORE this visit (the page then marks it seen). */
+export type StudentFiches = { fiches: StudentFiche[]; lastSeenAt: string | null };
