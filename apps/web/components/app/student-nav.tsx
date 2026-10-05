@@ -27,7 +27,7 @@ export const STUDENT_ICONS: Record<StudentNavKey, NavItem["icon"]> = {
 /** What a screen reader hears after the label: ", 2 séances à venir". */
 const BADGE_LABEL: Record<Exclude<keyof StudentShellCounts, "notifications">, (n: number) => Bilingual> = {
   upcoming: (n) => ({ fr: n === 1 ? "1 séance à venir" : `${n} séances à venir`, ar: `${n} حصص جايين` }),
-  fiches: (n) => ({ fr: n === 1 ? "1 nouvelle fiche" : `${n} nouvelles fiches`, ar: `${n} ملخّصات جداد` }),
+  fiches: (n) => ({ fr: n === 1 ? "1 nouvelle fiche" : `${n} nouvelles fiches`, ar: `${n} ملفات جداد` }),
   messages: (n) => ({ fr: n === 1 ? "1 message non lu" : `${n} messages non lus`, ar: `${n} رسالة موش مقروية` }),
 };
 

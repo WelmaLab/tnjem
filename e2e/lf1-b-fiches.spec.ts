@@ -100,7 +100,7 @@ test.describe("B · the list of fiches", () => {
     const { me } = await verifiedTutor();
     const ctx = await contextAs(browser, me.id);
     const page = await ctx.newPage();
-    for (const [loc, label] of [["fr", "Créer ma 1ʳᵉ fiche"], ["ar", "اعمل أوّل ملخّص"]] as const) {
+    for (const [loc, label] of [["fr", "Créer ma 1ʳᵉ fiche"], ["ar", "اعمل أوّل ملف"]] as const) {
       await page.goto(`/${loc}/dashboard/materials`, { waitUntil: "networkidle" });
       const empty = page.locator("[data-e2e=shell-empty]");
       await expect(empty).toBeVisible();

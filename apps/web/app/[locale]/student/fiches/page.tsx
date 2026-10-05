@@ -10,7 +10,7 @@ import { isUuid } from "@tnajem/shared";
 
 const copy = bilingual({
   fr: { title: "Mes fiches", description: "Les documents et vidéos que tes profs partagent avec toi sur Tnajem." },
-  ar: { title: "ملفّاتي", description: "الوثائق والفيديوات اللي يقسموها معاك أساتذتك في Tnajem." },
+  ar: { title: "ملفاتي", description: "الوثائق والفيديوات اللي يقسموها معاك أساتذتك في Tnajem." },
 });
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }): Promise<Metadata> {

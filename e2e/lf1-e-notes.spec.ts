@@ -41,7 +41,7 @@ test.describe("E · the blocker, and no second note", () => {
     await expect(page.locator("main .aps-sub")).toHaveText("Décris ta fiche, ajoute le fichier, fixe ton prix. Tes élèves la voient sur ta page.");
     await expect(page.locator("main .note-info")).toHaveCount(0);
     await page.goto("/ar/dashboard/new-pack", { waitUntil: "networkidle" });
-    await expect(page.locator("main .aps-sub")).toContainText("وصّف الملخّص");
+    await expect(page.locator("main .aps-sub")).toContainText("وصّف الملف");
   });
 });
 

@@ -9,9 +9,10 @@ import {
    The next class (start + duration decides, whatever classes.status says — C7),
    « Cette semaine » (my other seats + the open classes of the profs I follow, at the
    price the checkout opens with), « Mes profs », « Nouvelles fiches » under the ONE
-   access rule (lib/material-access.ts — C6), and — only when there is nothing at
-   all — up to 3 verified profs matching the student's level and subjects, else the
-   newest verified. Session + student role on every call (C9). */
+   access rule (lib/material-access.ts — C6), and « Profs pour toi »: always, up to 3
+   verified profs matching the student's level and subjects, never one they follow,
+   empty when nothing matches — with nothing at all, the newest verified instead.
+   Session + student role on every call (C9). */
 
 let app: App;
 const materialIds: string[] = [];
@@ -100,7 +101,8 @@ describe("B · the next class and « Cette semaine »", () => {
     assert.equal(o.priceTnd, 36, "40 TND − 10 % (pricing.ts, the price the checkout opens with)");
     assert.ok(!opens.some((x: { classId: string }) => x.classId === full.id), "a full class is not offered");
     assert.ok(!opens.some((x: { classId: string }) => x.classId === nextMonth.id), "nor one beyond 7 days");
-    assert.equal(res.body.suggestions, null, "following a prof is not « nothing at all »");
+    assert.equal(res.body.nothing, false, "following a prof is not « nothing at all »");
+    assert.deepEqual(res.body.suggestions, [], "no level, no subjects: nothing matches, and no « newest » fallback once there is a prof");
   });
 });
 
@@ -180,5 +182,38 @@ describe("B · nothing at all: suggestions from Profil", () => {
     assert.equal(res.body.suggestions[0].id, match.id, "the prof matching both comes first");
     assert.ok(!res.body.suggestions.some((t: { id: string }) => t.id === pending.id), "never a prof who is not verified");
     assert.doesNotMatch(res.raw, /Ben Salah/);
+  });
+});
+
+describe("B · « Profs pour toi » for a student who already has profs", () => {
+  test("always there, matched on level + subjects, never a followed prof; a Profil edit changes it", async () => {
+    const followedMatch = await seedTutor({ fullName: "Walid Trabelsi" });
+    const otherMatch = await seedTutor({ fullName: "Sana Ben Salah" });
+    const svt = await seedTutor({ fullName: "Ines Gharbi" });
+    await sql`update tutors set subject = 'physique', levels = '{bac}' where id in ${sql([followedMatch.id, otherMatch.id])}`;
+    await sql`update tutors set subject = 'svt', levels = '{bac}' where id = ${svt.id}`;
+    const booked = await seedTutor();
+    const student = await seedProfile({ role: "student" });
+    await seedBooking({ classId: (await seedClass({ tutorId: booked.id, hoursFromNow: 30 })).id, studentId: student.id });
+    await sql`insert into tutor_follows (student_profile_id, tutor_id) values (${student.id}, ${followedMatch.id})`;
+    await sql`update profiles set level = 'bac', subjects = 'physique' where id = ${student.id}`;
+
+    const cookie = await login(student.id);
+    let res = await home(cookie);
+    assert.equal(res.body.nothing, false);
+    assert.equal(res.body.suggestionsMatched, true);
+    const ids = () => res.body.suggestions.map((t: { id: string }) => t.id) as string[];
+    assert.ok(res.body.suggestions.length >= 1 && res.body.suggestions.length <= 3, "at most 3");
+    assert.equal(res.body.suggestions[0].subject, "physique", "a prof matching level AND subject comes first");
+    assert.ok(ids().includes(otherMatch.id) || res.body.suggestions.every((t: { subject: string }) => t.subject === "physique"),
+      "the unfollowed physique/bac prof is offered (or 3 newer ones matching just as well)");
+    assert.ok(!ids().includes(followedMatch.id), "never a prof the student already follows");
+
+    // Profil: physique → svt. The block follows the edit.
+    await sql`update profiles set subjects = 'svt' where id = ${student.id}`;
+    res = await home(cookie);
+    assert.equal(res.body.suggestionsMatched, true);
+    assert.equal(res.body.suggestions[0].subject, "svt", "the svt profs now come first");
+    assert.ok(!ids().includes(followedMatch.id));
   });
 });

@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { and, desc, eq, gt, inArray, isNull, ne, sql as raw, classes, profiles, reviews, tutors } from "@tnajem/db";
+import { and, desc, eq, gt, inArray, isNull, ne, notInArray, sql as raw, classes, profiles, reviews, tutors } from "@tnajem/db";
 import {
   displayName, isUuid, priceWithPromotion, studentToLevel, subjectCodeFrom,
   type StudentClassDetail, type StudentClasses, type StudentFiches, type StudentProfCard, type StudentProfs,
@@ -18,7 +18,8 @@ import {
 /* THE STUDENT SPACE — student-space-v1 · pages (letters B–F of STUDENT_SPACE_V1.md).
 
      GET /student/home        Accueil: the next class, this week, my profs, new fiches,
-                              and — when there is nothing at all — suggested profs
+                              and « Profs pour toi » (level + subjects; with nothing at
+                              all, the newest verified profs when nothing matches)
      GET /student/profs       Mes profs: followed ∪ had-a-class, + « Abonnements mensuels »
      GET /student/fiches      Mes fiches: every fiche the student may open (the one rule)
      POST /student/fiches/seen   the page was opened: « Nouveau » starts again from now (0042)
@@ -50,9 +51,10 @@ export async function studentGate(req: FastifyRequest, budget: { key: string; ma
   return { ok: true, session };
 }
 
-/** Up to 3 verified profs for a student with nothing yet: matching their level and
-    subjects (Profil) when any match, else the newest verified. */
-async function suggestedTutors(uid: string): Promise<{ list: StudentTutorRef[]; matched: boolean }> {
+/** « Profs pour toi »: up to 3 verified profs matching the student's level and subjects
+    (Profil), never one they already follow. With no match the list is empty — except for
+    a student with nothing at all (`newestIfNone`), who gets the newest verified profs. */
+async function suggestedTutors(uid: string, exclude: string[], newestIfNone: boolean): Promise<{ list: StudentTutorRef[]; matched: boolean }> {
   const [p] = await db.select({ level: profiles.level, subjects: profiles.subjects }).from(profiles).where(eq(profiles.id, uid)).limit(1);
   const rows = await db
     .select({ id: tutors.id, slug: tutors.slug, fullName: tutors.fullName, subject: tutors.subject, levels: tutors.levels, status: tutors.status })
@@ -62,6 +64,7 @@ async function suggestedTutors(uid: string): Promise<{ list: StudentTutorRef[]; 
       isNull(tutors.suspendedAt),
       isNull(tutors.erasedAt),
       raw`coalesce(${tutors.profileId}::text, '') <> ${uid}`,
+      exclude.length ? notInArray(tutors.id, exclude) : undefined,
     ))
     .orderBy(desc(tutors.createdAt))
     .limit(200);
@@ -76,7 +79,7 @@ async function suggestedTutors(uid: string): Promise<{ list: StudentTutorRef[]; 
     .filter((x) => x.s > 0)
     .sort((a, b) => b.s - a.s || a.i - b.i);
   if (scored.length) return { list: scored.slice(0, 3).map((x) => tutorRef(x.t)), matched: true };
-  return { list: rows.slice(0, 3).map(tutorRef), matched: false };
+  return { list: newestIfNone ? rows.slice(0, 3).map(tutorRef) : [], matched: false };
 }
 
 export async function studentSpaceRoutes(app: FastifyInstance): Promise<void> {
@@ -157,7 +160,7 @@ export async function studentSpaceRoutes(app: FastifyInstance): Promise<void> {
     }));
 
     const nothing = rows.length === 0 && followed.length === 0;
-    const suggestions = nothing ? await suggestedTutors(uid) : null;
+    const suggestions = await suggestedTutors(uid, followed, nothing);
 
     const body: StudentHome = {
       firstName: displayName((gate.session.profile.fullName ?? "").trim().split(/\s+/)[0] ?? ""),
@@ -166,8 +169,9 @@ export async function studentSpaceRoutes(app: FastifyInstance): Promise<void> {
       profs,
       profsTotal: shownIds.length,
       newFiches: fiches.slice(0, 3),
-      suggestions: suggestions?.list ?? null,
-      suggestionsMatched: suggestions?.matched ?? false,
+      nothing,
+      suggestions: suggestions.list,
+      suggestionsMatched: suggestions.matched,
     };
     return { ok: true, ...body };
   });

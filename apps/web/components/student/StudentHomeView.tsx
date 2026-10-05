@@ -8,7 +8,7 @@ import { Info, Search, Video } from "@/components/icons";
 import { AppPage, EmptyState, ErrorState, PageSkeleton } from "@/components/app/AppShell";
 import { WrongRoleNotice } from "@/components/WrongRoleNotice";
 import { getStudentHome, type StudentHomeResult } from "@/app/actions-student";
-import { levelsLabel, type StudentFiche, type StudentHomeProf, type StudentTutorRef, type StudentWeekItem } from "@tnajem/shared";
+import { levelsLabel, type StudentFiche, type StudentHome, type StudentHomeProf, type StudentTutorRef, type StudentWeekItem } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 import { NextClassHero } from "./NextClassHero";
 import { cancelOutcomeText } from "./SeatMenu";
@@ -26,9 +26,12 @@ import { tunisClock } from "@tnajem/shared";
      Mes profs                up to 3 followed or past profs, each with their next
                               class or « n nouvelle(s) fiche(s) »
      Nouvelles fiches         the latest 3 fiches I may open
-     nothing at all           ONE card « Trouve ton premier prof » → Explore, then up
-                              to 3 verified profs matching my level and subjects
-                              (Profil), else the newest verified profs
+     Profs pour toi           at the bottom, always: up to 3 verified profs matching my
+                              level and subjects (Profil), never one I follow; hidden
+                              when nothing matches
+     nothing at all           ONE card « Trouve ton premier prof » → Explore, then
+                              « Profs pour toi » — or, with no match, the newest
+                              verified profs
 
    Everything comes from GET /student/home: no demo class, no invented count. */
 
@@ -64,7 +67,7 @@ const copy = bilingual({
     firstT: "Trouve ton premier prof",
     firstB: "Choisis un prof vérifié, suis-le ou réserve une séance : ton espace se remplit dès ta première séance.",
     firstCta: "Explorer les profs",
-    suggestMatched: "Des profs pour toi",
+    suggestMatched: "Profs pour toi",
     suggestNewest: "Les derniers profs vérifiés",
     suggestMatchedSub: "D'après ton niveau et tes matières (Profil).",
     suggestNewestSub: "Ajoute ton niveau et tes matières dans ton profil pour des suggestions faites pour toi.",
@@ -76,7 +79,7 @@ const copy = bilingual({
   },
   ar: {
     hello: (n: string) => (n ? `أهلا ${n}` : "أهلا"),
-    sub: "حصّتك الجاية، أساتذتك وملفّاتك — في بلاصة وحدة.",
+    sub: "حصّتك الجاية، أساتذتك وملفاتك — في بلاصة وحدة.",
     week: "الجمعة هاذي",
     allClasses: "حصصي الكل",
     weekEmpty: "ما فمّا شي آخر مبرمج الجمعة هاذي.",
@@ -93,7 +96,7 @@ const copy = bilingual({
     newFiches: (n: number) => (n === 1 ? "ملف جديد" : `${n} ملفات جديدة`),
     noNext: "ما فمّا حتى حصة مبرمجة",
     fiches: "ملفات جديدة",
-    myFiches: "ملفّاتي",
+    myFiches: "ملفاتي",
     fichesEmpty: "الملفات اللي يقسموها معاك أساتذتك يظهرو هوني.",
     forClass: (d: string) => `لحصة ${d}`,
     fromPage: "ملف من صفحتو",
@@ -112,7 +115,7 @@ const copy = bilingual({
     seePage: "شوف صفحتو",
     verified: "أستاذ متثبّت منّو",
     outT: "ادخل باش تشوف الفضاء متاعك",
-    outB: "حصصك، أساتذتك وملفّاتك يظهرو هوني كي تدخل.",
+    outB: "حصصك، أساتذتك وملفاتك يظهرو هوني كي تدخل.",
     signIn: "تسجيل الدخول",
   },
 });
@@ -207,6 +210,20 @@ function Suggestion({ t, c, locale }: { t: StudentTutorRef; c: Copy; locale: Loc
   );
 }
 
+/** « Profs pour toi » (or, for a student with nothing at all and no match, the newest verified profs). */
+function ForYou({ home, c, locale }: { home: StudentHome; c: Copy; locale: Locale }) {
+  if (!home.suggestions.length) return null;
+  return (
+    <section aria-labelledby="ssv-sug-t" data-e2e="home-for-you">
+      <h2 id="ssv-sug-t" className="hp-card-t">{home.suggestionsMatched ? c.suggestMatched : c.suggestNewest}</h2>
+      <p className="ssv-row-m ssv-sug-sub">{home.suggestionsMatched ? c.suggestMatchedSub : c.suggestNewestSub}</p>
+      <ul className="ssv-sug-grid" data-e2e="suggestions" data-matched={home.suggestionsMatched ? "true" : "false"}>
+        {home.suggestions.map((t) => <Suggestion key={t.id} t={t} c={c} locale={locale} />)}
+      </ul>
+    </section>
+  );
+}
+
 function CardHead({ id, title, link }: { id: string; title: string; link?: { href: string; label: string } }) {
   return (
     <div className="hp-card-head ssv-card-head">
@@ -250,7 +267,7 @@ export function StudentHomeView() {
       </EmptyState>
     );
   } else if (!data.ok) body = <WrongRoleNotice role="guardian" />;
-  else if (home && home.suggestions) {
+  else if (home && home.nothing) {
     // Nothing at all: one card, then the suggested profs.
     body = (
       <div className="ssv-stack" data-e2e="home-nothing">
@@ -262,77 +279,72 @@ export function StudentHomeView() {
         >
           {c.firstB}
         </EmptyState>
-        {home.suggestions.length > 0 && (
-          <section aria-labelledby="ssv-sug-t">
-            <h2 id="ssv-sug-t" className="hp-card-t">{home.suggestionsMatched ? c.suggestMatched : c.suggestNewest}</h2>
-            <p className="ssv-row-m ssv-sug-sub">{home.suggestionsMatched ? c.suggestMatchedSub : c.suggestNewestSub}</p>
-            <ul className="ssv-sug-grid" data-e2e="suggestions" data-matched={home.suggestionsMatched ? "true" : "false"}>
-              {home.suggestions.map((t) => <Suggestion key={t.id} t={t} c={c} locale={locale} />)}
-            </ul>
-          </section>
-        )}
+        <ForYou home={home} c={c} locale={locale} />
       </div>
     );
   } else if (home) {
     body = (
-      <div className="ssv-home">
-        <div className="ssv-col">
-          {home.next ? (
-            <NextClassHero
-              row={home.next}
-              onCancelled={(o) => {
-                setFlash(cancelOutcomeText(o, locale));
-                load();
-              }}
-            />
-          ) : (
-            <EmptyState
-              icon={<Video />}
-              title={c.noUpcomingT}
-              action={<Link href="/explore" className="btn btn-primary btn-sm">{c.noUpcomingCta}</Link>}
-            >
-              {c.noUpcomingB}
-            </EmptyState>
-          )}
-
-          <section className="u-card u-card-pad ssv-card" aria-labelledby="ssv-week-t" data-e2e="home-week">
-            <CardHead id="ssv-week-t" title={c.week} link={{ href: "/student/cours", label: c.allClasses }} />
-            {home.week.length ? (
-              <ul className="ssv-list">
-                {home.week.map((w) => (
-                  <WeekRow key={w.kind === "booked" ? w.row.bookingId : w.open.classId} item={w} c={c} locale={locale} />
-                ))}
-              </ul>
+      <div className="ssv-stack">
+        <div className="ssv-home">
+          <div className="ssv-col">
+            {home.next ? (
+              <NextClassHero
+                row={home.next}
+                onCancelled={(o) => {
+                  setFlash(cancelOutcomeText(o, locale));
+                  load();
+                }}
+              />
             ) : (
-              <p className="hp-muted">{c.weekEmpty}</p>
+              <EmptyState
+                icon={<Video />}
+                title={c.noUpcomingT}
+                action={<Link href="/explore" className="btn btn-primary btn-sm">{c.noUpcomingCta}</Link>}
+              >
+                {c.noUpcomingB}
+              </EmptyState>
             )}
-          </section>
-        </div>
 
-        <div className="ssv-col">
-          <section className="u-card u-card-pad ssv-card" aria-labelledby="ssv-profs-t" data-e2e="home-profs">
-            <CardHead id="ssv-profs-t" title={c.profs} link={{ href: "/student/profs", label: c.seeAll }} />
-            <ul className="ssv-list">
-              {home.profs.map((p) => <ProfRow key={p.tutor.id} p={p} c={c} locale={locale} />)}
-            </ul>
-          </section>
+            <section className="u-card u-card-pad ssv-card" aria-labelledby="ssv-week-t" data-e2e="home-week">
+              <CardHead id="ssv-week-t" title={c.week} link={{ href: "/student/cours", label: c.allClasses }} />
+              {home.week.length ? (
+                <ul className="ssv-list">
+                  {home.week.map((w) => (
+                    <WeekRow key={w.kind === "booked" ? w.row.bookingId : w.open.classId} item={w} c={c} locale={locale} />
+                  ))}
+                </ul>
+              ) : (
+                <p className="hp-muted">{c.weekEmpty}</p>
+              )}
+            </section>
+          </div>
 
-          <section className="u-card u-card-pad ssv-card" aria-labelledby="ssv-fiches-t" data-e2e="home-fiches">
-            <CardHead id="ssv-fiches-t" title={c.fiches} link={{ href: "/student/fiches", label: c.myFiches }} />
-            {home.newFiches.length ? (
+          <div className="ssv-col">
+            <section className="u-card u-card-pad ssv-card" aria-labelledby="ssv-profs-t" data-e2e="home-profs">
+              <CardHead id="ssv-profs-t" title={c.profs} link={{ href: "/student/profs", label: c.seeAll }} />
               <ul className="ssv-list">
-                {home.newFiches.map((f) => <FicheRow key={f.id} f={f} c={c} locale={locale} />)}
+                {home.profs.map((p) => <ProfRow key={p.tutor.id} p={p} c={c} locale={locale} />)}
               </ul>
-            ) : (
-              <p className="hp-muted">{c.fichesEmpty}</p>
-            )}
-          </section>
+            </section>
 
-          <div className="note-info ssv-tip">
-            <Info />
-            <p>{c.tip}</p>
+            <section className="u-card u-card-pad ssv-card" aria-labelledby="ssv-fiches-t" data-e2e="home-fiches">
+              <CardHead id="ssv-fiches-t" title={c.fiches} link={{ href: "/student/fiches", label: c.myFiches }} />
+              {home.newFiches.length ? (
+                <ul className="ssv-list">
+                  {home.newFiches.map((f) => <FicheRow key={f.id} f={f} c={c} locale={locale} />)}
+                </ul>
+              ) : (
+                <p className="hp-muted">{c.fichesEmpty}</p>
+              )}
+            </section>
+
+            <div className="note-info ssv-tip">
+              <Info />
+              <p>{c.tip}</p>
+            </div>
           </div>
         </div>
+        <ForYou home={home} c={c} locale={locale} />
       </div>
     );
   }

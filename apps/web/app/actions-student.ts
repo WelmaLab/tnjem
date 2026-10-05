@@ -17,7 +17,7 @@ export type StudentSpaceError = { ok: false; error: string };
 export type StudentHomeResult = ({ ok: true } & StudentHome) | StudentSpaceError;
 
 const EMPTY_HOME: StudentHome = {
-  firstName: "", next: null, week: [], profs: [], profsTotal: 0, newFiches: [], suggestions: [], suggestionsMatched: false,
+  firstName: "", next: null, week: [], profs: [], profsTotal: 0, newFiches: [], nothing: false, suggestions: [], suggestionsMatched: false,
 };
 
 /** Accueil (/student). */

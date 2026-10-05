@@ -68,7 +68,7 @@ export const APP_NAV: NavGroup[] = [
       {
         key: "materials",
         href: "/dashboard/materials",
-        label: { fr: "Mes fiches", ar: "ملخّصاتي" },
+        label: { fr: "Mes fiches", ar: "ملفاتي" },
         icon: Book,
       },
       {
@@ -135,7 +135,7 @@ export const APP_NAV: NavGroup[] = [
 /** Pages under an item: they light it up and read "<item> › <label>" in the breadcrumbs. */
 export const APP_SUBPAGES: { path: string; parent: string; label: Bilingual }[] = [
   { path: "/dashboard/new-class", parent: "classes", label: { fr: "Nouvelle classe", ar: "حصة جديدة" } },
-  { path: "/dashboard/new-pack", parent: "materials", label: { fr: "Nouvelle fiche", ar: "ملخّص جديد" } },
+  { path: "/dashboard/new-pack", parent: "materials", label: { fr: "Nouvelle fiche", ar: "ملف جديد" } },
   { path: "/dashboard/storefront/preview", parent: "storefront", label: { fr: "Aperçu privé", ar: "معاينة خاصة" } },
   { path: "/onboarding", parent: "storefront", label: { fr: "Modifier ma page", ar: "بدّل صفحتي" } },
   { path: "/dashboard/payout", parent: "home", label: { fr: "Retirer mes gains", ar: "اسحب أرباحي" } },
@@ -161,7 +161,7 @@ export const CREATE_TAB_AT = 2;
 /** The « + » on a phone (the tab bar's middle slot). */
 export const CREATE_ACTIONS: { href: string; label: Bilingual; icon: NavItem["icon"] }[] = [
   { href: "/dashboard/new-class", label: { fr: "Nouvelle classe", ar: "حصة جديدة" }, icon: Plus },
-  { href: "/dashboard/new-pack", label: { fr: "Nouvelle fiche", ar: "ملخّص جديد" }, icon: Plus },
+  { href: "/dashboard/new-pack", label: { fr: "Nouvelle fiche", ar: "ملف جديد" }, icon: Plus },
 ];
 
 /* ── lookups (pure) ─────────────────────────────────────────────────────────── */

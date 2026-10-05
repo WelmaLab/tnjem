@@ -16,14 +16,13 @@ import { BASE_URL } from "./support/env";
 
      6a · signed in with a password on /auth, nothing yet: Accueil suggests the
           newest verified profs; the student sets level + subjects on Profil › Moi
-          → the suggestions change to the matching prof. (Suggestions exist only
-          while the student has nothing at all — spec B — so this is checked
-          FIRST, and at the end it is checked that they are gone.)
+          → « Profs pour toi » changes to the matching prof;
      1 · « Suivre » on the prof's page, then the class row → the class page →
          « Réserver cette séance » → the checkout → « Confirmer ma place »;
      2 · the class is the Accueil hero and in Mes cours › À venir (and the shell's
-         « Mes cours » badge says 1); Mes fiches is still empty — that visit is the
-         « last seen » the next fiche is new against;
+         « Mes cours » badge says 1); « Profs pour toi » is still at the bottom of
+         Accueil, without the prof the student now follows; Mes fiches is still
+         empty — that visit is the « last seen » the next fiche is new against;
      3 · the prof adds a file to that class through « Mes fiches » (the library
          form, the class picked in the shell's Select) → the student's shell shows
          the fiches badge, Mes fiches shows it with « Nouveau », and so does the
@@ -37,7 +36,8 @@ import { BASE_URL } from "./support/env";
          still says `scheduled`; Mes cours › Passées has it, « Passée », with the
          review form; /cron/reminders then writes `done`; the booking keeps its
          status (no attendance is ever recorded);
-     6b · the profile edit stuck, and Accueil no longer shows suggestions.
+     6b · the profile edit stuck; a second edit (physique → SVT) on a student who
+          now has a prof, a class and fiches changes « Profs pour toi » again.
 
    FR at 1440×900, AR at 390×844 (the phone: the class detail is its own page; the
    fiches badge lives in the sidebar, checked at 1440 for a moment). ADDED as its
@@ -200,7 +200,11 @@ for (const run of [
         await expect(hero).toContainText(klass.title);
         await expect(hero).toContainText("Walid T.");
         await expect(hero).not.toContainText("Tester");
-        await expect(s.locator("[data-e2e=suggestions]"), "no suggestions once there is a class").toHaveCount(0);
+        // « Profs pour toi » stays (follow-up 1): matched on the profile, never the prof now followed.
+        const forYou = s.locator("[data-e2e=home-for-you] [data-e2e=suggestions]");
+        await expect(forYou).toHaveAttribute("data-matched", "true");
+        await expect(forYou.locator("[data-e2e=suggested-prof]").first().locator("a")).toHaveAttribute("href", `/${loc}/${match.slug}`);
+        await expect(forYou.locator(`a[href="/${loc}/${tutor.slug}"]`), "never a followed prof").toHaveCount(0);
         await noHorizontalScroll(s);
 
         await s.locator(phone ? "[data-e2e=tab-courses]" : "[data-e2e=nav-courses]").click();
@@ -342,13 +346,31 @@ for (const run of [
         expect(after.status).toBe("done");
       });
 
-      await test.step("6b · the profile stuck; Accueil shows the student's world, no suggestions", async () => {
+      await test.step("6b · the profile stuck; physique → SVT changes « Profs pour toi » on a full Accueil", async () => {
+        // The newest SVT/bac prof: with level AND subject matching, they lead the block once the profile says SVT.
+        const svtFirst = `Ines${letters(5)}`;
+        const svt = await seedTutor({ fullName: `${svtFirst} Mejri` });
+        await sql`update tutors set subject = 'svt', levels = '{bac}' where id = ${svt.id}`;
+
         await s.goto(`/${loc}/account?tab=moi`);
         await expect(s.locator('[data-e2e=moi-levels] [data-level="bac"]')).toHaveAttribute("aria-pressed", "true");
         await expect(s.locator('[data-e2e=moi-subjects] [data-subject="physique"]')).toHaveAttribute("aria-pressed", "true");
+        await s.locator('[data-e2e=moi-subjects] [data-subject="physique"]').click();
+        await s.locator('[data-e2e=moi-subjects] [data-subject="svt"]').click();
+        await expect(s.locator('[data-e2e=moi-subjects] [data-subject="svt"]')).toHaveAttribute("aria-pressed", "true");
+        await s.locator("[data-e2e=moi-save]").click();
+        await expect(s.locator(".toast")).toHaveText(L.saved);
+        await expect
+          .poll(async () => (await sql<{ subjects: string | null }[]>`select subjects from profiles where id = ${student.id}`)[0].subjects)
+          .toBe("svt");
+
         await s.goto(`/${loc}/student`);
         await expect(s.locator("[data-e2e=home-profs] [data-e2e=home-prof]").first()).toContainText("Walid T.");
-        await expect(s.locator("[data-e2e=suggestions]")).toHaveCount(0);
+        const forYou = s.locator("[data-e2e=home-for-you] [data-e2e=suggestions]");
+        await expect(forYou).toHaveAttribute("data-matched", "true");
+        await expect(forYou.locator("[data-e2e=suggested-prof]").first().locator("a")).toHaveAttribute("href", `/${loc}/${svt.slug}`);
+        await expect(forYou.locator(`a[href="/${loc}/${tutor.slug}"]`), "never a followed prof").toHaveCount(0);
+        await noHorizontalScroll(s);
       });
     } finally {
       await ctx.close();

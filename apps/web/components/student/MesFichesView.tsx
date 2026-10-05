@@ -53,7 +53,7 @@ const copy = bilingual({
     note: "Ces fiches sont privées : elles s'ouvrent avec ton compte, jamais par un lien public.",
   },
   ar: {
-    title: "ملفّاتي",
+    title: "ملفاتي",
     sub: "الوثائق والفيديوات متاع أساتذتك : متاع حصصك واللي يقسموها في صفحتهم.",
     chips: { all: "الكل", classes: "حصصي", videos: "فيديوات" },
     filters: "صفّي الملفات",
@@ -64,7 +64,7 @@ const copy = bilingual({
     tagClass: "حصة",
     tagPage: "ملف",
     onlyClass: (t: string) => `حصة « ${t} »`,
-    allFiches: "شوف ملفّاتي الكل",
+    allFiches: "شوف ملفاتي الكل",
     noMatch: "حتى ملف ما يتطابق.",
     clear: "فسّخ البحث",
     emptyT: "ما زال ما فمّا حتى ملف",

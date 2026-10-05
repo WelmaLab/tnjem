@@ -11,7 +11,7 @@ import { pageMetadata } from "@/lib/metadata";
 
 const copy = bilingual({
   fr: { title: "Accueil", description: "Ta prochaine séance, tes profs et tes fiches sur Tnajem." },
-  ar: { title: "الرئيسية", description: "حصّتك الجاية، أساتذتك وملفّاتك في Tnajem." },
+  ar: { title: "الرئيسية", description: "حصّتك الجاية، أساتذتك وملفاتك في Tnajem." },
 });
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }): Promise<Metadata> {

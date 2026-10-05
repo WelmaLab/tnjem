@@ -185,9 +185,9 @@ const MESSAGES: Record<Locale, Record<ShareKind, Record<Tone, (c: ShareMessageCo
       post: (c) => `${c.percent ? `\u2066−${c.percent} %\u2069 على دروسي` : "تخفيض على دروسي"}${c.endsOn ? ` حتى لـ ${c.endsOn}` : ""}${c.promoCode ? ` بالكود ${c.promoCode}` : ""}. كل شي في صفحتي على Tnajem :`,
     },
     pack: {
-      chat: (c) => `${c.ficheTitle ? `الملخّص متاعي « ${c.ficheTitle} »` : "الملخّصات متاعي"} في صفحتي على Tnajem. هوني 👇`,
-      short: (c) => `${c.ficheTitle ? `الملخّص متاعي « ${c.ficheTitle} »` : "الملخّصات متاعي"} على Tnajem :`,
-      post: (c) => `${c.ficheTitle ? `الملخّص متاعي « ${c.ficheTitle} »` : "الملخّصات متاعي"} في صفحتي على Tnajem، مع الحصص الجاية متاعي :`,
+      chat: (c) => `${c.ficheTitle ? `الملف متاعي « ${c.ficheTitle} »` : "الملفات متاعي"} في صفحتي على Tnajem. هوني 👇`,
+      short: (c) => `${c.ficheTitle ? `الملف متاعي « ${c.ficheTitle} »` : "الملفات متاعي"} على Tnajem :`,
+      post: (c) => `${c.ficheTitle ? `الملف متاعي « ${c.ficheTitle} »` : "الملفات متاعي"} في صفحتي على Tnajem، مع الحصص الجاية متاعي :`,
     },
   },
 };

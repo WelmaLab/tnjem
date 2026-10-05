@@ -150,7 +150,7 @@ describe("the student nav table (packages/shared/src/student-shell.ts)", () => {
 
   test("five phone tabs: Accueil · Cours · Profs · Fiches · Messages (Profil is the avatar)", () => {
     assert.deepEqual(STUDENT_TABS.map((t) => t.label.fr), ["Accueil", "Cours", "Profs", "Fiches", "Messages"]);
-    assert.deepEqual(STUDENT_TABS.map((t) => t.label.ar), ["الرئيسية", "حصصي", "أساتذتي", "ملخّصاتي", "الرسائل"]);
+    assert.deepEqual(STUDENT_TABS.map((t) => t.label.ar), ["الرئيسية", "حصصي", "أساتذتي", "ملفاتي", "الرسائل"]);
   });
 
   test("the active item follows the path; Accueil is never a prefix", () => {
@@ -169,7 +169,7 @@ describe("the student nav table (packages/shared/src/student-shell.ts)", () => {
   test("breadcrumbs: « Apprendre › Mes cours », « Accueil », « Compte › Profil », « Mes cours › Séance »", () => {
     assert.deepEqual(studentCrumbs("/student", "fr"), [{ label: "Accueil" }]);
     assert.deepEqual(studentCrumbs("/student/cours", "fr"), [{ label: "Apprendre" }, { label: "Mes cours" }]);
-    assert.deepEqual(studentCrumbs("/student/fiches", "ar"), [{ label: "نتعلّم" }, { label: "ملخّصاتي" }]);
+    assert.deepEqual(studentCrumbs("/student/fiches", "ar"), [{ label: "نتعلّم" }, { label: "ملفاتي" }]);
     assert.deepEqual(studentCrumbs("/messages", "fr"), [{ label: "Échanger" }, { label: "Messages" }]);
     assert.deepEqual(studentCrumbs("/account", "fr"), [{ label: "Compte" }, { label: "Profil" }]);
     assert.deepEqual(studentCrumbs("/student/cours/x", "fr"), [{ label: "Mes cours", href: "/student/cours" }, { label: "Séance" }]);

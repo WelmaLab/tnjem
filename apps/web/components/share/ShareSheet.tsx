@@ -61,7 +61,7 @@ const copy = bilingual({
     copyFailed: "Copie impossible — sélectionne le lien et copie-le à la main.",
   },
   ar: {
-    titles: { profile: "شارك صفحتي", class: "شارك الحصة هاذي", offer: "شارك الاشتراك متاعي", promo: "شارك التخفيض متاعي", pack: "شارك الملخّص هذا" } as Record<ShareKind, string>,
+    titles: { profile: "شارك صفحتي", class: "شارك الحصة هاذي", offer: "شارك الاشتراك متاعي", promo: "شارك التخفيض متاعي", pack: "شارك الملف هذا" } as Record<ShareKind, string>,
     close: "سكّر",
     link: "الرابط متاعك",
     copyLink: "انسخ الرابط",

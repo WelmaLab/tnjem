@@ -18,7 +18,7 @@ const copy = bilingual({
   },
   ar: {
     title: "فضائي",
-    description: "حصصك الدايركت الجاية، أساتذتك والملخّصات متاعك في Tnajem.",
+    description: "حصصك الدايركت الجاية، أساتذتك والملفات متاعك في Tnajem.",
   },
 });
 

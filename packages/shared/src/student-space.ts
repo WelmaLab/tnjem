@@ -108,8 +108,12 @@ export type StudentHome = {
   profsTotal: number;
   /** The latest 3 fiches the student may open. */
   newFiches: StudentFiche[];
-  /** Only when there is nothing at all (no booking, no prof): up to 3 verified profs. */
-  suggestions: StudentTutorRef[] | null;
+  /** No booking and no followed prof: Accueil shows « Trouve ton premier prof ». */
+  nothing: boolean;
+  /** « Profs pour toi »: up to 3 verified profs matching the student's level and subjects, never
+      one they follow. Empty when nothing matches — except when `nothing`, where it falls back to
+      the newest verified profs (`suggestionsMatched` false). */
+  suggestions: StudentTutorRef[];
   /** true = they match the student's level and subjects; false = the newest verified profs. */
   suggestionsMatched: boolean;
 };

@@ -63,7 +63,7 @@ export const STUDENT_NAV: StudentNavGroup[] = [
     items: [
       { key: "courses", href: "/student/cours", label: { fr: "Mes cours", ar: "حصصي" }, badge: "upcoming" },
       { key: "tutors", href: "/student/profs", label: { fr: "Mes profs", ar: "أساتذتي" } },
-      { key: "fiches", href: "/student/fiches", label: { fr: "Mes fiches", ar: "ملخّصاتي" }, badge: "fiches" },
+      { key: "fiches", href: "/student/fiches", label: { fr: "Mes fiches", ar: "ملفاتي" }, badge: "fiches" },
     ],
   },
   {
@@ -98,7 +98,7 @@ export const STUDENT_TABS: { key: StudentNavKey; label: StudentNavLabel }[] = [
   { key: "home", label: { fr: "Accueil", ar: "الرئيسية" } },
   { key: "courses", label: { fr: "Cours", ar: "حصصي" } },
   { key: "tutors", label: { fr: "Profs", ar: "أساتذتي" } },
-  { key: "fiches", label: { fr: "Fiches", ar: "ملخّصاتي" } },
+  { key: "fiches", label: { fr: "Fiches", ar: "ملفاتي" } },
   { key: "messages", label: { fr: "Messages", ar: "الرسائل" } },
 ];
 
