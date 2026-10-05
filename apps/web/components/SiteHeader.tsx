@@ -5,18 +5,15 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useLocale } from "./LocaleProvider";
 import { LocaleToggle } from "./LocaleToggle";
+import { useRoleHint } from "./role-hint";
 
 /* The coarse role for nav, read from the readable ROLE_HINT_COOKIE (lib/auth.ts).
    This REPLACES a getMe() server-action POST that used to fire on every page load —
    which meant every perfectly-cached page still dragged an uncacheable POST behind
    it for every visitor (SCALABILITY.md / launch brief Phase 2). Reading a cookie is
    zero network. It is a display hint only: a stale/forged value at worst shows a nav
-   link that bounces to /auth (middleware) — every action re-checks the real session. */
-function readRoleHint(): string | null {
-  if (typeof document === "undefined") return null;
-  const m = document.cookie.match(/(?:^|;\s*)tnajem_role=([^;]+)/);
-  return m ? decodeURIComponent(m[1]) : null;
-}
+   link that bounces to /auth (middleware) — every action re-checks the real session.
+   student-space-v1 · A: the reader lives in ./role-hint.ts, shared with the footer. */
 
 /* Header copy is page-local (lib/i18n.ts is shared and read-only for agents).
    Nav labels say WHAT you get, not where you go: "Trouver un prof" beats
@@ -29,7 +26,7 @@ const NAV = {
     forTutors: "Pour les profs",
     signIn: "Se connecter",
     createPage: "Créer ma page",
-    myClasses: "Mes cours",
+    mySpace: "Mon espace",
     dashboard: "Tableau de bord",
     messages: "Messages",
     guardianArea: "Espace parent",
@@ -46,7 +43,7 @@ const NAV = {
     forTutors: "للأساتذة",
     signIn: "دخول",
     createPage: "اعمل صفحتك",
-    myClasses: "حصصي",
+    mySpace: "فضائي",
     dashboard: "لوحتي",
     messages: "الرسائل",
     guardianArea: "فضاء الولي",
@@ -119,21 +116,22 @@ const CSS = `
 html[dir="rtl"] .qh-menu .qh-group{letter-spacing:normal}
 `;
 
-/* Responsive top navigation. Auth-aware (shows dashboard / my classes when a role
-   cookie is present). On phones every destination collapses into a grouped
+/* Responsive top navigation. Auth-aware (student-space-v1 · A, three states): a
+   signed-in student gets « Mon espace » (→ /student), a prof « Tableau de bord », a
+   parent « Espace parent »; nobody signed in is offered « Se connecter » — logged out,
+   the header is exactly as before. On phones every destination collapses into a grouped
    hamburger menu — grouped by audience, so a first-time visitor sees which half
    of the product is theirs. */
 export function SiteHeader() {
   const { locale } = useLocale();
   const c = NAV[locale];
   const pathname = usePathname();
-  const [role, setRole] = useState<string | null>(null);
+  const role = useRoleHint();
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLElement>(null);
 
-  // Post-hydration read (server render is auth-agnostic so the HTML stays cacheable).
-  useEffect(() => { setRole(readRoleHint()); }, []);
+  // The role is read after hydration (useRoleHint): the server render is auth-agnostic, so the HTML stays cacheable.
 
   // Close on navigation.
   useEffect(() => { setOpen(false); }, [pathname]);
@@ -181,12 +179,14 @@ export function SiteHeader() {
           <LocaleToggle compact />
 
           {isTutor ? (
-            <Link href="/dashboard" className="btn btn-outline btn-sm qh-cta">{c.dashboard}</Link>
+            <Link href="/dashboard" className="btn btn-outline btn-sm qh-cta" data-e2e="header-space">{c.dashboard}</Link>
           ) : isStudent ? (
-            <Link href="/student" className="btn btn-outline btn-sm qh-cta">{c.myClasses}</Link>
+            <Link href="/student" className="btn btn-outline btn-sm qh-cta" data-e2e="header-space">{c.mySpace}</Link>
+          ) : role === "guardian" ? (
+            <Link href="/guardian" className="btn btn-outline btn-sm qh-cta" data-e2e="header-space">{c.guardianArea}</Link>
           ) : (
             <>
-              <Link href="/auth" className="qh-signin">{c.signIn}</Link>
+              <Link href="/auth" className="qh-signin" data-e2e="header-signin">{c.signIn}</Link>
               {/* SIGNUP, not /onboarding. This CTA used to point straight at the
                   tutor's step-1 screen, which was reachable by any signed-in
                   profile and silently converted a student's account to a tutor
@@ -219,7 +219,7 @@ export function SiteHeader() {
         <nav id="qh-menu" ref={menuRef} className="qh-menu" aria-label={c.menu} onClick={() => setOpen(false)}>
           <div className="qh-group">{c.gStudents}</div>
           <Link href="/explore" aria-current={cur("/explore")}>{c.findTutor}</Link>
-          {isStudent && <Link href="/student" aria-current={cur("/student")}>{c.myClasses}</Link>}
+          {isStudent && <Link href="/student" aria-current={cur("/student")}>{c.mySpace}</Link>}
 
           <div className="qh-group">{c.gTutors}</div>
           <Link href="/pour-les-profs" aria-current={cur("/pour-les-profs")}>{c.forTutors}</Link>

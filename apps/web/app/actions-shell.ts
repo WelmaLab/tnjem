@@ -6,6 +6,7 @@
 import { call } from "@/lib/api";
 import { demoFallback } from "@/lib/backend";
 import type { Storefront, TutorShell, TutorStudent, TutorVerifStatus } from "@tnajem/shared";
+import type { StudentShellCounts, StudentShellInfo } from "@tnajem/shared"; // student-space-v1 · A
 
 /** The AppShell's data (sidebar avatar card, plan label, verification badge). null = not a tutor / no session. */
 export async function getTutorShell(): Promise<TutorShell | null> {
@@ -60,4 +61,36 @@ export async function isMyPage(slug: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/* ── student-space-v1 · A — the StudentShell ──────────────────────────────────── */
+
+/** The StudentShell's data (avatar card, « Mes cours » badge). null = not a student / no session. */
+export async function getStudentShell(): Promise<StudentShellInfo | null> {
+  if (demoFallback) return null;
+  return call<StudentShellInfo | null>("/student/shell", undefined, "GET");
+}
+
+/** A `{ count }` answer as a count; anything else (an error, a route not deployed yet) is 0. */
+function countOf(x: unknown): number {
+  const n = (x as { count?: unknown } | null)?.count;
+  return typeof n === "number" && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+/** CONTRACT C4 — every badge of the student shell. Never throws: a read that fails (an API
+    blip, a 429, a route not deployed yet) shows no badge rather than a made-up number. */
+export async function getStudentShellCounts(): Promise<StudentShellCounts> {
+  if (demoFallback) return { notifications: 0, messages: 0, fiches: 0, upcoming: 0 };
+  const [shell, fiches, notes, msgs] = await Promise.all([
+    call<StudentShellInfo | null>("/student/shell", undefined, "GET").catch(() => null),
+    call<{ count: number }>("/student/fiches/new-count", undefined, "GET").catch(() => null),
+    call<{ read: boolean }[] | null>("/notifications", undefined, "GET").catch(() => null),
+    call<{ count: number }>("/messages/unread-count", undefined, "GET").catch(() => null),
+  ]);
+  return {
+    notifications: (Array.isArray(notes) ? notes : []).filter((n) => !n.read).length,
+    messages: countOf(msgs),
+    fiches: countOf(fiches),
+    upcoming: countOf({ count: shell?.upcoming }),
+  };
 }

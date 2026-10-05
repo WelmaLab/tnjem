@@ -1539,3 +1539,22 @@ html[dir="rtl"] * { letter-spacing: normal !important }
      tab bar, + 16px and the safe area), so the first frame is right before anything is measured. */
   .aps .toast{bottom:max(var(--aps-bottom),calc(var(--toast-bar,0px) + 16px))}
 }
+
+/* ── student-space-v1 · shell ── ─────────────────────────────────────────────
+   A · the StudentShell (components/app/StudentShell.tsx): the AppShell's frame (.aps-*), with
+   the student's differences — five phone tabs (no « + »), the unread count on the Messages tab,
+   the top bar's messages button on wide screens only (on a phone it is that tab), and the
+   avatar in the phone's top bar with its menu (Profil · Aide · Se déconnecter), dropping down. */
+@layer components {
+  .aps-st-tabs{grid-template-columns:repeat(5,minmax(0,1fr))}
+  /* The icon carries the count; .aps-tab span would clip it (overflow:hidden). */
+  .aps-st-tabs .aps-st-tab-ic{position:relative;display:inline-grid;place-items:center;overflow:visible;max-width:none}
+  .aps-st-tab-ic .aps-count{inset-block-start:-7px;inset-inline-end:-12px}
+  .aps-st-wide{display:none}
+  .aps-st-avatar .aps-me-av{width:34px;height:34px;font-size:13px;border-width:2px}
+  .aps-st-me-menu{inset-block-start:calc(100% + 8px);inset-inline-end:0;width:min(240px,calc(100vw - 24px))}
+  @media (min-width:900px){
+    .aps-st-wide{display:grid}
+    .aps-st-narrow{display:none}
+  }
+}

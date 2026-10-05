@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, type ReactNode } from "react";
-import type { TutorShell } from "@tnajem/shared";
+import type { StudentShellInfo, TutorShell } from "@tnajem/shared";
 
 /* espace prof v2 · shell — the one piece of the AppShell that the PUBLIC chrome
    needs to know about, kept in its own small file so SiteShell can import it
@@ -14,22 +14,29 @@ import type { TutorShell } from "@tnajem/shared";
 export type Crumb = { label: string; href?: string };
 
 export type ShellContextValue = {
-  /** The tutor the shell was rendered for (GET /tutor/shell), or null if it could not be read. */
+  /** The tutor the shell was rendered for (GET /tutor/shell), or null if it could not be read.
+      Always null inside the STUDENT shell (student-space-v1 · A) — see `student`. */
   shell: TutorShell | null;
+  /** student-space-v1 · A — which space this is. Absent = the prof's AppShell, as before. */
+  kind?: "tutor" | "student";
+  /** student-space-v1 · A — the student the StudentShell was rendered for (GET /student/shell). */
+  student?: StudentShellInfo | null;
   /** Replace the top bar's breadcrumbs for the current page (AppPage `crumbs`). null = derived from nav.tsx. */
   setCrumbs: (crumbs: Crumb[] | null) => void;
-  /** Re-read the unread counts (bell + messages) — e.g. after marking things read. */
+  /** Re-read the unread counts (bell + messages; in the student shell also the « Mes cours » and
+      « Mes fiches » badges) — e.g. after marking things read or seen. */
   refreshCounts: () => void;
 };
 
 export const ShellContext = createContext<ShellContextValue | null>(null);
 
-/** The shell context, or null outside a prof page. */
+/** The shell context, or null outside a prof or student page. */
 export function useShell(): ShellContextValue | null {
   return useContext(ShellContext);
 }
 
-/** True when this render sits inside the AppShell (a tutor on a prof page). */
+/** True when this render sits inside a shell — the AppShell (a tutor on a prof page) or the
+    StudentShell (a student on a student page). Either way the public chrome steps aside. */
 export function useInAppShell(): boolean {
   return useContext(ShellContext) !== null;
 }

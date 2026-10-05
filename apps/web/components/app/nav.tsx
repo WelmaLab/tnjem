@@ -28,7 +28,10 @@ import {
 
 export type Bilingual = { fr: string; ar: string };
 
-export type NavItem = {
+/* student-space-v1 · A: generic over what the badges read (`T`) — the prof space's items
+   read the TutorShell (the default), the student space's read its counts
+   (components/app/student-nav.tsx). Everything else is the same shape. */
+export type NavItem<T = TutorShell | null> = {
   key: string;
   href: string;
   label: Bilingual;
@@ -36,14 +39,14 @@ export type NavItem = {
   /** More locale-bare paths that mark this item as the current page (exact, or a prefix when ending in "/*"). */
   match?: string[];
   /** A small count beside the label, from the shell data. `label` is what a screen reader hears. */
-  badge?: (shell: TutorShell | null) => { text: string; label: Bilingual } | null;
+  badge?: (shell: T) => { text: string; label: Bilingual } | null;
 };
 
-export type NavGroup = {
+export type NavGroup<T = TutorShell | null> = {
   key: string;
   /** null = an ungrouped item at the top (Accueil). */
   label: Bilingual | null;
-  items: NavItem[];
+  items: NavItem<T>[];
 };
 
 export const APP_NAV: NavGroup[] = [

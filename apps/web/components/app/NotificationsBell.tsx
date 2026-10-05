@@ -5,7 +5,7 @@ import { Spinner } from "@/components/ui";
 import { useLocale } from "@/components/LocaleProvider";
 import { Bell } from "@/components/icons";
 import { getNotifications, markNotificationsRead } from "@/app/actions";
-import type { NotificationItem } from "@tnajem/shared";
+import { studentDeepLink, type NotificationItem } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 import { closeOnLeave } from "./disclosure";
 
@@ -146,10 +146,12 @@ export function NotificationsBell({ unread, onRead }: { unread: number; onRead: 
                     </span>
                   </>
                 );
+                // student-space-v1 · A: an old « /student » row lands where it meant (Mes cours › Annulées…).
+                const href = studentDeepLink(n.kind, n.href);
                 return (
                   <li key={n.id}>
-                    {n.href ? (
-                      <Link href={n.href} className={`aps-note${n.read ? "" : " is-new"}`} onClick={() => setOpen(false)}>
+                    {href ? (
+                      <Link href={href} className={`aps-note${n.read ? "" : " is-new"}`} onClick={() => setOpen(false)}>
                         {inner}
                       </Link>
                     ) : (

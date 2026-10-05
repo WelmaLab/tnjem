@@ -81,3 +81,5 @@ export * from "./admin-offers";
 export * from "./fiches";
 // live-fixes-1 · pages (C2) — names, phones and subjects as they are SHOWN (never stored). Pure.
 export * from "./display";
+// student-space-v1 · A — the student shell: its nav table, breadcrumbs, badges and old-link map. Pure.
+export * from "./student-shell";

@@ -2,13 +2,23 @@
 import { Link } from "@/components/Link";
 import { Logo } from "@/components/Logo";
 import { useLocale } from "./LocaleProvider";
+import { useRoleHint } from "./role-hint";
 
 /* Site footer — brand, then the same two-audience split as the header
    (students/parents · tutors), then legal. A visitor who scrolled to the bottom
    without deciding still sees exactly two doors.
    Bilingual + RTL-safe: logical properties only, no left/right.
    Page-scoped CSS is prefixed `qf-` and injected with dangerouslySetInnerHTML
-   (inline <style>{`…`}</style> in a client component triggers hydration errors). */
+   (inline <style>{`…`}</style> in a client component triggers hydration errors).
+
+   AUTH-AWARE (student-space-v1 · A), read after hydration from the role hint (./role-hint.ts)
+   so the server HTML — the logged-out footer — stays cacheable and /[slug] stays ISR:
+     logged out        exactly as before;
+     a student         « Mon espace » (→ /student) for « Mes cours »; no « Se connecter »,
+                       no « Tableau de bord » (that one is the prof's);
+     a prof            « Tableau de bord »; no « Se connecter », no student link (it would
+                       only bounce them to /dashboard), no « Créer ma page » (they have one);
+     a parent          « Espace parent »; no « Se connecter », no « Tableau de bord ». */
 
 const CONTACT_EMAIL = "contact@tnajem.com";
 
@@ -19,6 +29,8 @@ const F = {
     tutors: "Profs",
     findTutor: "Trouver un prof",
     myClasses: "Mes cours",
+    mySpace: "Mon espace",
+    guardianArea: "Espace parent",
     signIn: "Se connecter",
     forTutors: "Pour les profs",
     pricing: "Tarifs",
@@ -30,6 +42,8 @@ const F = {
     tutors: "أساتذة",
     findTutor: "لقّي أستاذ",
     myClasses: "حصصي",
+    mySpace: "فضائي",
+    guardianArea: "فضاء الولي",
     signIn: "دخول",
     forTutors: "للأساتذة",
     pricing: "الأسعار",
@@ -72,6 +86,7 @@ export function SiteFooter() {
   const { t, locale } = useLocale();
   const f = F[locale];
   const year = new Date().getFullYear();
+  const role = useRoleHint();
 
   return (
     <footer className="site-footer">
@@ -87,8 +102,14 @@ export function SiteFooter() {
           <h2>{f.students}</h2>
           <ul>
             <li><Link href="/explore">{f.findTutor}</Link></li>
-            <li><Link href="/student">{f.myClasses}</Link></li>
-            <li><Link href="/auth">{f.signIn}</Link></li>
+            {role === "student" ? (
+              <li><Link href="/student" data-e2e="footer-space">{f.mySpace}</Link></li>
+            ) : role === "guardian" ? (
+              <li><Link href="/guardian" data-e2e="footer-space">{f.guardianArea}</Link></li>
+            ) : role === null ? (
+              <li><Link href="/student">{f.myClasses}</Link></li>
+            ) : null}
+            {role === null && <li><Link href="/auth" data-e2e="footer-signin">{f.signIn}</Link></li>}
           </ul>
         </nav>
 
@@ -97,8 +118,8 @@ export function SiteFooter() {
           <ul>
             <li><Link href="/pour-les-profs">{f.forTutors}</Link></li>
             <li><Link href="/tarifs">{f.pricing}</Link></li>
-            <li><Link href="/signup/prof">{f.createPage}</Link></li>
-            <li><Link href="/dashboard">{f.dashboard}</Link></li>
+            {role !== "tutor" && <li><Link href="/signup/prof">{f.createPage}</Link></li>}
+            {(role === null || role === "tutor") && <li><Link href="/dashboard" data-e2e="footer-dashboard">{f.dashboard}</Link></li>}
           </ul>
         </nav>
 

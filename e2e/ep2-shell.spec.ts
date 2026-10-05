@@ -114,14 +114,17 @@ test.describe("the frame", () => {
     await ctx.close();
   });
 
-  test("the shell is the TUTOR's: a student keeps the public layout on /messages and /account; a tutor's /account is Réglages", async ({ browser }) => {
+  /* student-space-v1 · A: a student no longer keeps the public layout there — /messages and
+     /account sit in the STUDENT shell now (e2e/ssv1-a-shell.spec.ts). What this test guards is
+     unchanged: the prof's AppShell is the tutor's alone. */
+  test("the AppShell is the TUTOR's: a student gets the student shell on /messages and /account; a tutor's /account is Réglages", async ({ browser }) => {
     const student = await seedProfile({ role: "student", birthYear: 1995, fullName: "Sarra Mejri" });
     const ctx = await browser.newContext();
     await loginAs(ctx, student.id);
     const page = await ctx.newPage();
     for (const path of ["/fr/messages", "/fr/account"]) {
       await page.goto(path);
-      await expect(page.locator(".site-header"), path).toBeVisible();
+      await expect(page.locator("[data-e2e=student-shell]"), path).toBeVisible();
       await expect(page.locator("[data-e2e=app-shell]"), path).toHaveCount(0);
     }
     await ctx.close();

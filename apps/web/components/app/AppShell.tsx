@@ -11,7 +11,9 @@
      app/[locale]/messages/layout.tsx     /messages, /messages/[id]   (shared with students)
      (/account is the student's page; its layout sends a tutor to /dashboard/settings — phase 6)
    Each layout reads the session server-side; a tutor gets the shell, anyone else
-   (student, guardian, guest) gets the page exactly as before. /onboarding/upgrade
+   (student, guardian, guest) gets the page exactly as before — except that a STUDENT
+   gets the student space's own frame there, StudentShell.tsx (student-space-v1 · A),
+   which reuses this file's NavList, AvatarCard and MeMenuItems. /onboarding/upgrade
    is only ever shown to STUDENTS (a tutor is redirected from it), so it keeps the
    public frame.
 
@@ -71,7 +73,7 @@
      {/* ep2:follow-slot *\/}  the public « Ce prof arrive bientôt » page (growth's Suivre)
      {/* ep2:stats-slot *\/}   Ma vitrine (growth's Vues · Clics · Abonnés)
    ══════════════════════════════════════════════════════════════════════════════ */
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Link } from "@/components/Link";
 import { Logo } from "@/components/Logo";
@@ -86,7 +88,7 @@ import { ShellContext, type Crumb, type ShellContextValue } from "./ShellContext
 import { NotificationsBell } from "./NotificationsBell";
 import { closeOnLeave } from "./disclosure";
 import { useFocusRescue } from "./focus-rescue";
-import { APP_NAV, CREATE_ACTIONS, CREATE_TAB_AT, MOBILE_TABS, activeItemKey, crumbsFor, navItem, type NavItem } from "./nav";
+import { APP_NAV, CREATE_ACTIONS, CREATE_TAB_AT, MOBILE_TABS, activeItemKey, crumbsFor, navItem, type NavGroup, type NavItem } from "./nav";
 
 export { AppPage, Blocker, ActionBar, FormMode, FormSection, PageSkeleton, EmptyState, ErrorState } from "./AppPage";
 export type { AppPageProps } from "./AppPage";
@@ -138,18 +140,20 @@ function planLine(shell: TutorShell | null, c: Copy): string {
   return `${c.role} · ${plan}`;
 }
 
-async function signOut() {
+export async function signOut() {
   await logout().catch(() => null);
   // Hard navigation on purpose: a full reload drops every client cache of the signed-in user.
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.href = "/";
 }
 
-/* ── the nav list: the sidebar AND the mobile « Profil » sheet ──────────────── */
-function NavList({ shell, activeKey, onNavigate, idPrefix }: { shell: TutorShell | null; activeKey: string | null; onNavigate?: () => void; idPrefix: string }) {
+/* ── the nav list: the sidebar AND the mobile « Profil » sheet ────────────────
+   student-space-v1 · A: generic — `nav` is the space's table (APP_NAV for the prof,
+   STUDENT_APP_NAV for the student) and `data` is what its badges read. */
+export function NavList<T>({ nav, data, activeKey, onNavigate, idPrefix }: { nav: NavGroup<T>[]; data: T; activeKey: string | null; onNavigate?: () => void; idPrefix: string }) {
   const { locale } = useLocale();
-  const link = (item: NavItem) => {
-    const badge = item.badge?.(shell) ?? null;
+  const link = (item: NavItem<T>) => {
+    const badge = item.badge?.(data) ?? null;
     const Icon = item.icon;
     return (
       <li key={item.key}>
@@ -174,7 +178,7 @@ function NavList({ shell, activeKey, onNavigate, idPrefix }: { shell: TutorShell
   };
   return (
     <>
-      {APP_NAV.map((g) =>
+      {nav.map((g) =>
         g.label ? (
           <div key={g.key} className="aps-group" role="group" aria-labelledby={`${idPrefix}-${g.key}`}>
             <p className="aps-group-t" id={`${idPrefix}-${g.key}`}>{g.label[locale]}</p>
@@ -188,12 +192,41 @@ function NavList({ shell, activeKey, onNavigate, idPrefix }: { shell: TutorShell
   );
 }
 
-/* ── the avatar card at the bottom of the sidebar (rule 3) ──────────────────── */
-function AvatarCard({ shell, c }: { shell: TutorShell | null; c: Copy }) {
+/* ── the avatar menu's entries: links, then « Se déconnecter » ────────────────
+   student-space-v1 · A: shared by the prof's avatar card and the student's (sidebar
+   card, and the avatar of the phone's top bar). */
+export type MeLink = { href: string; label: string; icon: (p: { className?: string }) => ReactElement };
+
+export function MeMenuItems({ links, logout, onClose }: { links: MeLink[]; logout: string; onClose: () => void }) {
+  return (
+    <>
+      {links.map((l) => (
+        <li key={l.href}>
+          <Link prefetch={false} href={l.href} className="aps-menu-item" onClick={onClose}>
+            <l.icon />
+            {l.label}
+          </Link>
+        </li>
+      ))}
+      <li>
+        <button type="button" className="aps-menu-item" onClick={signOut}>
+          <LogOut />
+          {logout}
+        </button>
+      </li>
+    </>
+  );
+}
+
+/* ── the avatar card at the bottom of the sidebar (rule 3) ────────────────────
+   student-space-v1 · A: what it shows comes from the caller — the prof's card reads
+   "Prof · Pilote" and opens Réglages · Aide; the student's reads "Élève · Pilote" and
+   opens Profil · Aide. Same markup, same hooks, same keyboard behaviour. */
+export function AvatarCard({ name, initials, line, links, meLabel, logout }: { name: string; initials: string; line: string; links: MeLink[]; meLabel: string; logout: string }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const first = publicDisplayName(shell?.name) ?? "—";
+  const first = name;
 
   useEffect(() => {
     if (!open) return;
@@ -225,37 +258,20 @@ function AvatarCard({ shell, c }: { shell: TutorShell | null; c: Copy }) {
         className="aps-me-btn"
         aria-expanded={open}
         aria-controls="aps-me-menu"
-        aria-label={`${c.me} · ${first}`}
+        aria-label={`${meLabel} · ${first}`}
         onClick={() => setOpen((v) => !v)}
         data-e2e="shell-me"
       >
-        <span className="avatar aps-me-av" aria-hidden="true">{shell?.initials ?? "?"}</span>
+        <span className="avatar aps-me-av" aria-hidden="true">{initials}</span>
         <span className="aps-me-txt">
           <span className="aps-me-name">{first}</span>
-          <span className="aps-me-plan" data-e2e="shell-plan">{planLine(shell, c)}</span>
+          <span className="aps-me-plan" data-e2e="shell-plan">{line}</span>
         </span>
         <ChevronUp className="aps-me-chev" />
       </button>
       {open && (
         <ul id="aps-me-menu" className="aps-pop aps-me-menu" data-e2e="shell-me-menu">
-          <li>
-            <Link prefetch={false} href="/dashboard/settings" className="aps-menu-item" onClick={() => setOpen(false)}>
-              <Gear />
-              {c.settings}
-            </Link>
-          </li>
-          <li>
-            <Link prefetch={false} href="/aide" className="aps-menu-item" onClick={() => setOpen(false)}>
-              <Help />
-              {c.help}
-            </Link>
-          </li>
-          <li>
-            <button type="button" className="aps-menu-item" onClick={signOut}>
-              <LogOut />
-              {c.logout}
-            </button>
-          </li>
+          <MeMenuItems links={links} logout={logout} onClose={() => setOpen(false)} />
         </ul>
       )}
     </div>
@@ -295,7 +311,7 @@ function ProfileSheet({ shell, activeKey, open, onClose, c }: { shell: TutorShel
           </button>
         </div>
         <nav aria-label={c.space} className="aps-nav aps-sheet-nav">
-          <NavList shell={shell} activeKey={activeKey} onNavigate={onClose} idPrefix="aps-sheet" />
+          <NavList nav={APP_NAV} data={shell} activeKey={activeKey} onNavigate={onClose} idPrefix="aps-sheet" />
         </nav>
         {/* « Aide » is in the nav list above (nav.tsx, COMPTE group — pro P7). */}
         <ul className="aps-sheet-extra">
@@ -418,9 +434,19 @@ export function AppShell({ shell, children }: { shell: TutorShell | null; childr
             <Logo variant="full" height={30} />
           </Link>
           <nav aria-label={c.space} className="aps-nav">
-            <NavList shell={shell} activeKey={activeKey} idPrefix="aps-side" />
+            <NavList nav={APP_NAV} data={shell} activeKey={activeKey} idPrefix="aps-side" />
           </nav>
-          <AvatarCard shell={shell} c={c} />
+          <AvatarCard
+            name={publicDisplayName(shell?.name) ?? "—"}
+            initials={shell?.initials ?? "?"}
+            line={planLine(shell, c)}
+            links={[
+              { href: "/dashboard/settings", label: c.settings, icon: Gear },
+              { href: "/aide", label: c.help, icon: Help },
+            ]}
+            meLabel={c.me}
+            logout={c.logout}
+          />
         </aside>
 
         <div className="aps-body">

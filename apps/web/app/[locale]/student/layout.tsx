@@ -4,18 +4,21 @@ import { bilingual } from "@/lib/i18n";
 import { isLocale, DEFAULT_LOCALE } from "@/lib/locale";
 import { pageMetadata } from "@/lib/metadata";
 import { pageGuard, localeOf, localePath } from "@/lib/page-guard";
+import { StudentShellLayout } from "@/components/app/StudentShellLayout";
 
-/* Metadata for the student's space (and /student/welcome under it). The pages are
-   client components, so this pass-through layout carries it. The title is the
-   page's own heading, « Mes cours » (lib/i18n.ts student.title). NOINDEX: private. */
+/* Metadata for the student's space — Accueil and every page under it (Mes cours,
+   Mes profs, Mes fiches, /student/welcome). The pages are client components, so this
+   layout carries it. student-space-v1 · A: /student is no longer « Mes cours » but
+   the space's home, so the title names the space, « Mon espace » — the words of the
+   public header's button that leads here. NOINDEX: private. */
 const copy = bilingual({
   fr: {
-    title: "Mes cours",
-    description: "Tes prochains cours en direct et tes réservations sur Tnajem.",
+    title: "Mon espace",
+    description: "Tes prochains cours en direct, tes profs et tes fiches sur Tnajem.",
   },
   ar: {
-    title: "حصصي",
-    description: "حصصك الدايركت الجاية والحجوزات متاعك في Tnajem.", // phase-a lane L6 (A18.derija-2)
+    title: "فضائي",
+    description: "حصصك الدايركت الجاية، أساتذتك والملخّصات متاعك في Tnajem.",
   },
 });
 
@@ -29,9 +32,12 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
 export const dynamic = "force-dynamic";
 
 /* phase-a lane L2 (A17) — the reverse of app/[locale]/dashboard/layout.tsx: a
-   TUTOR who opens /student (or /student/welcome) is sent to their dashboard,
+   TUTOR who opens /student (or anything under it) is sent to their dashboard,
    server-side, before anything renders. Guests and the build-time "inert" state
-   fall through to the pages' own handling. */
+   fall through to the pages' own handling.
+
+   student-space-v1 · A — a STUDENT gets every page under /student inside the
+   StudentShell (components/app/StudentShell.tsx), including the pages added later. */
 export default async function StudentLayout(props: {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
@@ -40,5 +46,5 @@ export default async function StudentLayout(props: {
   if (guard.kind === "user" && guard.profile.role === "tutor") {
     redirect(localePath(localeOf((await props.params).locale), "/dashboard"));
   }
-  return <>{props.children}</>;
+  return <StudentShellLayout guard={guard}>{props.children}</StudentShellLayout>;
 }
