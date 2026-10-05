@@ -14,10 +14,10 @@ import { mintSession } from "./support/session";
    Runs against the production build (ISR does not exist in `next dev`).
    ADDED, never edited into an existing spec. */
 
-async function head(request: APIRequestContext, path: string, cookie?: string) {
+async function head(request: APIRequestContext, path: string, cookie?: string, extra: Record<string, string> = {}) {
   const res = await request.get(path, {
     maxRedirects: 0,
-    headers: { "x-forwarded-proto": "https", ...(cookie ? { cookie } : {}) },
+    headers: { "x-forwarded-proto": "https", ...(cookie ? { cookie } : {}), ...extra },
   });
   return { status: res.status(), headers: res.headers(), body: await res.text() };
 }
@@ -95,9 +95,15 @@ test.describe("static rendering and 404s", () => {
       ["/fr/Not-A-Slug", "Cette page n'existe pas"],
       [`/fr/no-such-tutor-${Date.now()}`, "Cette page n'existe pas"],
     ];
+    /* student-space-v1 · I: as a visitor of its OWN. The proxy's slug lookup has a per-IP
+       budget (lib/tutor-lookup.ts: 20, +1 every 3 s) and, over it, fails open to the soft
+       404 on purpose; the ssv1-* specs that run just before open dozens of storefronts from
+       the same 127.0.0.1 and left none — a 200 here, only in the full run. The budget
+       itself is pinned in tutor-lookup.spec.ts. 198.51.100.0/24 is TEST-NET-2. */
+    const visitor = { "x-real-ip": `198.51.100.${1 + Math.floor(Math.random() * 250)}` };
     for (const [path, title] of cases) {
       for (const attempt of [1, 2]) {
-        const r = await head(request, path);
+        const r = await head(request, path, undefined, visitor);
         expect(r.status, `${path} (attempt ${attempt})`).toBe(404);
         expect(r.headers["x-nextjs-cache"], `${path} must not enter the ISR cache`).toBeUndefined();
         expect(r.body.replace(/&#x27;/g, "'"), path).toContain(title);

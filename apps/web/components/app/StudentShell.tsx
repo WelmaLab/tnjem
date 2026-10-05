@@ -202,9 +202,9 @@ export function StudentShell({ student, children }: { student: StudentShellInfo 
                 {crumbs.map((cr, i) => (
                   <li key={`${cr.label}-${i}`}>
                     {cr.href && i < crumbs.length - 1 ? (
-                      <Link prefetch={false} href={cr.href}>{cr.label}</Link>
+                      <Link prefetch={false} href={cr.href}><bdi>{cr.label}</bdi></Link>
                     ) : (
-                      <span aria-current={i === crumbs.length - 1 ? "page" : undefined}>{cr.label}</span>
+                      <span aria-current={i === crumbs.length - 1 ? "page" : undefined}><bdi>{cr.label}</bdi></span>
                     )}
                   </li>
                 ))}

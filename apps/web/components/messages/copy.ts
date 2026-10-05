@@ -29,7 +29,9 @@ export const msgCopy = bilingual({
     privacy: "Les numéros, e-mails et liens sont retirés automatiquement.",
     minorNotice:
       "Cet élève a moins de 18 ans. Son parent ou tuteur peut lire cette conversation depuis son propre compte. Elle est conservée, et Tnajem peut la consulter si un message est signalé.",
-    marker: (title: string, when: string) => `Séance « ${title} » · ${when}`,
+    /* FSI…PDI (\u2068…\u2069) isolate the title: a French title inside the Arabic marker
+       pulled the guillemets and the day number across it (gate I). */
+    marker: (title: string, when: string) => `Séance « \u2068${title}\u2069 » · ${when}`,
     empty: "Aucun message pour l'instant. Écris le premier.",
     emptyClosed: "Aucun message pour l'instant.",
     gone: "Cette conversation n'existe pas, ou tu n'en fais pas partie.",
@@ -88,7 +90,7 @@ export const msgCopy = bilingual({
     privacy: "النمر، الإيميلات والروابط يتنحّاو آليًا.",
     minorNotice:
       "التلميذ هذا عمرو أقلّ من 18 سنة. الولي متاعو ينجّم يقرا المحادثة هاذي من الحساب متاعو. وهي تتحفظ، وTnajem تنجّم تشوفها كان رسالة تتبلّغ.",
-    marker: (title: string, when: string) => `حصة « ${title} » · ${when}`,
+    marker: (title: string, when: string) => `حصة « \u2068${title}\u2069 » · ${when}`,
     empty: "ما فمّاش رسائل لتوّا. اكتب الأولى.",
     emptyClosed: "ما فمّاش رسائل لتوّا.",
     gone: "المحادثة هاذي ما موجودةش، ولا إنت ماكش فيها.",

@@ -41,7 +41,8 @@
     "ui:shots-ep2": "playwright test -c e2e/visual/visual.config.ts ep2-all",
     "ui:shots-lf1": "playwright test -c e2e/visual/visual.config.ts lf1-all",
     "ui:shots-lf2": "playwright test -c e2e/visual/visual.config.ts lf2-all",
-    "ui:shots-lf3": "playwright test -c e2e/visual/visual.config.ts lf3-all"
+    "ui:shots-lf3": "playwright test -c e2e/visual/visual.config.ts lf3-all",
+    "ui:shots-ssv1": "playwright test -c e2e/visual/visual.config.ts ssv1-all"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

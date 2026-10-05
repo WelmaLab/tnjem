@@ -264,7 +264,7 @@ export function AvatarCard({ name, initials, line, links, meLabel, logout }: { n
       >
         <span className="avatar aps-me-av" aria-hidden="true">{initials}</span>
         <span className="aps-me-txt">
-          <span className="aps-me-name">{first}</span>
+          <span className="aps-me-name"><bdi>{first}</bdi></span>
           <span className="aps-me-plan" data-e2e="shell-plan">{line}</span>
         </span>
         <ChevronUp className="aps-me-chev" />
@@ -303,7 +303,7 @@ function ProfileSheet({ shell, activeKey, open, onClose, c }: { shell: TutorShel
         <div className="aps-sheet-head">
           <span className="avatar aps-me-av" aria-hidden="true">{shell?.initials ?? "?"}</span>
           <span className="aps-me-txt">
-            <span className="aps-me-name" id="aps-sheet-t">{first}</span>
+            <span className="aps-me-name" id="aps-sheet-t"><bdi>{first}</bdi></span>
             <span className="aps-me-plan">{planLine(shell, c)}</span>
           </span>
           <button type="button" className="aps-tool" aria-label={c.close} onClick={onClose}>
@@ -459,9 +459,9 @@ export function AppShell({ shell, children }: { shell: TutorShell | null; childr
                 {crumbs.map((cr, i) => (
                   <li key={`${cr.label}-${i}`}>
                     {cr.href && i < crumbs.length - 1 ? (
-                      <Link prefetch={false} href={cr.href}>{cr.label}</Link>
+                      <Link prefetch={false} href={cr.href}><bdi>{cr.label}</bdi></Link>
                     ) : (
-                      <span aria-current={i === crumbs.length - 1 ? "page" : undefined}>{cr.label}</span>
+                      <span aria-current={i === crumbs.length - 1 ? "page" : undefined}><bdi>{cr.label}</bdi></span>
                     )}
                   </li>
                 ))}

@@ -1825,7 +1825,8 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .msg-item-top{display:flex;align-items:center;gap:6px;min-width:0}
   .msg-item-name{font-weight:700;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .msg-item-tag{flex:none;font-size:13px;font-weight:700;color:var(--ink2)}
-  .msg-item-last{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* gate I: the direction from the preview itself — a French message in the Arabic list shows its START, cut at its end. */
+  .msg-item-last{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
   .msg-item-last.is-first{font-style:italic}
   .msg-item-end{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
   .msg-item-time{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
