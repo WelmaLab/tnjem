@@ -1,15 +1,16 @@
 import {
   and, desc, eq, gt, inArray, isNull, sql as raw,
-  bookings, cancellations, classes, materials, profiles, tutorFollows, tutors,
+  bookings, cancellations, classes, materials, profiles, studentSubscriptions, tutorFollows, tutorOffers, tutors,
 } from "@tnajem/db";
 import {
   BOOKING_GRACE_REASON, ficheType, initialsOfName, lateCancelRetainedTnd,
   movedAfterBooking, publicTutorName, sortLevels,
-  type StudentClassRow, type StudentFiche, type StudentTutorRef,
+  type StudentClassRow, type StudentFiche, type StudentSubscriptionRow, type StudentTutorRef,
 } from "@tnajem/shared";
 import { classEndMs } from "@tnajem/shared/live";
 import { db } from "../db";
 import { canReadWith, materialAccessContext, type MaterialAccessContext } from "./material-access";
+import { sessionsUsedInWindow } from "./subscription-seat";
 
 /* THE STUDENT SPACE'S READS (student-space-v1 · pages). routes/student-space.ts
    answers with these; each one is the student's OWN data, read by profile id from
@@ -273,6 +274,44 @@ export async function bookableNextClass(uid: string, tutorId: string): Promise<{
     .limit(1);
   const r = rows[0];
   return r ? { classId: r.id, title: r.title, startsAt: new Date(r.scheduledAt).toISOString() } : null;
+}
+
+/** « Abonnements mensuels » (Mes profs): every student_subscriptions row of the student,
+    newest first — the offer, seats per month, seats left this month (an active one in
+    its paid period), the renewal date, the status. */
+export async function studentSubscriptionRows(uid: string): Promise<StudentSubscriptionRow[]> {
+  const rows = await db
+    .select({
+      id: studentSubscriptions.id,
+      status: studentSubscriptions.status,
+      sessionsPerMonth: studentSubscriptions.sessionsPerMonth,
+      periodStart: studentSubscriptions.periodStart,
+      periodEnd: studentSubscriptions.periodEnd,
+      offerTitle: tutorOffers.title,
+      tutor: tutorCols,
+    })
+    .from(studentSubscriptions)
+    .innerJoin(tutorOffers, eq(tutorOffers.id, studentSubscriptions.offerId))
+    .innerJoin(tutors, eq(tutors.id, studentSubscriptions.tutorId))
+    .where(eq(studentSubscriptions.studentProfileId, uid))
+    .orderBy(desc(studentSubscriptions.createdAt))
+    .limit(20);
+  const now = new Date();
+  const out: StudentSubscriptionRow[] = [];
+  for (const r of rows) {
+    const inPeriod = r.status === "active" && r.periodStart && r.periodEnd && new Date(r.periodStart) <= now && now < new Date(r.periodEnd);
+    const used = inPeriod ? await sessionsUsedInWindow(db, r.id, r.periodStart!, now) : 0;
+    out.push({
+      id: r.id,
+      tutor: tutorRef(r.tutor),
+      offerTitle: r.offerTitle,
+      sessionsPerMonth: r.sessionsPerMonth,
+      seatsLeft: inPeriod ? Math.max(0, r.sessionsPerMonth - used) : null,
+      renewsAt: (r.status === "active" || r.status === "paused") && r.periodEnd ? new Date(r.periodEnd).toISOString() : null,
+      status: r.status,
+    });
+  }
+  return out;
 }
 
 /** Each prof's next class (not cancelled, not started), booked or not. */

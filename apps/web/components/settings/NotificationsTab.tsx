@@ -50,7 +50,7 @@ const copy = bilingual({
       bookings: ["Réservations", "Chaque réservation ou annulation dans tes séances, avec le fichier pour ton agenda."],
       reminders: ["Rappels", "24 h puis 1 h avant chacune de tes séances qui a un élève inscrit."],
       messages: ["Messages", "Pas encore envoyés par e-mail : les nouveaux messages sont dans la cloche."],
-      followers: ["Abonnés", "Pas encore envoyés par e-mail : tes nouveaux abonnés sont dans la cloche."],
+      followers: ["Élèves qui te suivent", "Pas encore envoyés par e-mail : chaque élève qui te suit est dans la cloche."], // student-space-v1 · D
     } as Record<Key, [string, string]>,
     saved: "Préférence enregistrée.",
     failed: "Ça n'a pas marché. Le réglage n'a pas changé.",

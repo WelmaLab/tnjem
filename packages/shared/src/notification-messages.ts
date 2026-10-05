@@ -206,7 +206,7 @@ export const NOTIFICATION_MESSAGES = {
       sms: "Tnajem : ton dossier de vérification doit être complété. Détails dans ton espace prof.",
     }),
     followNew: (p, f) => ({
-      title: "Nouvel abonné",
+      title: "Un élève te suit", // student-space-v1 · D: never « abonné » for a follow
       body: f.who(p, "Un élève") + " te suit : il sera prévenu de tes nouvelles séances et fiches.",
     }),
     followDigest: (p, f) => {

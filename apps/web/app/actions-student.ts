@@ -8,7 +8,7 @@
    Demo mode (no API, dev only) answers with the empty state — never invented data. */
 import { call } from "@/lib/api";
 import { demoFallback } from "@/lib/backend";
-import type { StudentClassDetail, StudentClasses, StudentHome } from "@tnajem/shared";
+import type { StudentClassDetail, StudentClasses, StudentHome, StudentProfs } from "@tnajem/shared";
 
 /** A refusal from the student space: no session, not a student, or the budget. */
 export type StudentSpaceError = { ok: false; error: string };
@@ -27,6 +27,14 @@ export async function getStudentHome(): Promise<StudentHomeResult> {
 
 export type StudentClassesResult = ({ ok: true } & StudentClasses) | StudentSpaceError;
 export type StudentClassDetailResult = ({ ok: true } & StudentClassDetail) | StudentSpaceError;
+
+export type StudentProfsResult = ({ ok: true } & StudentProfs) | StudentSpaceError;
+
+/** Mes profs (/student/profs): followed ∪ had-a-class, + the monthly subscriptions. */
+export async function getStudentProfs(): Promise<StudentProfsResult> {
+  if (demoFallback) return { ok: true, profs: [], subscriptions: [] };
+  return call<StudentProfsResult>("/student/profs", undefined, "GET");
+}
 
 /** Mes cours (/student/cours): every booking, by tab. */
 export async function getStudentClasses(): Promise<StudentClassesResult> {

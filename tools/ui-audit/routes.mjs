@@ -285,6 +285,7 @@ export const ROUTES = [
   { path: "/admin/moderation", name: "admin-moderation", auth: "admin" },
   /* student-space-v1 · pages: the student space's pages (empty state for the harness student). */
   { path: "/student/cours", name: "student-cours", auth: "student" },
+  { path: "/student/profs", name: "student-profs", auth: "student" },
 ];
 
 /** Expand the bare routes across both locales. */

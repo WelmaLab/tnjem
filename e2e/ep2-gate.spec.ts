@@ -192,7 +192,7 @@ test("« Suivre » on a CLASS page, signed out → sign in with the password →
 
   await page.waitForURL((u) => u.pathname === `/fr/class/${klass.id}`, { timeout: 20_000 });
   await expect(btn).toHaveAttribute("data-following", "true", { timeout: 15_000 });
-  await expect(btn).toHaveText("Abonné");
+  await expect(btn).toHaveText("Suivi ✓"); // student-space-v1 · D: « Suivi ✓ », never « Abonné »
   await expect.poll(() => new URL(page.url()).searchParams.get("suivre")).toBeNull();
   expect(await follows()).toBe(1);
 

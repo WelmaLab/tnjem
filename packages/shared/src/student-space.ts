@@ -158,3 +158,37 @@ export type StudentClassDetail = {
   /** « Réserver la prochaine »: this prof's next class the student holds no seat in, with a seat left. */
   nextClass: StudentNextClass | null;
 };
+
+/* ── Mes profs (letter D) ─────────────────────────────────────────────────── */
+
+/** One prof card: followed, or had (or holds) a class with the student. */
+export type StudentProfCard = {
+  tutor: StudentTutorRef;
+  following: boolean;
+  /** The prof's next class (not cancelled, not started), booked or not. */
+  nextClass: StudentNextClass | null;
+  /** The student holds a seat in that next class. */
+  nextClassBooked: boolean;
+  /** Classes taken with this prof: past (ended), not cancelled. */
+  taken: number;
+  /** Fiches of this prof the student may open. */
+  fiches: number;
+  /** …of which added since the student's last visit to « Mes fiches ». */
+  newFiches: number;
+};
+
+/** A row of « Abonnements mensuels » (a student_subscriptions row). */
+export type StudentSubscriptionRow = {
+  id: string;
+  tutor: StudentTutorRef;
+  offerTitle: string;
+  sessionsPerMonth: number;
+  /** Seats left in the current month — only while active in its paid period, else null. */
+  seatsLeft: number | null;
+  /** The end of the paid period (renewal), while active or paused; else null. */
+  renewsAt: string | null;
+  status: "requested" | "active" | "paused" | "cancelled" | "expired";
+};
+
+/** GET /student/profs. */
+export type StudentProfs = { profs: StudentProfCard[]; subscriptions: StudentSubscriptionRow[] };

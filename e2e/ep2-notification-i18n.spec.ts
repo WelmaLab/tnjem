@@ -36,7 +36,7 @@ test("the bell renders a stored key in the page's language — French on /fr, Ar
 
   await page.goto("/fr/dashboard");
   await page.locator("[data-e2e=shell-bell]").click();
-  await expect(keyed).toContainText("Nouvel abonné");
+  await expect(keyed).toContainText("Un élève te suit");
   await expect(keyed).toContainText("Yosra te suit : il sera prévenu de tes nouvelles séances et fiches.");
   await expect(keyed.locator("span[lang]").first()).toHaveAttribute("lang", "fr");
   await expect(legacy).toContainText("Amine a réservé « Intégrales »");

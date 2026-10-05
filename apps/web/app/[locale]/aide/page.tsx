@@ -117,7 +117,7 @@ const copy = bilingual({
           "Le bouton « Partager » (sur l'accueil, dans Ma vitrine, Mes classes, Promotions, Abonnements, et juste après avoir publié une classe) ouvre WhatsApp, Facebook, Messenger, X, Telegram, LinkedIn, « Copier le lien » et un QR code à télécharger. Sur mobile, il ouvre aussi le partage de ton téléphone (Instagram, TikTok…).",
           "Le message est déjà écrit, en français et en arabe : tu peux le modifier avant d'envoyer.",
           "Tant que tu n'es pas vérifié, ton lien t'affiche un aperçu privé ; les autres voient une page « Ce prof arrive bientôt ».",
-          "On peut te « Suivre » depuis ta page, une classe ou la page « arrive bientôt ». Quand tu publies une classe ou une fiche, tes abonnés sont prévenus dans l'app, et par un seul email récapitulatif, au plus une fois par jour (désinscription en un clic). Tu vois chaque nouvel abonné, par son prénom seulement.",
+          "On peut te « Suivre » depuis ta page, une classe ou la page « arrive bientôt ». Quand tu publies une classe ou une fiche, les élèves qui te suivent sont prévenus dans l'app, et par un seul email récapitulatif, au plus une fois par jour (désinscription en un clic). Tu vois chaque élève qui te suit, par son prénom seulement.",
           "Ma vitrine compte les vues et les clics de tes liens sur 30 jours, sans traceur et sans garder d'adresse IP.",
         ],
         cta: { label: "Ma vitrine", href: "/dashboard/storefront" },

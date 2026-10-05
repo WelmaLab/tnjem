@@ -23,7 +23,7 @@ const copy = bilingual({
     title: "Les 30 derniers jours",
     views: "Vues",
     clicks: "Clics",
-    followers: "Abonnés",
+    followers: "Suivent ta page", // student-space-v1 · D: « Abonnés » is the monthly subscription's word
     sources: "D'où viennent tes visites",
     srcViews: (n: number) => (n === 1 ? "1 vue" : `${n} vues`),
     srcClicks: (n: number) => (n === 1 ? "1 clic" : `${n} clics`),

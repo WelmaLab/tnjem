@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { and, desc, eq, gt, inArray, isNull, ne, sql as raw, classes, profiles, reviews, tutors } from "@tnajem/db";
 import {
   displayName, isUuid, priceWithPromotion, studentToLevel, subjectCodeFrom,
-  type StudentClassDetail, type StudentClasses,
+  type StudentClassDetail, type StudentClasses, type StudentProfCard, type StudentProfs,
   type StudentHome, type StudentHomeProf, type StudentOpenClass, type StudentTutorRef, type StudentWeekItem,
 } from "@tnajem/shared";
 import { db } from "../db";
@@ -12,13 +12,14 @@ import { materialAccessContext } from "../lib/material-access";
 import { livePublicPromotions } from "../lib/promotions";
 import {
   bookableNextClass, followedTutorIds, lastSeenFiches, nextClassOf, splitBookings, studentBookings, studentFiches,
-  studentTutorIds, tutorRef, tutorRefs,
+  studentSubscriptionRows, studentTutorIds, tutorRef, tutorRefs,
 } from "../lib/student-space";
 
 /* THE STUDENT SPACE — student-space-v1 · pages (letters B–F of STUDENT_SPACE_V1.md).
 
      GET /student/home        Accueil: the next class, this week, my profs, new fiches,
                               and — when there is nothing at all — suggested profs
+     GET /student/profs       Mes profs: followed ∪ had-a-class, + « Abonnements mensuels »
      GET /student/classes     Mes cours: every booking, by tab (À venir · Passées · Annulées)
      GET /student/classes/:bookingId
                               one booking: its fiches, my review, the prof's next class
@@ -165,6 +166,40 @@ export async function studentSpaceRoutes(app: FastifyInstance): Promise<void> {
       suggestions: suggestions?.list ?? null,
       suggestionsMatched: suggestions?.matched ?? false,
     };
+    return { ok: true, ...body };
+  });
+
+  /* ── GET /student/profs — Mes profs (letter D) ─────────────────────────────── */
+  app.get("/student/profs", async (req) => {
+    const gate = await studentGate(req);
+    if (!gate.ok) return gate;
+    const uid = gate.session.profile.id;
+    const [access, followed, lastSeen] = await Promise.all([materialAccessContext(uid), followedTutorIds(uid), lastSeenFiches(uid)]);
+    const rows = await studentBookings(uid, Date.now(), access);
+    const profIds = await studentTutorIds(uid, rows, followed);
+    const refs = new Map<string, StudentTutorRef>(rows.map((r) => [r.tutor.id, r.tutor]));
+    for (const [id, ref] of await tutorRefs(profIds.filter((id) => !refs.has(id)))) refs.set(id, ref);
+    const shown = profIds.filter((id) => refs.has(id));
+    const [fiches, nextOf, subscriptions] = await Promise.all([
+      studentFiches(uid, shown, { lastSeen, access }),
+      nextClassOf(shown),
+      studentSubscriptionRows(uid),
+    ]);
+    const followedSet = new Set(followed);
+    const mineAhead = new Set(rows.filter((r) => r.state === "upcoming" || r.state === "live").map((r) => r.classId));
+    const profs: StudentProfCard[] = shown.map((id) => {
+      const next = nextOf.get(id) ?? null;
+      return {
+        tutor: refs.get(id)!,
+        following: followedSet.has(id),
+        nextClass: next,
+        nextClassBooked: Boolean(next && mineAhead.has(next.classId)),
+        taken: rows.filter((r) => r.tutor.id === id && r.state === "past").length,
+        fiches: fiches.filter((f) => f.tutor.id === id).length,
+        newFiches: fiches.filter((f) => f.tutor.id === id && f.isNew).length,
+      };
+    });
+    const body: StudentProfs = { profs, subscriptions };
     return { ok: true, ...body };
   });
 

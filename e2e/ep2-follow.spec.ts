@@ -79,7 +79,7 @@ async function suivreToAuth(page: Page, slug: string, address: string): Promise<
 async function backFollowing(page: Page, slug: string): Promise<void> {
   await page.waitForURL((u) => u.pathname === `/fr/${slug}`, { timeout: 20_000 });
   await expect(followButton(page)).toHaveAttribute("data-following", "true", { timeout: 15_000 });
-  await expect(followButton(page)).toHaveText("Abonné");
+  await expect(followButton(page)).toHaveText("Suivi ✓"); // student-space-v1 · D: « Suivi ✓ », never « Abonné »
   await expect(followButton(page)).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => new URL(page.url()).searchParams.get("suivre")).toBeNull();
 }
@@ -152,7 +152,7 @@ test("« Ce prof arrive bientôt »: a signed-in student follows a tutor who is 
 
   // Arabic: the same button, in Arabic.
   await page.goto(`/ar/${tutor.slug}`, { waitUntil: "networkidle" });
-  await expect(page.locator("[data-e2e=coming-soon] [data-e2e=follow-button]")).toHaveText("متابِع");
+  await expect(page.locator("[data-e2e=coming-soon] [data-e2e=follow-button]")).toHaveText("تتابع ✓"); // student-space-v1 · D
   await ctx.close();
 
   // The tutor already has a follower in Mes élèves.

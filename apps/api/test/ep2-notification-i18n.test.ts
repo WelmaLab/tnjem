@@ -142,7 +142,7 @@ describe("ep2 · notifications are stored as a key + parameters and rendered for
     assert.match(ar.body[0].title, ARABIC);
     assert.match(ar.body[0].body, /Amine/);
     const fr = await call(app, "GET", "/notifications?locale=fr", cookie);
-    assert.deepEqual([fr.body[0].lang, fr.body[0].title], ["fr", "Nouvel abonné"]);
+    assert.deepEqual([fr.body[0].lang, fr.body[0].title], ["fr", "Un élève te suit"]);
     assert.match(fr.body[0].body, /^Amine te suit/);
     // No locale: the account's language.
     await sql`update profiles set locale = 'ar' where id = ${p.id}`;

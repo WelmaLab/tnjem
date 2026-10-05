@@ -1,14 +1,15 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Check, Plus } from "@/components/icons";
+import { Plus } from "@/components/icons";
+import { ConfirmDialog } from "@/components/app/ConfirmDialog"; // student-space-v1 · D
 import { Link, useLocalizedRouter } from "@/components/Link";
 import { useLocale } from "@/components/LocaleProvider";
 import { bilingual } from "@/lib/i18n";
 import { followTutor, getFollowStatus, unfollowTutor, type FollowStatus } from "@/app/actions-growth";
 import { Toast } from "@/components/useToast"; // live-fixes-3 · D1: above the sticky « Réserver » bars
 
-/* SUIVRE / ABONNÉ ✓ — Espace prof v2 · Phase 4 · contract C4.
+/* SUIVRE / SUIVI ✓ — Espace prof v2 · Phase 4 · contract C4.
 
    On the profile, the class pages and the "Ce prof arrive bientôt" page:
 
@@ -26,14 +27,22 @@ import { Toast } from "@/components/useToast"; // live-fixes-3 · D1: above the 
    address bar. Every rule (students only, the minors/consent rule, never your own
    page) is the API's; this renders its answers. A tutor, a guardian or the owner
    sees no button at all. Blue, never ochre: the page's one main action is
-   booking, and following is a state. */
+   booking, and following is a state.
+
+   student-space-v1 · D — the label is « Suivre » / « Suivi ✓ » (AR « تابع » /
+   « تتابع ✓ »), never « Abonné »: that word belongs to the monthly subscription.
+   `confirmUnfollow` (Mes profs) asks before unfollowing; `onChange` tells the page. */
 
 const copy = bilingual({
   fr: {
     follow: "Suivre",
-    following: "Abonné",
+    following: "Suivi ✓", // student-space-v1 · D: never « Abonné » for a follow
     followAria: (n: string) => `Suivre ${n}`,
-    followingAria: (n: string) => `Ne plus suivre ${n}`,
+    followingAria: (n: string) => `Suivi : ne plus suivre ${n}`,
+    confirmT: (n: string) => `Ne plus suivre ${n} ?`,
+    confirmB: "Tu ne seras plus prévenu de ses nouvelles séances et fiches. Tu pourras le suivre à nouveau quand tu veux.",
+    confirmYes: "Ne plus suivre",
+    confirmNo: "Garder",
     followed: "C'est noté : tu seras prévenu de ses nouvelles séances et fiches.",
     unfollowed: "Tu ne suis plus ce prof.",
     needsConsent: "Pour suivre un prof, il faut d'abord l'accord de ton parent ou tuteur.",
@@ -43,10 +52,14 @@ const copy = bilingual({
     thisTutor: "ce prof",
   },
   ar: {
-    follow: "تابِع",
-    following: "متابِع",
-    followAria: (n: string) => `تابِع ${n}`,
-    followingAria: (n: string) => `ما عادش تتابع ${n}`,
+    follow: "تابع",
+    following: "تتابع ✓", // student-space-v1 · D
+    followAria: (n: string) => `تابع ${n}`,
+    followingAria: (n: string) => `تتابع : ما عادش تتابع ${n}`,
+    confirmT: (n: string) => `ما عادش تتابع ${n} ؟`,
+    confirmB: "ما عادش توصلك الحصص والملفات الجديدة متاعو. تنجّم تعاود تتابعو وقتلي تحب.",
+    confirmYes: "ما عادش نتابع",
+    confirmNo: "خلّيه",
     followed: "مريڨل : توصلك الحصص والفيشات الجديدة متاعو.",
     unfollowed: "ما عادش تتابع هالأستاذ.",
     needsConsent: "باش تتابع أستاذ، لازم موافقة وليّك قبل.",
@@ -62,12 +75,18 @@ export function FollowButton({
   tutorName,
   variant = "default",
   className,
+  confirmUnfollow = false,
+  onChange,
 }: {
   slug: string;
   /** For the accessible name ("Suivre Mohamed B."). */
   tutorName?: string;
   variant?: "default" | "hero";
   className?: string;
+  /** student-space-v1 · D (Mes profs): « Suivi ✓ » asks before unfollowing. */
+  confirmUnfollow?: boolean;
+  /** Called with the new state after a follow or an unfollow went through. */
+  onChange?: (following: boolean) => void;
 }) {
   const { locale } = useLocale();
   const c = copy[locale];
@@ -77,6 +96,7 @@ export function FollowButton({
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<null | { text: string; consent?: boolean }>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const autoApplied = useRef(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -101,6 +121,7 @@ export function FollowButton({
       if (res.ok) {
         setStatus((s) => ({ ...(s ?? { signedIn: true, canFollow: true }), following: Boolean(res.following) }));
         say(want ? c.followed : c.unfollowed);
+        onChange?.(Boolean(res.following));
       } else if (res.error === "not-authenticated") toLogin();
       else if (res.error === "needs-consent") setNote({ text: c.needsConsent, consent: true });
       else if (res.error === "adults-only") setNote({ text: c.adultsOnly });
@@ -111,7 +132,7 @@ export function FollowButton({
     } finally {
       setBusy(false);
     }
-  }, [slug, say, toLogin, c]);
+  }, [slug, say, toLogin, c, onChange]);
 
   useEffect(() => {
     let alive = true;
@@ -150,12 +171,13 @@ export function FollowButton({
         disabled={busy}
         onClick={() => {
           if (status && !status.signedIn) return toLogin();
+          if (following && confirmUnfollow) return setConfirming(true);
           void apply(!following);
         }}
         data-e2e="follow-button"
         data-following={following ? "true" : "false"}
       >
-        {following ? <Check /> : <Plus />}
+        {following ? null : <Plus />}
         <span>{following ? c.following : c.follow}</span>
       </button>
       {note && (
@@ -165,6 +187,23 @@ export function FollowButton({
         </p>
       )}
       {toast && <Toast>{toast}</Toast>}
+      {confirmUnfollow ? (
+        <ConfirmDialog
+          open={confirming}
+          title={c.confirmT(name)}
+          confirmLabel={c.confirmYes}
+          cancelLabel={c.confirmNo}
+          tone="primary"
+          busy={busy}
+          onClose={() => setConfirming(false)}
+          onConfirm={() => {
+            setConfirming(false);
+            void apply(false);
+          }}
+        >
+          {c.confirmB}
+        </ConfirmDialog>
+      ) : null}
       <style dangerouslySetInnerHTML={{ __html: FB_CSS }} />
     </div>
   );

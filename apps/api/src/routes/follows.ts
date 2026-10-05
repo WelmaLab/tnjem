@@ -11,7 +11,7 @@ import { getSession } from "../lib/session";
 import { checkRateLimit } from "../lib/rate-limit";
 import { minorGate } from "../lib/minor-gate";
 
-/* FOLLOWS — "Suivre / Abonné ✓" (Espace prof v2 · Phase 4 · contract C4).
+/* FOLLOWS — "Suivre / Suivi ✓" (Espace prof v2 · Phase 4 · contract C4).
 
    A student follows a teacher from the profile, a class page, or the "Ce prof
    arrive bientôt" page of a tutor who is not public yet — that is the point of
