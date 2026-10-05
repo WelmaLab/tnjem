@@ -131,3 +131,30 @@ export function ficheType(kind: string, mime: string | null | undefined): Studen
   return "file";
 }
 
+
+/* ── Mes cours (letter C) ─────────────────────────────────────────────────── */
+
+/** GET /student/classes — every booking, by tab. */
+export type StudentClasses = {
+  /** « À venir »: not cancelled, not ended (live ones included), soonest first. */
+  ahead: StudentClassRow[];
+  /** « Passées »: not cancelled, ended (start + duration), latest first. */
+  past: StudentClassRow[];
+  /** « Annulées »: by the student, the prof or Tnajem, latest first. */
+  cancelled: StudentClassRow[];
+};
+
+/** The student's review of a class, as stored (a masked one shows its masked text). */
+export type StudentReview = { rating: number; text: string | null };
+
+/** GET /student/classes/:bookingId — the detail panel / the phone page. */
+export type StudentClassDetail = {
+  row: StudentClassRow;
+  /** The fiches of THIS class the student may open (lib/material-access.ts). */
+  fiches: StudentFiche[];
+  review: StudentReview | null;
+  /** Why the student cannot review (yet), or null when they can (review-eligibility.ts). */
+  reviewBlock: "not-booked" | "class-not-started" | "class-not-ended" | null;
+  /** « Réserver la prochaine »: this prof's next class the student holds no seat in, with a seat left. */
+  nextClass: StudentNextClass | null;
+};

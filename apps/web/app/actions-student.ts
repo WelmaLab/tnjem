@@ -8,7 +8,7 @@
    Demo mode (no API, dev only) answers with the empty state — never invented data. */
 import { call } from "@/lib/api";
 import { demoFallback } from "@/lib/backend";
-import type { StudentHome } from "@tnajem/shared";
+import type { StudentClassDetail, StudentClasses, StudentHome } from "@tnajem/shared";
 
 /** A refusal from the student space: no session, not a student, or the budget. */
 export type StudentSpaceError = { ok: false; error: string };
@@ -23,4 +23,19 @@ const EMPTY_HOME: StudentHome = {
 export async function getStudentHome(): Promise<StudentHomeResult> {
   if (demoFallback) return { ok: true, ...EMPTY_HOME };
   return call<StudentHomeResult>("/student/home", undefined, "GET");
+}
+
+export type StudentClassesResult = ({ ok: true } & StudentClasses) | StudentSpaceError;
+export type StudentClassDetailResult = ({ ok: true } & StudentClassDetail) | StudentSpaceError;
+
+/** Mes cours (/student/cours): every booking, by tab. */
+export async function getStudentClasses(): Promise<StudentClassesResult> {
+  if (demoFallback) return { ok: true, ahead: [], past: [], cancelled: [] };
+  return call<StudentClassesResult>("/student/classes", undefined, "GET");
+}
+
+/** One booking of the student: its fiches, their review, the prof's next class. */
+export async function getStudentClass(bookingId: string): Promise<StudentClassDetailResult> {
+  if (demoFallback || typeof bookingId !== "string" || !/^[0-9a-f-]{36}$/i.test(bookingId)) return { ok: false, error: "not-found" };
+  return call<StudentClassDetailResult>(`/student/classes/${encodeURIComponent(bookingId)}`, undefined, "GET");
 }

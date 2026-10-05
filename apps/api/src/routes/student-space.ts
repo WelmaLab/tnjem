@@ -1,7 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { and, desc, eq, gt, inArray, isNull, ne, sql as raw, classes, profiles, tutors } from "@tnajem/db";
+import { and, desc, eq, gt, inArray, isNull, ne, sql as raw, classes, profiles, reviews, tutors } from "@tnajem/db";
 import {
-  displayName, priceWithPromotion, studentToLevel, subjectCodeFrom,
+  displayName, isUuid, priceWithPromotion, studentToLevel, subjectCodeFrom,
+  type StudentClassDetail, type StudentClasses,
   type StudentHome, type StudentHomeProf, type StudentOpenClass, type StudentTutorRef, type StudentWeekItem,
 } from "@tnajem/shared";
 import { db } from "../db";
@@ -10,7 +11,7 @@ import { checkRateLimit } from "../lib/rate-limit";
 import { materialAccessContext } from "../lib/material-access";
 import { livePublicPromotions } from "../lib/promotions";
 import {
-  followedTutorIds, lastSeenFiches, nextClassOf, splitBookings, studentBookings, studentFiches,
+  bookableNextClass, followedTutorIds, lastSeenFiches, nextClassOf, splitBookings, studentBookings, studentFiches,
   studentTutorIds, tutorRef, tutorRefs,
 } from "../lib/student-space";
 
@@ -18,6 +19,9 @@ import {
 
      GET /student/home        Accueil: the next class, this week, my profs, new fiches,
                               and — when there is nothing at all — suggested profs
+     GET /student/classes     Mes cours: every booking, by tab (À venir · Passées · Annulées)
+     GET /student/classes/:bookingId
+                              one booking: its fiches, my review, the prof's next class
 
    EVERY ROUTE: a session (else not-authenticated), the STUDENT role (a tutor or a
    guardian gets not-a-student — the web layout already sends a tutor to /dashboard),
@@ -160,6 +164,48 @@ export async function studentSpaceRoutes(app: FastifyInstance): Promise<void> {
       newFiches: fiches.slice(0, 3),
       suggestions: suggestions?.list ?? null,
       suggestionsMatched: suggestions?.matched ?? false,
+    };
+    return { ok: true, ...body };
+  });
+
+  /* ── GET /student/classes — Mes cours (letter C) ──────────────────────────── */
+  app.get("/student/classes", async (req) => {
+    const gate = await studentGate(req);
+    if (!gate.ok) return gate;
+    const { ahead, past, cancelled } = splitBookings(await studentBookings(gate.session.profile.id));
+    const body: StudentClasses = { ahead, past, cancelled };
+    return { ok: true, ...body };
+  });
+
+  /* ── GET /student/classes/:bookingId — one booking (the detail panel) ──────── */
+  app.get<{ Params: { bookingId: string } }>("/student/classes/:bookingId", async (req) => {
+    const gate = await studentGate(req);
+    if (!gate.ok) return gate;
+    const uid = gate.session.profile.id;
+    // Someone else's booking id answers exactly like an unknown one: no probing.
+    if (!isUuid(req.params.bookingId)) return { ok: false, error: "not-found" };
+    const access = await materialAccessContext(uid);
+    const row = (await studentBookings(uid, Date.now(), access)).find((r) => r.bookingId === req.params.bookingId);
+    if (!row) return { ok: false, error: "not-found" };
+
+    const [fiches, mine, nextClass] = await Promise.all([
+      studentFiches(uid, [row.tutor.id], { lastSeen: await lastSeenFiches(uid), access }),
+      db.select({ rating: reviews.rating, text: reviews.text })
+        .from(reviews)
+        .where(and(eq(reviews.studentId, uid), eq(reviews.classId, row.classId)))
+        .limit(1),
+      bookableNextClass(uid, row.tutor.id),
+    ]);
+    /* Who may review: the same rule POST /reviews applies (review-eligibility.ts), read
+       from the state this row already derived from start + duration. */
+    const reviewBlock: StudentClassDetail["reviewBlock"] =
+      row.state === "cancelled" ? "not-booked" : row.state === "upcoming" ? "class-not-started" : row.state === "live" ? "class-not-ended" : null;
+    const body: StudentClassDetail = {
+      row,
+      fiches: fiches.filter((f) => f.origin.kind === "class" && f.origin.classId === row.classId),
+      review: mine[0] ? { rating: mine[0].rating, text: mine[0].text ?? null } : null,
+      reviewBlock,
+      nextClass,
     };
     return { ok: true, ...body };
   });

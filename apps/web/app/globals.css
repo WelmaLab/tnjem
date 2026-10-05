@@ -1660,5 +1660,67 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .ssv-sug{padding:16px;gap:12px;justify-content:space-between}
   .ssv-sug-head{display:flex;align-items:center;gap:12px;min-width:0}
   .ssv-sug-name{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:700;color:var(--ink);min-width:0}
+
+  /* ── Mes cours (mockup 2a): the list, and the detail as the right column from 1000px ── */
+  .ssv-tabs{margin-block-end:14px}
+  .ssv-filter{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-block-end:12px}
+  .ssv-filter-x{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding-inline:8px;border:0;background:transparent;
+    font:inherit;font-size:13.5px;font-weight:700;color:var(--blue);cursor:pointer}
+  .ssv-filter-x .ic{width:15px;height:15px}
+  .ssv-cours{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+  @media (min-width:1000px){.ssv-cours{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}}
+  .ssv-clist{list-style:none;height:auto;padding:6px}
+  .ssv-crow + .ssv-crow{border-block-start:1px solid var(--line)}
+  .ssv-crow-a{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px 12px;padding:12px;border-radius:14px;color:inherit;min-height:44px}
+  .ssv-crow-a:hover .ssv-row-t{color:var(--blue)}
+  .ssv-crow.is-sel .ssv-crow-a{background:var(--blue50)}
+  .ssv-crow-a:focus-visible{outline:3px solid var(--blue);outline-offset:-3px}
+  .ssv-crow-a > .tag,.ssv-crow-a > .chip{justify-self:end}
+  .ssv-late{font-size:13px;line-height:1.5;color:var(--ochre-ink);margin-block-start:4px}
+  .ssv-late-row{display:block;white-space:normal}
+  @media (max-width:479px){
+    /* A phone: the tag goes under the text, never squeezing the title (spec H3, AR at 390). */
+    .ssv-crow-a{grid-template-columns:auto minmax(0,1fr)}
+    .ssv-crow-a > .tag,.ssv-crow-a > .chip{grid-column:2;justify-self:start}
+  }
+  .ssv-cdetail{height:auto;min-width:0}
+  @media (min-width:1000px){.ssv-cdetail{position:sticky;inset-block-start:calc(var(--aps-top-h,0px) + 16px)}}
+  .ssv-cdetail-page{max-width:var(--aps-form-w,760px)}
+  .ssv-detail{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .ssv-detail-when{font-size:13.5px;color:var(--muted)}
+  .ssv-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
+  .ssv-detail-t{font-family:var(--fd);font-size:clamp(18px,2vw,21px);font-weight:700;line-height:1.3;color:var(--ink);min-width:0}
+  .ssv-prof{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-block-start:12px;padding-block:12px;border-block:1px solid var(--line)}
+  .ssv-verified{display:inline-flex;align-items:center;gap:4px}
+  .ssv-dsec{margin-block-start:14px}
+  .ssv-dsec-t{font-size:14px;font-weight:700;color:var(--ink);margin-block-end:4px}
+  .ssv-muted{font-size:13.5px;line-height:1.55;color:var(--muted)}
+  .ssv-ok{font-size:13.5px;line-height:1.5;color:var(--green-ink);font-weight:600;margin-block-start:6px}
+  .ssv-detail-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-block-start:18px}
+
+  /* a fiche row (Mes cours › Fiches de la séance, Mes fiches) */
+  .ssv-fiche + .ssv-fiche{border-block-start:1px solid var(--line)}
+  .ssv-fiche .ssv-row{border-block-end:0}
+  .ssv-fiche-t{display:flex;align-items:center;gap:7px;min-width:0}
+  .ssv-new-dot{width:9px;height:9px;border-radius:999px;background:var(--ochre);flex:none}
+  .ssv-fiche-btn{flex:none}
+  .ssv-video{position:relative;padding-block-end:56.25%;height:0;margin-block-end:12px}
+  .ssv-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:var(--r-s)}
+
+  /* « Ton avis » */
+  .ssv-stars{display:inline-flex;gap:2px}
+  .ssv-stars .ic{width:22px;height:22px}
+  .ssv-star-on{color:var(--amber)}
+  .ssv-star-off{color:var(--lineCool)}
+  .ssv-stars-pick{display:flex;gap:0;margin-inline-start:-6px}
+  .ssv-star-btn{display:grid;place-items:center;min-width:44px;min-height:44px;border:0;background:transparent;cursor:pointer;color:var(--lineCool)}
+  .ssv-star-btn .ic{width:24px;height:24px}
+  .ssv-star-btn.is-on{color:var(--amber)}
+  .ssv-star-btn:focus-visible{outline:3px solid var(--blue);outline-offset:-3px;border-radius:10px}
+  .ssv-review-inp{width:100%;margin-block:6px 8px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--paper);
+    color:var(--ink);font:inherit;font-size:14px;resize:vertical}
+  .ssv-review-inp:focus{outline:3px solid var(--blue);outline-offset:1px}
+  .ssv-review-send{margin-block-end:6px}
+  .ssv-review-text{font-size:14px;line-height:1.55;color:var(--ink2);margin-block-start:4px}
 }
 @media (prefers-reduced-motion: no-preference){.ssv-badge.is-live .ssv-dot{animation:live-pulse 1.4s ease-in-out infinite}}

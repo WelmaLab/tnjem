@@ -41,6 +41,12 @@ const SWEEP: [file: string, pairs: [msa: string, derija: string][]][] = [
   ["components/student/NextClassHero.tsx", [
     ["المباشر بدا توّا", "الدايركت بدا توّا"],
   ]],
+  // student-space-v1 · C: the review flow is « Ton avis » in the class detail of Mes cours.
+  ["components/student/ReviewBox.tsx", [
+    ["لقد نقّمت هذه الحصة من قبل.", "قيّمت الحصة هاذي من قبل."],
+    ["ما كنتش محجوز في هذه الحصة.", "ما كنتش محجوز في الحصة هاذي."],
+    ["هذه الحصة ما زالت ما صارتش.", "الحصة هاذي ما زالت ما صارتش."],
+  ]],
   // espace prof v2 · phase 6: the new-pack form moved into its own component.
   ["components/dashboard/new-pack/NewPackForm.tsx", [["أمشي لـ « التثبّت »", "امشي لـ « التثبّت »"]]],
   ["components/WrongRoleNotice.tsx", [["حسابك ما عندوش نفاذ لهذه الصفحة.", "حسابك ما ينجّمش يدخل للصفحة هاذي."]]],

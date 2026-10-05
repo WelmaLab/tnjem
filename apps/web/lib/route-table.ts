@@ -51,6 +51,8 @@ export const ROUTE_PATTERNS: readonly string[] = [
   "signup/eleve",
   "signup/prof",
   "student",
+  "student/cours", // student-space-v1 · pages (C)
+  "student/cours/[bookingId]", // student-space-v1 · pages (C)
   "student/welcome",
   "tarifs",
   "terms",

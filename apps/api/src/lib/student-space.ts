@@ -255,6 +255,26 @@ export async function tutorRefs(ids: readonly string[]): Promise<Map<string, Stu
   return out;
 }
 
+/** « Réserver la prochaine »: this prof's next class (not cancelled, not started, a seat
+    left) that the student holds no live seat in. */
+export async function bookableNextClass(uid: string, tutorId: string): Promise<{ classId: string; title: string; startsAt: string } | null> {
+  const rows = await db
+    .select({ id: classes.id, title: classes.title, scheduledAt: classes.scheduledAt })
+    .from(classes)
+    .where(and(
+      eq(classes.tutorId, tutorId),
+      raw`coalesce(${classes.status}, 'scheduled') <> 'cancelled'`,
+      gt(classes.scheduledAt, raw`now()`),
+      raw`coalesce(${classes.seatsTaken}, 0) < coalesce(${classes.seats}, 0)`,
+      raw`not exists (select 1 from ${bookings} b where b.class_id = ${classes.id} and b.student_id = ${uid}
+                      and coalesce(b.status, 'reserved') <> 'cancelled')`,
+    ))
+    .orderBy(classes.scheduledAt)
+    .limit(1);
+  const r = rows[0];
+  return r ? { classId: r.id, title: r.title, startsAt: new Date(r.scheduledAt).toISOString() } : null;
+}
+
 /** Each prof's next class (not cancelled, not started), booked or not. */
 export async function nextClassOf(tutorIds: readonly string[]): Promise<Map<string, { classId: string; title: string; startsAt: string }>> {
   const out = new Map<string, { classId: string; title: string; startsAt: string }>();

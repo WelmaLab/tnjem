@@ -141,8 +141,9 @@ test("student journey: minor signup → consent → explore → book → live ga
 
   await test.step("review a class they took; the tutor's rating moves", async () => {
     await seedBooking({ classId: taken.id, studentId, isFree: false });
-    await page.goto("/fr/student");
-    await page.getByRole("button", { name: "Noter mon prof" }).first().dispatchEvent("click");
+    /* student-space-v1 · C: « Ton avis » is in the class detail of « Mes cours › Passées »
+       (the right column on a computer), stars first — no « Noter mon prof » toggle. */
+    await page.goto(`/fr/student/cours/${(await sql<{ id: string }[]>`select id from bookings where class_id = ${taken.id} and student_id = ${studentId}`)[0].id}`);
     await page.getByRole("button", { name: "4 étoiles" }).dispatchEvent("click");
     await page.getByLabel(/Un mot pour les autres élèves/).fill("Très clair, on a refait tous les exercices.");
     await page.getByRole("button", { name: "Envoyer mon avis" }).dispatchEvent("click");

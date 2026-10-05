@@ -283,6 +283,8 @@ export const ROUTES = [
   /* live-fixes-2 · C: the one admin screen the list did not have (found by the crawl
      of every route for a visible native select or file input, e2e/lf2-c-native-controls). */
   { path: "/admin/moderation", name: "admin-moderation", auth: "admin" },
+  /* student-space-v1 · pages: the student space's pages (empty state for the harness student). */
+  { path: "/student/cours", name: "student-cours", auth: "student" },
 ];
 
 /** Expand the bare routes across both locales. */
