@@ -138,6 +138,9 @@ export const profiles = pgTable("profiles", {
   passwordSetAt: timestamp("password_set_at", { withTimezone: true }),
   /* When a password-less account was offered "Crée un mot de passe" once (prompt-once). */
   passwordPromptedAt: timestamp("password_prompted_at", { withTimezone: true }),
+  /* student-space-v1 · pages (0042): when the student last opened « Mes fiches ».
+     A fiche they may open created after it is « Nouveau ». NULL = never opened. */
+  lastSeenFichesAt: timestamp("last_seen_fiches_at", { withTimezone: true }),
 
 
 });

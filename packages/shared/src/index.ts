@@ -83,3 +83,5 @@ export * from "./fiches";
 export * from "./display";
 // student-space-v1 · A — the student shell: its nav table, breadcrumbs, badges and old-link map. Pure.
 export * from "./student-shell";
+// student-space-v1 · pages — the student space payloads (Accueil, Mes cours, Mes profs, Mes fiches). Pure.
+export * from "./student-space";

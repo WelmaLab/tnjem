@@ -52,6 +52,8 @@ async function studentPage(browser: Browser, studentId: string, viewport = { wid
 async function cancelFromDashboard(page: Page, locale: "fr" | "ar"): Promise<{ warning: string; flash: string }> {
   const u = UI[locale];
   await page.goto(`/${locale}/student`);
+  // student-space-v1 · B: « Annuler ma place » is behind the next class's « ⋯ » menu now.
+  await page.locator("[data-e2e=seat-menu]").first().click();
   const btn = page.getByRole("button", { name: u.cancel }).first();
   await expect(btn).toBeVisible({ timeout: 15_000 });
   await btn.click();

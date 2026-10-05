@@ -37,11 +37,9 @@ const SWEEP: [file: string, pairs: [msa: string, derija: string][]][] = [
     ["إنت الأستاذ متاع هذه الحصة.", "إنت الأستاذ متاع الحصة هاذي."],
     ["هذه الحصة تلغات", "الحصة هاذي تلغات"],
   ]],
-  ["app/[locale]/student/page.tsx", [
+  // student-space-v1 · B: the old /student page is gone; its live badge is Accueil's hero now.
+  ["components/student/NextClassHero.tsx", [
     ["المباشر بدا توّا", "الدايركت بدا توّا"],
-    ["لقد نقّمت هذه الحصة من قبل.", "قيّمت الحصة هاذي من قبل."],
-    ["ما كنتش محجوز في هذه الحصة.", "ما كنتش محجوز في الحصة هاذي."],
-    ["هذه الحصة ما زالت ما صارتش.", "الحصة هاذي ما زالت ما صارتش."],
   ]],
   // espace prof v2 · phase 6: the new-pack form moved into its own component.
   ["components/dashboard/new-pack/NewPackForm.tsx", [["أمشي لـ « التثبّت »", "امشي لـ « التثبّت »"]]],

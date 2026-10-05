@@ -2,7 +2,7 @@ import type { FastifyBaseLogger, FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
   and, desc, eq, isNull, sql as raw,
-  bookings, classes, materials, materialTakedowns, tutorStrikes, tutors,
+  classes, materials, materialTakedowns, tutorStrikes, tutors,
   objectStore, storageKey, type StoredObject,
 } from "@tnajem/db";
 import {
@@ -25,6 +25,7 @@ import { assertNoContactInfo, CONTACT_ERROR } from "../lib/contact-guard";
 import { checkRateLimit, ipBucket } from "../lib/rate-limit";
 import { requireAdmin } from "../lib/admin";
 import { auditAdmin } from "../lib/audit";
+import { canRead, canReadWith, materialAccessContext } from "../lib/material-access"; // student-space-v1 · pages (C6)
 
 /* phase-a lane L4 (A11): delete the three stored sizes of ONE photo version.
    Best-effort: the row has already moved on, so a failure here leaves an orphan
@@ -95,42 +96,9 @@ const SAFE_SERVE_MIME = new Set(["application/pdf", "image/png", "image/jpeg", "
 /** The policy a material's bytes are served with (GET /materials/:id/file). */
 export const MATERIAL_FILE_CSP = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'";
 
-/** Everyone who may read a given material, resolved against the database. */
-async function canRead(
-  material: { id: string; tutorId: string; visibility: string; classId?: string | null }, // phase-a lane L5 (A18.9): + classId
-  uid: string | null,
-): Promise<boolean> {
-  if (material.visibility === "public") return true;
-  if (!uid) return false;
-
-  const [tutor] = await db
-    .select({ profileId: tutors.profileId })
-    .from(tutors)
-    .where(eq(tutors.id, material.tutorId))
-    .limit(1);
-  if (tutor?.profileId === uid) return true; // the owner, whatever the visibility
-
-  if (material.visibility === "private") return false;
-
-  /* `students`: a LIVE booking on any class of this tutor. Cancelled bookings do
-     not count — giving up the seat gives up the materials with it, which is the
-     same rule messaging follows. */
-  const [row] = await db
-    .select({ n: raw<number>`count(*)::int` })
-    .from(bookings)
-    .innerJoin(classes, eq(bookings.classId, classes.id))
-    .where(
-      and(
-        eq(classes.tutorId, material.tutorId),
-        eq(bookings.studentId, uid),
-        raw`coalesce(${bookings.status}, 'reserved') <> 'cancelled'`,
-        /* phase-a lane L5 (A18.9): attached to a class → "Élèves de cette séance":
-           a live booking in THAT class. No class → "Tous mes élèves", as before. */
-        material.classId ? eq(bookings.classId, material.classId) : undefined,
-      ),
-    );
-  return (row?.n ?? 0) > 0;
-}
+/* WHO MAY READ A MATERIAL: canRead() moved to lib/material-access.ts (student-space-v1 ·
+   pages, contract C6). It is the ONE rule, shared with « Mes fiches » and every student
+   list, so a list and this file endpoint can never disagree. The rule is unchanged. */
 
 function toItem(m: typeof materials.$inferSelect): MaterialItem {
   return {
@@ -357,11 +325,9 @@ export async function materialRoutes(app: FastifyInstance): Promise<void> {
       .orderBy(desc(materials.createdAt))
       .limit(MAX_MATERIALS_PER_TUTOR);
 
-    const visible: MaterialItem[] = [];
-    for (const m of rows) {
-      if (await canRead(m, uid)) visible.push(toItem(m));
-    }
-    return visible;
+    // The ONE rule (lib/material-access.ts), the viewer's side read once for the whole list.
+    const ctx = await materialAccessContext(uid, [tutor.id]);
+    return rows.filter((m) => canReadWith(m, ctx)).map(toItem);
   });
 
   /* ── GET /materials/:id/file — the bytes ─────────────────────────────────── */

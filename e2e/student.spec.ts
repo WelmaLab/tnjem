@@ -61,6 +61,8 @@ test("an adult student books a seat, sees it, and cancels it", async ({ browser 
      screen POSITION, and the card reflows between resolving the locator and the
      click. dispatchEvent fires the event on the element itself, so position stops
      mattering; React 18's delegated listener picks it up normally. */
+  // student-space-v1 · B: « Annuler ma place » is behind the next class's « ⋯ » menu now.
+  await page.locator("[data-e2e=seat-menu]").first().dispatchEvent("click");
   const cancelBtn = page.getByRole("button", { name: /Annuler ma place/i }).first();
   await expect(cancelBtn).toBeVisible();
   await cancelBtn.dispatchEvent("click");

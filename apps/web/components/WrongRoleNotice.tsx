@@ -19,7 +19,7 @@ import type { Role } from "@tnajem/shared";
 const COPY = {
   fr: {
     title: "Tu es connecté comme élève",
-    body: "Le tableau de bord est l'espace des profs. Tes cours réservés, tes replays et tes avis sont sur « Mes cours ».",
+    body: "Le tableau de bord est l'espace des profs. Tes cours réservés, tes fiches et tes avis sont dans ton espace élève.",
     cta: "Voir mes cours",
     upgradeLead: "Tu veux enseigner sur Tnajem ?",
     upgradeCta: "Devenir prof",
@@ -29,7 +29,7 @@ const COPY = {
   },
   ar: {
     title: "إنتي داخل كتلميذ",
-    body: "لوحة التحكّم هي فضاء الأساتذة. الحصص اللي حجزتها، التسجيلات والتقييمات متاعك تلقاهم في «حصصي».",
+    body: "لوحة التحكّم هي فضاء الأساتذة. الحصص اللي حجزتها، الملفات والتقييمات متاعك تلقاهم في الفضاء متاعك كتلميذ.",
     cta: "شوف حصصي",
     upgradeLead: "تحب تقرّي في تنجّم ؟",
     upgradeCta: "ولّي أستاذ",

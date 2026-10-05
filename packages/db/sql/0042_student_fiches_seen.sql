@@ -1,0 +1,21 @@
+-- 0042 — when a student last opened « Mes fiches » (student-space-v1 · pages).
+--
+--   profiles.last_seen_fiches_at
+--     Set by POST /student/fiches/seen when the student opens /student/fiches.
+--     A material the student may open (apps/api/src/lib/material-access.ts) that
+--     was created AFTER this instant is « Nouveau »: the dot on Mes fiches, the
+--     « n nouvelle(s) fiche(s) » on Accueil and Mes profs, and the badge of the
+--     shell (GET /student/fiches/new-count).
+--     NULL = the student has never opened the page: every fiche they may open is new
+--     to them, which is the truth — they have not seen any of it here.
+--
+-- WHY A COLUMN AND NOT A TABLE: one instant per student, read with the profile and
+-- written once per visit. No per-material « seen » rows: the page marks everything
+-- seen at once, which is all the design asks for.
+--
+-- IDEMPOTENT. Additive only: one nullable column, no default, nothing rewritten.
+--
+-- ROLLBACK (manual, loses only the « seen » instants — every fiche reads new again):
+--   ALTER TABLE "profiles" DROP COLUMN IF EXISTS "last_seen_fiches_at";
+
+ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "last_seen_fiches_at" timestamptz;

@@ -32,6 +32,8 @@ async function lateSeat(opts: { isFree?: boolean; movedAfterBooking?: boolean })
 /** Open the confirm box, read it, confirm, and read the message that follows. */
 async function cancelFromDashboard(page: Page): Promise<{ warning: string; flash: string }> {
   await page.goto("/fr/student");
+  // student-space-v1 · B: « Annuler ma place » is behind the next class's « ⋯ » menu now.
+  await page.locator("[data-e2e=seat-menu]").first().dispatchEvent("click");
   const cancelBtn = page.getByRole("button", { name: /Annuler ma place/i }).first();
   await expect(cancelBtn).toBeVisible({ timeout: 15_000 });
   await cancelBtn.dispatchEvent("click");

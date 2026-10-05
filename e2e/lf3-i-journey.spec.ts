@@ -323,6 +323,8 @@ for (const run of [
       await test.step("5 · the student cancels within 15 min of booking: free, said before and after, nothing in the ledger", async () => {
         expect(Date.now() - bookedAt, "still inside the grace").toBeLessThan(CANCEL_GRACE_MINUTES * 60_000);
         await s.goto(`/${loc}/student`);
+        // student-space-v1 · B: « Annuler ma place » is behind the next class's « ⋯ » menu now.
+        await s.locator("[data-e2e=seat-menu]").first().click({ timeout: 20_000 });
         const cancel = s.getByRole("button", { name: L.cancel }).first();
         await expect(cancel).toBeVisible({ timeout: 20_000 });
         await cancel.click();

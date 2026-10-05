@@ -1558,3 +1558,107 @@ html[dir="rtl"] * { letter-spacing: normal !important }
     .aps-st-narrow{display:none}
   }
 }
+/* ── student-space-v1 · pages ── ─────────────────────────────────────────────
+   The student space's pages (components/student/*): Accueil, Mes cours, Mes profs,
+   Mes fiches, Profil. Mockups: UI_options/espace-eleve-*.png. Logical properties
+   only, tokens only; every colour pair is one contrast.mjs checks (the hero reuses
+   the ink panels' --on-dark pairs). Inside the student shell or in the public frame
+   alike: nothing here depends on .aps. */
+@layer components {
+  .ssv-stack{display:flex;flex-direction:column;gap:16px}
+  .ssv-flash{margin-block-end:14px;padding:11px 13px;border-radius:12px;background:var(--green50);color:var(--green-ink);font-size:13.5px;line-height:1.5}
+  .ssv-err{margin-block-start:10px;color:var(--rose);font-weight:600}
+  .ssv-spin{width:16px;height:16px;flex:none;border:2.5px solid var(--line);border-block-start-color:var(--blue);border-radius:50%;animation:spin 1s linear infinite}
+
+  /* ── Accueil: two columns from 1000px (mockup 1), one on a phone ── */
+  .ssv-home{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+  @media (min-width:1000px){.ssv-home{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)}}
+  .ssv-col{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .ssv-card{height:auto}
+  .ssv-card-head{margin-block-end:4px;padding-block-end:4px;border-block-end:1px solid var(--line)}
+  .ssv-more-link{display:inline-flex;align-items:center;gap:4px;min-height:44px;font-size:13.5px;font-weight:700;color:var(--blue)}
+  .ssv-more-link:hover{color:var(--blue700)}
+  html[dir="rtl"] .ssv-more-link span{display:inline-block;transform:scaleX(-1)}
+  .ssv-tip{font-size:13.5px;line-height:1.55}
+
+  /* rows: Cette semaine, Mes profs, Nouvelles fiches */
+  .ssv-list{list-style:none}
+  .ssv-row{display:flex;align-items:center;gap:12px;min-height:44px;padding-block:11px;border-block-end:1px solid var(--line);color:inherit;min-width:0}
+  .ssv-list > li:last-child > .ssv-row,.ssv-list > .ssv-row:last-child{border-block-end:0}
+  .ssv-row-a:hover .ssv-row-t{color:var(--blue)}
+  .ssv-row-main{display:flex;flex-direction:column;flex:1;min-width:0}
+  .ssv-row-t{display:block;font-size:14.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ssv-row-link{align-self:flex-start;max-width:100%;padding-block:12px;margin-block:-12px}
+  .ssv-row-link:hover{color:var(--blue)}
+  .ssv-row-m{display:block;font-size:13px;color:var(--muted);margin-block-start:2px;line-height:1.45}
+  .ssv-tile{width:46px;height:50px}
+  .ssv-tile b{font-size:17px}
+  .ssv-book{flex:none;white-space:nowrap}
+  .ssv-tag-plain svg{display:none}
+
+  /* the prof monogram */
+  .ssv-av{display:grid;place-items:center;flex:none;border-radius:12px;font-family:var(--fd);font-weight:700;line-height:1}
+  .ssv-av-ochre{background:linear-gradient(150deg,var(--amber),var(--ochre));color:var(--ink)}
+  .ssv-av-blue{background:linear-gradient(150deg,var(--blue),var(--blue900));color:#fff}
+  .ssv-av-sand{background:var(--sand);color:var(--ink2)}
+
+  /* the fiche type square */
+  .ssv-ft{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:10px;font-size:13px;font-weight:800}
+  .ssv-ft .ic{width:16px;height:16px}
+  .ssv-ft-pdf{background:var(--ochre-tint);color:var(--ochre-ink)}
+  .ssv-ft-image{background:var(--blue50);color:var(--blue700)}
+  .ssv-ft-youtube,.ssv-ft-file{background:var(--sand);color:var(--ink2)}
+
+  /* ── the next-class hero (mockup 1): the ink panel, like the live lobby ── */
+  .ssv-hero{padding:clamp(18px,2.6vw,26px);border-radius:var(--r-l);background:linear-gradient(155deg,var(--ink800),var(--ink900));color:#fff;min-width:0}
+  .ssv-hero > *{position:relative}
+  .ssv-hero-top{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;margin-block-end:12px}
+  .ssv-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;background:var(--paper);color:var(--ink);font-size:13px;font-weight:700}
+  .ssv-dot{width:8px;height:8px;border-radius:999px;background:var(--rose);flex:none}
+  .ssv-hero-with{font-size:13px;color:var(--on-dark-soft);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ssv-hero-t{font-family:var(--fd);font-size:clamp(19px,2.4vw,24px);font-weight:700;line-height:1.25;color:#fff}
+  .ssv-hero-m{font-size:13.5px;color:var(--on-dark);margin-block-start:6px}
+  .ssv-count{display:flex;gap:9px;margin-block:16px 4px}
+  .ssv-count-box{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:60px;min-height:62px;border-radius:12px;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14)}
+  .ssv-count-box b{font-size:21px;font-weight:700;color:#fff;line-height:1.1}
+  .ssv-count-box > span{font-size:13px;color:var(--on-dark-soft)}
+  .ssv-hero-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-block-start:16px}
+  .ssv-hero-actions .btn{width:auto;min-height:44px;padding:10px 16px;font-size:14px;border-radius:12px}
+  .ssv-btn-dark{background:transparent;border:1px solid rgba(255,255,255,.28);color:var(--on-dark)}
+  .ssv-btn-dark:hover{background:rgba(255,255,255,.08);color:#fff}
+  .ssv-btn-dark:focus-visible{outline:3px solid #fff;outline-offset:2px}
+  @media (max-width:599px){.ssv-join{flex:1 1 100%}}
+
+  /* the « ⋯ » seat menu */
+  .ssv-menu{position:relative;flex:none}
+  .ssv-more{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;cursor:pointer;background:transparent}
+  .ssv-more .ic{width:20px;height:20px}
+  .ssv-more-light{border:1.5px solid var(--line);color:var(--ink2)}
+  .ssv-more-light:hover{background:var(--blue50);color:var(--blue)}
+  .ssv-more-dark{border:1px solid rgba(255,255,255,.28);color:var(--on-dark)}
+  .ssv-more-dark:hover{background:rgba(255,255,255,.08);color:#fff}
+  .ssv-more:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+  .ssv-more-dark:focus-visible{outline-color:#fff}
+  .ssv-menu-pop{position:absolute;z-index:70;inset-block-end:calc(100% + 6px);inset-inline-end:0;min-width:200px;padding:6px;border-radius:14px;
+    background:var(--paper);border:1px solid var(--line);box-shadow:var(--sh-l)}
+  .ssv-menu-pop[hidden]{display:none}
+  .ssv-menu-item{display:flex;align-items:center;width:100%;min-height:44px;padding:8px 12px;border:0;border-radius:10px;background:transparent;
+    font:inherit;font-size:14px;font-weight:600;color:var(--ink);text-align:start;cursor:pointer}
+  .ssv-menu-item:hover,.ssv-menu-item:focus-visible{background:var(--blue50)}
+  .ssv-menu-danger{color:var(--rose)}
+  .ssv-menu-danger:hover,.ssv-menu-danger:focus-visible{background:var(--rose50);color:var(--rose)}
+
+  /* « Message » keeps its width while it shows its spinner */
+  .ssv-msg{gap:7px}
+  .ssv-msg .ic{width:16px;height:16px}
+
+  /* ── nothing at all: the suggested profs ── */
+  .ssv-sug-sub{margin-block:2px 10px}
+  .ssv-sug-grid{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+  @media (min-width:700px){.ssv-sug-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  .ssv-sug{padding:16px;gap:12px;justify-content:space-between}
+  .ssv-sug-head{display:flex;align-items:center;gap:12px;min-width:0}
+  .ssv-sug-name{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:700;color:var(--ink);min-width:0}
+}
+@media (prefers-reduced-motion: no-preference){.ssv-badge.is-live .ssv-dot{animation:live-pulse 1.4s ease-in-out infinite}}
