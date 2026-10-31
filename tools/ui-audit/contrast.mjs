@@ -108,6 +108,12 @@ const PAIRS = [
   ["Body text", "--ink2", "--band", "normal", "lead in the band", "page.tsx lp-sec"],
   ["Body text", "--muted", "--band", "normal", "muted in the band", "ExploreClient filters"],
   ["Accent text", "--blue", "--band", "normal", "links / eyebrow in the band", "page.tsx lp-sec"],
+  // home v2 · A: the soft BLUE band of « En 4 étapes » (its eyebrow, H2 and any text on it).
+  ["Body text", "--ink", "--band-blue", "normal", "home v2 steps band: H2 / text", "globals.css home v2 · A --band-blue"],
+  ["Body text", "--ink2", "--band-blue", "normal", "home v2 steps band: lead", "globals.css home v2 · A --band-blue"],
+  ["Body text", "--muted", "--band-blue", "normal", "home v2 steps band: muted", "globals.css home v2 · A --band-blue"],
+  ["Accent text", "--blue", "--band-blue", "normal", "home v2 steps band: eyebrow / links", "globals.css home v2 · A --band-blue"],
+  // home v2 · A: the trust row (.hv2-trust 13px ink2 on the cream hero) and the « Bientôt » row (.hv2-info-soon muted on paper) are existing pairs: --ink2/--cream, --muted/--paper.
   ["Accent text", "--blue", "--bg", "normal", ".web-eyebrow on page bg", "globals.css"],
   ["Body text", "--ink2", "--paper", "normal", ".web-lead / .side-nav", "globals.css:229"],
   ["Body text", "--ink2", "--cream", "normal", ".web-lead", "globals.css:229"],

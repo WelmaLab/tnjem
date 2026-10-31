@@ -34,12 +34,19 @@ export default {
         "on-blue": v("on-blue"), "on-blue-soft": v("on-blue-soft"),
         "on-dark": v("on-dark"), "on-dark-soft": v("on-dark-soft"),
         rose700: v("rose700"), rose600: v("rose600"), rose300: v("rose300"), rose200: v("rose200"),
+        /* home v2 · A: the soft blue section band and the hand-drawn accents. */
+        "band-blue": v("band-blue"), "doodle-ochre": v("doodle-ochre"), "doodle-blue": v("doodle-blue"),
+      },
+      fontSize: {
+        /* home v2 · A: the hero H1 — clamp() size + its line height (taller in Arabic). */
+        hero: [v("fs-hero"), { lineHeight: v("lh-hero") }],
       },
       fontFamily: {
         display: [v("fd")],
         body: [v("fb")],
         ar: [v("fa")],
         num: [v("fn")], // live-fixes-1 · C1: prices and figures (globals.css --fn)
+        hand: [v("fh")], // home v2 · A: the handwritten note (system face; Arabic face in RTL)
       },
       borderRadius: {
         "brand-sm": "var(--r-s)",
@@ -51,6 +58,7 @@ export default {
         "brand-sm": "var(--sh-s)",
         brand: "var(--sh)",
         "brand-lg": "var(--sh-l)",
+        card: "var(--sh-card)", // home v2 · A
       },
     },
   },

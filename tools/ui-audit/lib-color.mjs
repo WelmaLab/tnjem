@@ -19,14 +19,20 @@ import { dirname, resolve } from "node:path";
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const WEB_ROOT = resolve(ROOT, "apps", "web");
 
-/** Parse every `--name:#hex` / `--name:rgb(...)` declaration out of globals.css `:root{}`. */
+/** Parse every `--name:#hex` / `--name:rgb(...)` declaration out of globals.css `:root{}`.
+    home-v2 · A: EVERY `:root{}` block, not only the first. Later feature blocks
+    (espace prof v2's frame sizes, home v2's band / doodle tokens) declare their tokens in
+    their own appended `:root{}`; reading only the first made those invisible to the audit.
+    The first declaration of a name wins, so the main table keeps its old meaning. */
 export function readTokens(cssPath = resolve(WEB_ROOT, "app/globals.css")) {
   const css = readFileSync(cssPath, "utf8");
-  const root = css.match(/:root\s*\{([\s\S]*?)\n\}/);
-  if (!root) throw new Error("could not find :root{} in " + cssPath);
+  const roots = [...css.matchAll(/:root\s*\{([^{}]*)\}/g)];
+  if (!roots.length) throw new Error("could not find :root{} in " + cssPath);
   const tokens = {};
-  for (const m of root[1].matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)) {
-    tokens[m[1]] = m[2].trim();
+  for (const root of roots) {
+    for (const m of root[1].matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)) {
+      if (!(m[1] in tokens)) tokens[m[1]] = m[2].trim();
+    }
   }
   return tokens;
 }

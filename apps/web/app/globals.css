@@ -1936,3 +1936,115 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   @keyframes bk-blink{50%{opacity:.25}}
   @media (prefers-reduced-motion:reduce){.bk-live::before{animation:none}}
 }
+
+/* ── home v2 · A ── ────────────────────────────────────────────────────────────
+   The tokens the home page v2 mockup needs and the system did not have, and the
+   shared pieces of components/home/ (Doodle, TrustRow, StepCard, InfoCard,
+   SubjectChip, SubjectIcon). Image: UI_options/home-v2-reference.png.
+   Reused, not re-declared: --blue (#0E5AA6), --ochre-btn (#AE621A), --cream
+   (#FBF7F0), --ink (#101F33) and the tint pairs (--green50/--green-ink,
+   --blue50/--blue, --ochre-tint/--ochre-ink). Logical properties only; every new
+   text-on-surface pair is a row in tools/ui-audit/contrast.mjs. */
+:root{
+  /* The soft blue section band (« En 4 étapes »). Lighter than --blue50 so the
+     white step cards still read as cards on it: ink 15.27 · ink2 9.11 · muted 5.21 · blue 6.38. */
+  --band-blue:#F1F6FC;
+  /* The hand-drawn accents (rays, the curled arrow, the squiggle). Decorative and
+     aria-hidden, so no contrast floor; named so a brand change reaches them. */
+  --doodle-ochre:var(--ochre);
+  --doodle-blue:var(--blue);
+  /* The mockup's cards: a hairline lift plus a wide, faint, cool shadow — softer
+     than --sh, deeper than --sh-s. */
+  --sh-card:0 1px 2px rgba(16,31,51,.04), 0 18px 36px -22px rgba(16,31,51,.24);
+  /* The hero H1: 36px on a phone, 60px from ~1440px. --lh-hero is the Latin
+     value; Arabic gets more room below (its marks sit above and below the line). */
+  --fs-hero:clamp(36px, 3.2vw + 14px, 60px);
+  --lh-hero:1.08;
+  /* The handwritten note beside the hero card. No new web font (HOME_V2 E): a
+     system handwriting face, and in Arabic the Arabic face (below), because none
+     of these carry Arabic glyphs. */
+  --fh:'Segoe Print','Bradley Hand','Chalkboard SE',cursive;
+  /* The gap between StepCards — the arrow between two cards is centred in it. */
+  --hv2-step-gap:clamp(16px, 2.6vw, 40px);
+}
+html[dir="rtl"]{--lh-hero:1.32;--fh:var(--fa)}
+
+@layer components {
+  /* ── SubjectIcon: the stroke the contract fixes (1.8; .ic draws 1.85) ── */
+  .ic.hv2-sic{stroke-width:1.8}
+
+  /* ── Doodle ──
+     Default sizes per kind; a width/height utility on the call site wins (utilities
+     come after this layer). Mirrored in Arabic with the individual `scale` property,
+     NOT `transform`, so it composes with any rotate/translate the call site adds. */
+  .hv2-doodle{display:block;flex:none;pointer-events:none;overflow:visible}
+  .hv2-doodle.is-ochre{color:var(--doodle-ochre)}
+  .hv2-doodle.is-blue{color:var(--doodle-blue)}
+  .hv2-doodle-rays{width:40px;height:40px}
+  .hv2-doodle-arrow-curl{width:40px;height:48px}
+  .hv2-doodle-squiggle{width:72px;height:18px}
+  .hv2-doodle-blob{width:260px;height:260px}
+  /* The blob is a soft FILL behind a card, not a stroke: the tint of its tone. */
+  .hv2-doodle-blob.is-blue{color:var(--blue50)}
+  .hv2-doodle-blob.is-ochre{color:var(--ochre-tint)}
+  html[dir="rtl"] .hv2-doodle{scale:-1 1}
+
+  /* ── TrustRow: icon + a label on (about) two lines ──
+     The box is a size container, so the row lays itself out from the width it is
+     GIVEN (2 × 2, or 4 in a line from 520px) whatever the hero's grid does around it. */
+  .hv2-trust-box{container-type:inline-size;min-width:0}
+  .hv2-trust{list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
+  .hv2-trust li{display:flex;align-items:center;gap:9px;min-width:0;font-size:13px;line-height:1.4;color:var(--ink2)}
+  .hv2-trust-ic{flex:none;display:grid;place-items:center;width:22px;height:22px;color:var(--blue)}
+  .hv2-trust-ic .ic{width:20px;height:20px}
+  .hv2-trust-l{min-width:0;text-wrap:balance}
+  @container (min-width:520px){.hv2-trust{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}}
+
+  /* ── StepCard ──
+     .hv2-steps is the list they sit in (an <ol>, one <li> per card): one column, two
+     from 640px, four in a row from 1024px — the only width where the arrow shows,
+     because below it the « next » card is not beside this one. The arrow is centred
+     in --hv2-step-gap; set the gap through that variable, not with a gap utility. */
+  .hv2-steps{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:var(--hv2-step-gap)}
+  .hv2-steps>li{min-width:0}
+  @media (min-width:640px){.hv2-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (min-width:1024px){.hv2-steps{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  .u-card.hv2-step{box-shadow:var(--sh-card);border-color:var(--lineCool)}
+  .hv2-step-head{display:flex;align-items:center;gap:10px;margin-block-end:18px}
+  .hv2-step-n{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:50%;
+    background:var(--blue);color:#fff;font-family:var(--fb);font-size:16px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .hv2-step-ic{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:50%;background:var(--blue50);color:var(--blue)}
+  .hv2-step-ic .ic{width:20px;height:20px}
+  .hv2-step-t{font-family:var(--fd);font-size:17px;font-weight:700;line-height:1.3;color:var(--ink);margin-block-end:6px;text-wrap:balance}
+  .hv2-step-p{font-size:14px;line-height:1.6;color:var(--ink2)}
+  .hv2-step-arrow{display:none;position:absolute;inset-block-start:50%;
+    inset-inline-start:calc(100% + (var(--hv2-step-gap) - 20px) / 2);width:20px;height:12px;translate:0 -50%;color:var(--blue);overflow:visible}
+  @media (min-width:1024px){.hv2-step-arrow{display:block}}
+  html[dir="rtl"] .hv2-step-arrow{scale:-1 1}
+
+  /* ── InfoCard: tinted icon tile + title + text + the optional « Bientôt » row ── */
+  .u-card.hv2-info{box-shadow:var(--sh-card)}
+  .hv2-info-ic{display:grid;place-items:center;flex:none;width:52px;height:52px;border-radius:16px;margin-block-end:18px}
+  .hv2-info-ic .ic{width:24px;height:24px}
+  .hv2-info-ic.is-green{background:var(--green50);color:var(--green-ink)}
+  .hv2-info-ic.is-blue{background:var(--blue50);color:var(--blue)}
+  .hv2-info-ic.is-ochre{background:var(--ochre-tint);color:var(--ochre-ink)}
+  .hv2-info-t{font-family:var(--fd);font-size:clamp(17px,1.5vw,19px);font-weight:700;line-height:1.3;color:var(--ink);margin-block-end:8px;text-wrap:balance}
+  .hv2-info-body{font-size:14px;line-height:1.6;color:var(--ink2)}
+  .hv2-info-body>*+*{margin-block-start:8px}
+  /* Pinned to the card's foot, so the rows line up across a row of cards. */
+  .hv2-info-soon{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin-block-start:auto;padding-block-start:16px;
+    font-size:13px;line-height:1.5;color:var(--muted)}
+  .hv2-info-soon .tag{padding-block:6px;padding-inline:11px 13px}
+  .hv2-info-soon-t{flex:1 1 12em;min-width:0}
+
+  /* ── SubjectChip: a link pill, icon + label, ≥ 44px; the active one is filled cobalt ── */
+  .hv2-chip{flex:none;display:inline-flex;align-items:center;gap:8px;min-height:44px;max-width:100%;
+    padding-block:9px;padding-inline:14px 18px;border:1px solid var(--line);border-radius:999px;
+    background:var(--paper);color:var(--ink);font-family:var(--fb);font-size:14px;font-weight:700;line-height:1.2;
+    white-space:nowrap;box-shadow:var(--sh-s);transition:background-color .16s,border-color .16s,color .16s}
+  .hv2-chip .ic{width:18px;height:18px}
+  .hv2-chip:hover{border-color:var(--blue);color:var(--blue)}
+  .hv2-chip.is-active{background:var(--blue);border-color:var(--blue);color:#fff}
+  .hv2-chip.is-active:hover{background:var(--blue700);border-color:var(--blue700);color:#fff}
+}
