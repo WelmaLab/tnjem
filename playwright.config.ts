@@ -114,6 +114,12 @@ export default defineConfig({
            /account support row is hidden whatever the developer's .env holds. Blank
            here beats .env, as with MAIL_* above. */
         NEXT_PUBLIC_SUPPORT_WHATSAPP: "",
+        /* home v2 · D (honesty rule 5): pinned UNSET for the BUILD (NEXT_PUBLIC_ is
+           inlined at build time), so e2e/home-v2-chrome.spec.ts proves the footer shows
+           no social icon without config, whatever the developer's .env holds. */
+        NEXT_PUBLIC_SOCIAL_INSTAGRAM: "",
+        NEXT_PUBLIC_SOCIAL_FACEBOOK: "",
+        NEXT_PUBLIC_SOCIAL_LINKEDIN: "",
         // phase-a lane L2 (A24): the same switch as the API, so the signup copy matches it.
         /* phase-a lane L5 (A18.1): the guardian-consent form only renders while
            ALLOW_MINORS=1 (app/[locale]/auth/consent/layout.tsx). The suite keeps
@@ -142,6 +148,9 @@ export default defineConfig({
         ADMIN_EMAILS: "e2e-admin@tnajem.invalid",
         API_URL: "http://127.0.0.1:4000",
         NEXT_PUBLIC_SUPPORT_WHATSAPP: "",
+        NEXT_PUBLIC_SOCIAL_INSTAGRAM: "",
+        NEXT_PUBLIC_SOCIAL_FACEBOOK: "",
+        NEXT_PUBLIC_SOCIAL_LINKEDIN: "",
         ALLOW_MINORS: "", // blank beats .env, as with MAIL_* above
       },
     },

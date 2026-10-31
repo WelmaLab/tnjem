@@ -89,6 +89,13 @@ const CSS = `
   padding:10px 10px;border-radius:10px;min-height:44px;align-items:center}
 .qh-signin:hover{color:var(--blue)}
 .qh-cta{display:none!important}
+/* home v2 · D (UI_options/home-v2-reference.png): signed out, « Créer ma page » is a
+   FILLED cobalt button, as in the mockup. Still never orange (Phase A+ U2): the page's
+   own main action stays the only ochre button in view. Signed in, « Mon espace » /
+   « Tableau de bord » / « Espace parent » keep the cobalt outline: a way in, not a
+   call to action. White on --blue / --blue700 is in tools/ui-audit/contrast.mjs. */
+.qh-cta-fill{background:var(--blue);border:1.5px solid var(--blue);color:#fff}
+.qh-cta-fill:hover{background:var(--blue700);border-color:var(--blue700)}
 .qh-burger{display:grid;place-items:center;width:44px;height:44px;border-radius:11px;
   border:1px solid var(--line);background:var(--paper);cursor:pointer;color:var(--ink);flex:none}
 @media (min-width:600px){ .qh-cta{display:inline-flex!important} }
@@ -109,9 +116,9 @@ const CSS = `
   font-weight:600;font-size:15px;color:var(--ink);min-height:48px}
 .qh-menu a:hover,.qh-menu a:focus-visible{background:var(--blue50);color:var(--blue)}
 .qh-menu a[aria-current="page"]{background:var(--sand);color:var(--ink)}
-/* Phase A+ (U2): the menu's CTA is the same cobalt outline as the header's. */
-.qh-menu .qh-menu-cta{justify-content:center;background:transparent;color:var(--blue);border:1.5px solid var(--blue);margin-top:8px}
-.qh-menu .qh-menu-cta:hover{background:var(--blue50);color:var(--blue)}
+/* home v2 · D: the menu's CTA is the same filled cobalt as the header's. */
+.qh-menu .qh-menu-cta{justify-content:center;background:var(--blue);color:#fff;border:1.5px solid var(--blue);margin-top:8px}
+.qh-menu .qh-menu-cta:hover,.qh-menu .qh-menu-cta:focus-visible{background:var(--blue700);border-color:var(--blue700);color:#fff}
 .qh-menu .qh-sep{height:1px;background:var(--line);margin:8px 4px}
 html[dir="rtl"] .qh-menu .qh-group{letter-spacing:normal}
 `;
@@ -191,9 +198,9 @@ export function SiteHeader() {
                   tutor's step-1 screen, which was reachable by any signed-in
                   profile and silently converted a student's account to a tutor
                   one on submit. The role is now chosen by choosing a page. */}
-              {/* Phase A+ (U2): the header is never orange — its CTA is the cobalt outline for
-                  everyone, so each page's own main action is the only ochre button in view. */}
-              <Link href="/signup/prof" className="btn btn-outline btn-sm qh-cta">{c.createPage}</Link>
+              {/* Phase A+ (U2): the header is never orange, so each page's own main action is
+                  the only ochre button in view. home v2 · D: filled cobalt, as in the mockup. */}
+              <Link href="/signup/prof" className="btn btn-sm qh-cta qh-cta-fill" data-e2e="header-create">{c.createPage}</Link>
             </>
           )}
 

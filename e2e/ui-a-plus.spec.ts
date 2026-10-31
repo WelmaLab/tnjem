@@ -46,7 +46,11 @@ test.describe("U1 — info notes are blue, and the payment sentence starts its o
 });
 
 /* ── U2: the header button is never orange ───────────────────────────────────── */
-test.describe("U2 — the header CTA is a blue outline for everyone", () => {
+/* home v2 · D: signed out, « Créer ma page » became the mockup's FILLED cobalt
+   (UI_options/home-v2-reference.png). What U2 protects is unchanged: the header is
+   never orange, and the page's own action is the one ochre button in view. The
+   signed-in outline (« Tableau de bord ») is still asserted in ui-option-a.spec.ts. */
+test.describe("U2 — the header CTA is cobalt, never orange", () => {
   test("signed out on a tutor page: exactly ONE ochre button in view — 'Réserver la séance'", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/fr/yassine-math");
@@ -66,7 +70,7 @@ test.describe("U2 — the header CTA is a blue outline for everyone", () => {
       const s = getComputedStyle(el);
       return { bg: s.backgroundColor, color: s.color };
     });
-    expect(cta).toEqual({ bg: "rgba(0, 0, 0, 0)", color: "rgb(14, 90, 166)" });
+    expect(cta).toEqual({ bg: "rgb(14, 90, 166)", color: "rgb(255, 255, 255)" });
   });
 });
 
