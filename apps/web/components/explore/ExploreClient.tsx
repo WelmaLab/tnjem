@@ -125,7 +125,10 @@ const SUBJECT_FILTERS = [
   { slug: "maths", term: "Math", fr: "Maths", ar: "رياضيات" },
   { slug: "physique", term: "Physique", fr: "Physique", ar: "فيزياء" },
   { slug: "svt", term: "SVT", fr: "SVT", ar: "علوم" },
-  { slug: "francais", term: "Français", fr: "Français", ar: "فرنسية" },
+  /* home-v2 · C: "Fran", not "Français" — ilike folds case but NOT accents, so
+     "Français" never matched a tutor whose subject is the stored code "francais"
+     (or typed without the cedilla). "Fran" matches both, and "Française". */
+  { slug: "francais", term: "Fran", fr: "Français", ar: "فرنسية" },
   { slug: "anglais", term: "Anglais", fr: "Anglais", ar: "إنڨليزية" },
   { slug: "arabe", term: "Arabe", fr: "Arabe", ar: "عربية" },
   { slug: "philo", term: "Philo", fr: "Philo", ar: "فلسفة" },

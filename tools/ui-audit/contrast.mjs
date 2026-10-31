@@ -59,8 +59,8 @@ const PAIRS = [
   ["Buttons", W, "--ochre-btn-hover", "normal", ".btn-primary:hover", "globals.css:79"],
   ["Buttons", W, "--green-btn", "normal", ".btn-green label", "globals.css:81"],
   ["Buttons", W, "--ink", "normal", ".btn-ink label", "globals.css:80"],
-  ["Buttons", W, "--blue", "normal", ".lp-chip-all / .verified", "page.tsx:271"],
-  ["Buttons", W, "--blue700", "normal", ".lp-chip-all:hover", "page.tsx:272"],
+  ["Buttons", W, "--blue", "normal", ".hv2-chip.is-active (home subject chip) / .verified", "globals.css home v2 · A .hv2-chip"],
+  ["Buttons", W, "--blue700", "normal", ".hv2-chip.is-active:hover", "globals.css home v2 · A .hv2-chip"],
   ["Buttons", W, "--rose", "normal", "student LIVE badge", "student/page.tsx"],
   // UI Option A (A3): cobalt carries STATE and the header way-in; the rose pill is destructive.
   ["Buttons", "--blue", "--bg", "normal", ".btn-outline label (header Tableau de bord)", "SiteHeader.tsx"],
@@ -104,15 +104,21 @@ const PAIRS = [
   ["Body text", "--ink", "--bg", "normal", "body on the flat page bg", "globals.css body"],
   ["Body text", "--ink2", "--bg", "normal", ".web-lead on page bg", "globals.css body"],
   ["Body text", "--muted", "--bg", "normal", ".muted on page bg", "globals.css body"],
-  ["Body text", "--ink", "--band", "normal", "text in the one band section", "page.tsx lp-sec / ExploreClient"],
-  ["Body text", "--ink2", "--band", "normal", "lead in the band", "page.tsx lp-sec"],
+  ["Body text", "--ink", "--band", "normal", "text in the band section", "ExploreClient (the home page has no --band section since home v2 · C)"],
+  ["Body text", "--ink2", "--band", "normal", "lead in the band", "ExploreClient"],
   ["Body text", "--muted", "--band", "normal", "muted in the band", "ExploreClient filters"],
-  ["Accent text", "--blue", "--band", "normal", "links / eyebrow in the band", "page.tsx lp-sec"],
+  ["Accent text", "--blue", "--band", "normal", "links / eyebrow in the band", "ExploreClient"],
   // home v2 · A: the soft BLUE band of « En 4 étapes » (its eyebrow, H2 and any text on it).
   ["Body text", "--ink", "--band-blue", "normal", "home v2 steps band: H2 / text", "globals.css home v2 · A --band-blue"],
   ["Body text", "--ink2", "--band-blue", "normal", "home v2 steps band: lead", "globals.css home v2 · A --band-blue"],
   ["Body text", "--muted", "--band-blue", "normal", "home v2 steps band: muted", "globals.css home v2 · A --band-blue"],
   ["Accent text", "--blue", "--band-blue", "normal", "home v2 steps band: eyebrow / links", "globals.css home v2 · A --band-blue"],
+  // home v2 · C: « Toutes les matières » (.hs-chip-all 14px/700 blue700 on blue50, blue100 on hover) and the
+  // text-only CTA banner (on-blue / on-blue-soft, checked at the gradient's LIGHT end, --blue).
+  ["Chips", "--blue700", "--blue50", "normal", ".hs-chip-all (Toutes les matières)", "components/home/sections.css"],
+  ["Chips", "--blue700", "--blue100", "normal", ".hs-chip-all:hover", "components/home/sections.css"],
+  ["On dark", "--on-blue", "--blue", "normal", ".hs-cta-checks / .hs-cta-pill — light end", "components/home/sections.css"],
+  ["On dark", "--on-blue-soft", "--blue", "normal", ".hs-cta-sub — light end", "components/home/sections.css"],
   // home v2 · A: the trust row (.hv2-trust 13px ink2 on the cream hero) and the « Bientôt » row (.hv2-info-soon muted on paper) are existing pairs: --ink2/--cream, --muted/--paper.
   ["Accent text", "--blue", "--bg", "normal", ".web-eyebrow on page bg", "globals.css"],
   ["Body text", "--ink2", "--paper", "normal", ".web-lead / .side-nav", "globals.css:229"],

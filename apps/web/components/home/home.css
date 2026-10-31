@@ -8,35 +8,12 @@
    so every selector stays behind the lp- prefix.
 
    Everything that can be a Tailwind utility IS one; this file only holds what
-   utilities can't express: the RTL font fallbacks, the edge-bleeding chip scroller,
-   the reveal-on-scroll and its reduced-motion kill-switch.
+   utilities can't express: the hero's eyebrow row (home v2 · B's HeroSection), and
+   the reveal-on-scroll the body sections use (home v2 · C, components/home/reveal.ts)
+   with its reduced-motion kill-switch. The hero's own CSS is hero.css (.hv-*); the
+   sections' is sections.css (.hs-*).
    Colours are tokens only (guardrails.mjs §4); logical properties only (§1).
    ══════════════════════════════════════════════════════════════════════════════ */
-
-/* ── rhythm ─────────────────────────────────────────────── */
-.lp-sec{padding-block:clamp(40px,6vw,80px)}
-.lp-sec.lp-tight{padding-block:clamp(26px,3.5vw,48px)}
-.lp-sec[id]{scroll-margin-top:84px} /* sticky header clearance for #etapes */
-
-/* ── titles ─────────────────────────────────────────────────
-   --fd (Space Grotesk) has NO Arabic glyphs and its negative
-   tracking severs Arabic cursive joins → fall back to --fa in RTL.
-   (.web-h1/.web-h2 already do this in globals.css.) */
-.lp-t{font-family:var(--fd);font-weight:700;letter-spacing:-.2px}
-html[dir=rtl] .lp-t{font-family:var(--fa);letter-spacing:normal}
-
-/* Every card on this page is the canonical .u-card + .u-card-pad from
-   globals.css — no local card surface, and no .u-card-int on the
-   step/fact cards because they are not clickable (a hover lift on
-   static content reads as a broken link). One exception below: the
-   teacher cross-link keeps its warm gradient. Loaded after globals.css,
-   so it beats .u-card's flat background. */
-.lp-outro{background:linear-gradient(135deg,var(--paper),var(--blue50))}
-
-/* ── hero ───────────────────────────────────────────────── */
-/* home v2 · B: the hero is components/home/HeroSection.tsx, styled by its own
-   hero.css (.hv-*). The subject picker is its own section since home v2 · E. */
-.lp-subjects{position:relative;overflow:hidden;padding-block-end:clamp(34px,6vw,72px)}
 
 /* ── eyebrow + pilot tag ────────────────────────────────────
    <PilotTag> asks /api/pilot after hydration (the flag is the running
@@ -61,45 +38,15 @@ html[dir=rtl] .lp-t{font-family:var(--fa);letter-spacing:normal}
   .lp-eyebrow-row > .web-eyebrow{flex-basis:100%}
 }
 
-/* primary CTA: lift + arrow nudge. In RTL the arrow already carries
-   .flip (scaleX(-1)); re-declaring transform would silently un-flip
-   it, so the RTL rule composes both. */
-.lp-cta:hover{transform:translateY(-2px);
-  box-shadow:0 20px 32px -14px rgba(224,133,46,.9)}
-.lp-cta .ic{transition:transform .18s ease}
-.lp-cta:hover .ic{transform:translateX(3px)}
-html[dir=rtl] .lp-cta:hover .ic{transform:scaleX(-1) translateX(3px)}
-
-/* ── subject chips ──────────────────────────────────────────
-   Scrolls edge-to-edge on phones (negative margin is safe: .lp-subjects
-   clips it), wraps from 760px up. */
-.lp-chips{display:flex;gap:10px;overflow-x:auto;padding-block:2px 8px;
-  scrollbar-width:none;-webkit-overflow-scrolling:touch;
-  margin-inline:calc(-1 * clamp(16px,4vw,40px));
-  padding-inline:clamp(16px,4vw,40px)}
-.lp-chips::-webkit-scrollbar{display:none}
-.lp-chip{flex:none;display:inline-flex;align-items:center;min-height:44px;
-  background:var(--paper);border:1.5px solid var(--line);border-radius:999px;
-  padding:10px 17px;font-weight:700;font-size:14px;color:var(--ink);
-  white-space:nowrap;box-shadow:var(--sh-s);transition:.16s}
-.lp-chip:hover{border-color:var(--blue);color:var(--blue)}
-.lp-chip-all{background:var(--blue);border-color:transparent;color:#fff}
-.lp-chip-all:hover{background:var(--blue700);border-color:transparent;color:#fff}
-@media (min-width:760px){
-  .lp-chips{flex-wrap:wrap;overflow-x:visible;margin-inline:0;padding-inline:0}
-}
-
 /* ── reveal-on-scroll (one per section) ─────────────────── */
 /* Default = final state (readable with no JS). .lp-armed is added by
    <Reveal> (components/Reveal.tsx) only to sections that are still
-   off-screen at hydration, and removed when they scroll into view. */
+   off-screen at hydration, and removed when they scroll into view. One per
+   section: steps, facts, the tutor band. */
 .lp-rv{transition:opacity .5s cubic-bezier(.2,.7,.2,1),transform .5s cubic-bezier(.2,.7,.2,1)}
 .lp-rv.lp-armed{opacity:0;transform:translateY(18px)}
 
 /* ── reduced motion: no motion, final state ─────────────── */
 @media (prefers-reduced-motion: reduce){
-  .lp-cta:hover{transform:none !important}
-  .lp-cta:hover .ic{transform:none !important}
-  html[dir=rtl] .lp-cta:hover .ic{transform:scaleX(-1) !important}
   .lp-rv,.lp-rv.lp-armed{opacity:1 !important;transform:none !important;transition:none !important}
 }

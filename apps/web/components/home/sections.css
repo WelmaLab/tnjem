@@ -1,0 +1,123 @@
+/* ── home v2 · C — body sections (prefix hs-) ─────────────────────────────────
+   Subjects · Steps (#etapes) · Facts · CTA banner · « Tu es prof ? ».
+   Logical properties only (guardrail 1), token colours only (guardrail 4: #fff is
+   the one literal allowed — the label on a dark fill). The shared pieces
+   (SubjectChip, StepCard, InfoCard, Doodle) carry their own styles (lane A); this
+   file only lays them out. */
+
+/* ── rhythm ─────────────────────────────────────────────────────────────────── */
+.hs-sec{padding-block:clamp(40px,6vw,80px)}
+.hs-sec-tight{padding-block:clamp(14px,2.4vw,28px)}
+.hs-sec-last{padding-block-end:clamp(40px,6vw,72px)}
+.hs-sec[id]{scroll-margin-top:84px} /* the sticky header, for #etapes */
+.hs-h2{max-width:680px}
+
+/* ── 1. subjects ─────────────────────────────────────────────────────────────
+   One row that scrolls sideways on phones, bleeding to the screen edges (the
+   negative margin cancels the container's padding). overflow-x:clip on the
+   section is what keeps that bleed from ever scrolling the PAGE — clip, not
+   hidden, so the section does not become a scroll container. Wraps from 760px. */
+.hs-subjects{overflow-x:clip;padding-block:4px clamp(32px,4.5vw,56px)}
+.hs-subjects-title{margin-block-end:12px;font-size:14px;font-weight:700;color:var(--ink)}
+.hs-chips{display:flex;gap:10px;overflow-x:auto;padding-block:2px 8px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+  margin-inline:calc(-1 * clamp(16px,4vw,40px));padding-inline:clamp(16px,4vw,40px);
+  scroll-padding-inline:clamp(16px,4vw,40px)}
+.hs-chips::-webkit-scrollbar{display:none}
+.hs-chips>*{flex:none}
+.hs-chip-all{display:inline-flex;align-items:center;gap:6px;min-height:44px;
+  padding:10px 18px;border-radius:999px;border:1.5px solid var(--blue100);
+  background:var(--blue50);color:var(--blue700);font-size:14px;font-weight:700;
+  white-space:nowrap;transition:background-color .16s,border-color .16s}
+.hs-chip-all:hover{background:var(--blue100);border-color:var(--blue)}
+/* From 900px: two rows of five, as a GRID — not flex-wrap. With wrap, where a row
+   breaks depends on the chips' widths, i.e. on the font: when the web font swapped
+   in, a chip jumped to the next row after first paint (a layout shift,
+   e2e/home-v2-perf.spec.ts at 1024px). Five max-content columns put every chip in a
+   fixed row whatever the font. Ten in one row (the mockup) does not fit the
+   1120px container in French (≈1290px). Below 900px, five columns would not fit
+   either, so the row scrolls, as on a phone. */
+@media (min-width:900px){
+  .hs-chips{display:grid;grid-template-columns:repeat(5,max-content);gap:10px;
+    overflow-x:visible;margin-inline:0;padding-inline:0}
+  /* Each chip fills its column (equal widths down a column, even gaps), content centred. */
+  .hs-chips>*{justify-content:center}
+}
+
+/* ── 2. steps (#etapes) ─────────────────────────────────────────────────────── */
+.hs-band{background:var(--band-blue)}
+.hs-eyebrow{margin-block-end:10px}
+/* The grid, its columns and the gap (--hv2-step-gap, where StepCard draws its
+   arrow) are lane A's .hv2-steps; this only spaces it from the title. */
+.hs-steps{margin-block-start:clamp(22px,3vw,32px)}
+
+/* ── 3. facts ────────────────────────────────────────────────────────────────── */
+.hs-facts{overflow-x:clip}
+.hs-facts-grid{position:relative;display:grid;grid-template-columns:1fr;
+  gap:clamp(14px,2vw,22px);margin-block-start:clamp(22px,3vw,32px)}
+.hs-facts-grid>*{min-width:0}
+@media (min-width:680px){.hs-facts-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1000px){.hs-facts-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* The one payment sentence (<PaymentStory>, with its own « Bientôt » tag), laid
+   out as the mockup's pill row: tag on the start side, the sentence beside it. */
+.hs-paystory{margin-block-start:14px}
+.hs-paystory .payment-story{display:flex;align-items:center;gap:10px;
+  font-size:13.5px;line-height:1.45;color:var(--ink2)}
+.hs-paystory .tag{padding-block:7px;padding-inline:12px;font-size:13.5px}
+
+/* ── decorative doodles (lane A's <Doodle>, aria-hidden, mirrored in RTL) ───── */
+.hs-doodle{position:absolute;z-index:1;pointer-events:none;width:38px;height:38px}
+.hs-doodle-facts-start{inset-block-start:-12px;inset-inline-start:-30px}
+.hs-doodle-facts-end{inset-block-start:-30px;inset-inline-end:-4px}
+@media (max-width:759px){.hs-doodle-facts-start,.hs-doodle-facts-end{display:none}}
+
+/* ── 4. CTA banner — text only (founder decision: no photo yet) ────────────────
+   The message and the action sit on the inline-start side; the inline-end side is
+   carried by decoration — a faint blob and the ochre rays and wave — so the card
+   reads as designed, not as a slot waiting for a picture. When a photo is approved
+   (see the PHOTO SLOT comment in CtaBanner.tsx), give .hs-cta a second column from
+   900px and the .hs-cta-media box goes there. */
+.hs-cta{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);
+  border-radius:var(--r-xl);color:var(--on-blue);box-shadow:var(--sh-card);
+  background:linear-gradient(115deg,var(--blue900),var(--blue700) 50%,var(--blue))}
+html[dir=rtl] .hs-cta{background:linear-gradient(245deg,var(--blue900),var(--blue700) 50%,var(--blue))}
+.hs-cta-blob{position:absolute;z-index:-1;pointer-events:none;width:clamp(240px,34vw,420px);height:auto;
+  aspect-ratio:1;inset-block-start:50%;inset-inline-end:clamp(-160px,-8vw,-60px);translate:0 -50%;opacity:.09}
+.hs-doodle-cta{inset-block-start:clamp(18px,3vw,34px);inset-inline-end:clamp(22px,7vw,120px);width:48px;height:48px}
+.hs-doodle-cta-wave{inset-block-end:clamp(20px,3vw,36px);inset-inline-end:clamp(30px,12vw,220px);width:96px;height:24px}
+.hs-cta-text{position:relative;z-index:1;min-width:0;max-width:760px;
+  padding-block:clamp(28px,4.5vw,52px);padding-inline:clamp(22px,4.5vw,56px)}
+.hs-cta-title{max-width:620px;color:#fff;font-size:clamp(24px,3vw,34px)}
+.hs-cta-sub{margin-block-start:10px;max-width:560px;font-size:15px;line-height:1.55;color:var(--on-blue-soft)}
+.hs-cta-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;margin-block-start:22px}
+.hs-cta-btn{display:inline-flex;width:auto;padding-block:14px;padding-inline:28px;border-radius:999px}
+.hs-cta-pill{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding-block:6px;padding-inline:12px 14px;
+  border:1px solid var(--on-blue-rule);border-radius:999px;background:var(--on-blue-fill);
+  font-size:13.5px;font-weight:600;color:var(--on-blue)}
+.hs-cta-pill .ic{width:17px;height:17px}
+.hs-cta-checks{display:flex;flex-wrap:wrap;gap:10px 22px;margin-block-start:22px;font-size:13.5px;color:var(--on-blue)}
+.hs-cta-checks>li{display:inline-flex;align-items:center;gap:8px}
+.hs-cta-tick{display:grid;place-items:center;flex:none;width:20px;height:20px;border-radius:999px;background:var(--green-btn);color:#fff}
+.hs-cta-tick .ic{width:12px;height:12px;stroke-width:2.8}
+/* Below 900px the text spans the card, so a doodle would sit on the title. */
+@media (max-width:899px){.hs-doodle-cta-wave,.hs-doodle-cta{display:none}}
+
+/* ── 5. « Tu es prof ? » ────────────────────────────────────────────────────── */
+.hs-prof{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 24px;
+  padding-block:clamp(16px,2.4vw,24px);padding-inline:clamp(18px,3vw,32px);
+  border:1px solid var(--lineCool);border-radius:var(--r-l);box-shadow:var(--sh-card);
+  background:linear-gradient(135deg,var(--paper),var(--blue50))}
+.hs-prof-main{display:flex;flex:1 1 320px;align-items:center;gap:14px;min-width:0}
+.hs-prof-tile{display:grid;place-items:center;flex:none;width:52px;height:52px;border-radius:16px;
+  background:var(--blue100);color:var(--blue)}
+.hs-prof-tile .ic{width:24px;height:24px}
+.hs-prof-title{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--ink)}
+.hs-prof-body{margin-block-start:4px;font-size:14px;line-height:1.55;color:var(--ink2)}
+.hs-prof-btn{display:inline-flex;flex:none;align-items:center;justify-content:center;gap:8px;min-height:48px;
+  padding-block:10px;padding-inline:22px;border-radius:999px;border:1.5px solid var(--blue);
+  background:var(--paper);color:var(--blue700);font-size:15px;font-weight:700;white-space:nowrap;
+  transition:background-color .16s}
+.hs-prof-btn:hover{background:var(--blue50)}
+@media (max-width:519px){.hs-prof-btn{flex:1 1 100%}}
+
