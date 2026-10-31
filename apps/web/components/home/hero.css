@@ -49,8 +49,11 @@ html[dir=rtl] .hv-cta:hover .hv-cta-ic{transform:scaleX(-1) translateX(3px)}
 .hv-blob{position:absolute;z-index:0;pointer-events:none}
 .hv-blob-a{inset-block-start:-4%;inset-inline-start:-6%;width:62%;height:auto;opacity:.9}
 .hv-blob-b{inset-block-end:-6%;inset-inline-end:-4%;width:48%;height:auto;opacity:.7}
+/* home v2 · F: below 1180px the card is centred (max 420px) in a wider stage, so an
+   offset from the STAGE's edge left the rays floating far from it (at 768px, 170px
+   off the card's corner). Hug the card's inline-end corner instead. */
 .hv-rays{position:absolute;z-index:2;pointer-events:none;width:44px;height:auto;
-  inset-block-start:-14px;inset-inline-end:clamp(4px,4%,28px)}
+  inset-block-start:-14px;inset-inline-end:max(4px,calc((100% - 420px) / 2 - 18px))}
 
 .hv-card{position:relative;z-index:1;width:100%;max-width:420px;
   background:var(--paper);border:1px solid var(--line);border-radius:var(--r-l);
@@ -119,6 +122,14 @@ html[dir=rtl] .hv-note{font-weight:600;transform:rotate(4deg)}
   .hv-card{padding:12px}
   .hv-row{gap:10px;padding-inline-start:10px}
   .hv-price b{font-size:14px}
+  /* home v2 · F: at 360–390px « Voir les profs » (or a price) leaves the title ~105px,
+     and French cut it to « Prof de Physi… » and the levels to « Secondaire · Bac · e… ».
+     Let both wrap (the row grows), the Vérifié badge riding at the end of the
+     title's last line rather than pinned to the far edge. */
+  .hv-row-title{display:block}
+  .hv-row-title-txt{white-space:normal;overflow-wrap:break-word}
+  .hv-row-title .verified{margin-inline-start:6px;vertical-align:-3px}
+  .hv-row-meta{white-space:normal}
 }
 
 @media (prefers-reduced-motion:reduce){

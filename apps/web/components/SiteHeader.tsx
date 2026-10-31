@@ -81,7 +81,9 @@ const CSS = `
   .site-header .qh-brand .ar{display:none}
 }
 .qh-nav{display:none;align-items:center;gap:22px;font-weight:600;font-size:14.5px;min-width:0}
-.qh-nav a{color:var(--ink2);transition:.15s;white-space:nowrap;padding:6px 2px;border-radius:8px}
+/* home v2 · F: a 44px tap target (it measured 108x30 in French, 59x34 in Arabic). */
+.qh-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;
+  color:var(--ink2);transition:.15s;white-space:nowrap;padding:0 2px;border-radius:8px}
 .qh-nav a:hover{color:var(--blue)}
 .qh-nav a[aria-current="page"]{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ochre)}
 .qh-right{display:flex;align-items:center;gap:8px;margin-inline-start:auto;min-width:0}

@@ -50,3 +50,16 @@
 @media (prefers-reduced-motion: reduce){
   .lp-rv,.lp-rv.lp-armed{opacity:1 !important;transform:none !important;transition:none !important}
 }
+
+/* ── home v2 · F — Arabic: the 13px lines one step up ─────────────────────────
+   13px passes the floor, but Arabic at 13px reads a size smaller than Latin at
+   13px (its dots and marks are what tell the letters apart). The page's 13px
+   Arabic lines — the trust labels under the CTA, the hero card's « level ·
+   أونلاين » meta, « شوف الأساتذة » and « للحصة », an InfoCard's « قريب » row —
+   go to 14px. French is untouched. Unlayered, so it beats globals.css's
+   @layer components (.hv2-trust li, .hv2-info-soon). */
+html[dir="rtl"] .hv2-trust li,
+html[dir="rtl"] .hv2-info-soon,
+html[dir="rtl"] .hv-row-meta,
+html[dir="rtl"] .hv-row-cta,
+html[dir="rtl"] .hv-price span{font-size:14px}

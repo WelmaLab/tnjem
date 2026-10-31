@@ -121,7 +121,9 @@ const CSS = `
   color:var(--ink);margin-bottom:12px}
 html[dir="rtl"] .qf-col h2{font-family:var(--fa);letter-spacing:normal}
 .qf-col ul{list-style:none;display:flex;flex-direction:column;gap:2px}
-.qf-col a{display:inline-flex;align-items:center;min-height:44px;font-size:13.5px;font-weight:600;
+/* min-width:44px (home v2 · F): the short labels were narrower than a finger —
+   « Tarifs » 35px, « دخول » 31px, « لوحتي » 32px. */
+.qf-col a{display:inline-flex;align-items:center;min-height:44px;min-width:44px;font-size:13.5px;font-weight:600;
   color:var(--muted);transition:.15s}
 .qf-col a:hover{color:var(--blue)}
 .qf-bottom{border-top:1px solid var(--line)}
