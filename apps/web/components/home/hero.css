@@ -1,0 +1,129 @@
+/* ── home v2 · B — the hero (HeroSection + HeroTutorsCard) ─────────────────────
+   Prefix hv-. Logical properties only (guardrail 1), token colours only
+   (guardrail 4), prices in --fn with tabular figures (guardrail 8).
+   Lane A's tokens (globals.css « home v2 · A »): --fs-hero/--lh-hero (the H1
+   scale; --lh-hero is taller in Arabic), --sh-card (the card), --fh (the
+   handwritten note; the Arabic face in RTL). */
+
+/* Bottom padding: the gap to the subject picker, which is its own section below
+   (home v2 · E) — the old .lp-hero's 36px, 44px from 640px. */
+.hv-hero{position:relative;overflow:hidden;isolation:isolate;
+  padding-block:clamp(28px,5vw,64px) 36px}
+@media (min-width:640px){.hv-hero{padding-block-end:44px}}
+/* The faint warm wash the hero already had (UI Option A kept only this one). */
+.hv-hero::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(720px 420px at 8% 0%,rgba(224,133,46,.10),transparent 60%)}
+html[dir=rtl] .hv-hero::before{background:radial-gradient(720px 420px at 92% 0%,rgba(224,133,46,.10),transparent 60%)}
+
+.hv-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(32px,5vw,56px);align-items:center}
+@media (min-width:1024px){.hv-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)}}
+
+/* ── left: the copy ─────────────────────────────────────────────────────────── */
+.hv-copy{display:flex;flex-direction:column;gap:20px;min-width:0}
+
+.hv-h1{font-family:var(--fd);font-weight:700;color:var(--ink);max-width:620px;
+  font-size:var(--fs-hero);line-height:var(--lh-hero);letter-spacing:-1.5px}
+/* --fd has no Arabic glyphs and negative tracking severs the joins. */
+html[dir=rtl] .hv-h1{font-family:var(--fa);letter-spacing:normal}
+.hv-h1-hi{color:var(--ochre-ink)}
+
+.hv-lead{max-width:500px}
+
+.hv-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px 28px}
+.hv-cta{width:auto;padding:16px 28px;font-size:15.5px;
+  transition:transform .18s ease,box-shadow .18s ease}
+.hv-cta:hover{transform:translateY(-2px);box-shadow:0 20px 32px -14px rgba(224,133,46,.9)}
+.hv-cta-ic{width:18px;height:18px;transition:transform .18s ease}
+.hv-cta:hover .hv-cta-ic{transform:translateX(3px)}
+/* RTL: the arrow already carries .flip (scaleX(-1)); compose, never replace. */
+html[dir=rtl] .hv-cta:hover .hv-cta-ic{transform:scaleX(-1) translateX(3px)}
+.hv-how{display:inline-flex;align-items:center;min-height:44px;font-weight:700;color:var(--blue);
+  text-underline-offset:4px}
+.hv-how:hover{text-decoration:underline}
+
+.hv-trust{margin-block-start:8px}
+
+/* ── right: the stage, the card, the note ───────────────────────────────────── */
+.hv-stage{position:relative;display:flex;flex-direction:column;align-items:center;min-width:0;
+  padding-block:8px}
+.hv-blob{position:absolute;z-index:0;pointer-events:none}
+.hv-blob-a{inset-block-start:-4%;inset-inline-start:-6%;width:62%;height:auto;opacity:.9}
+.hv-blob-b{inset-block-end:-6%;inset-inline-end:-4%;width:48%;height:auto;opacity:.7}
+.hv-rays{position:absolute;z-index:2;pointer-events:none;width:44px;height:auto;
+  inset-block-start:-14px;inset-inline-end:clamp(4px,4%,28px)}
+
+.hv-card{position:relative;z-index:1;width:100%;max-width:420px;
+  background:var(--paper);border:1px solid var(--line);border-radius:var(--r-l);
+  box-shadow:var(--sh-card);padding:16px}
+
+/* The search pill: ONE link — the ochre square is decoration inside it. */
+.hv-search{display:flex;align-items:center;gap:10px;min-height:52px;
+  border:1.5px solid var(--lineCool);border-radius:14px;padding:8px 8px;padding-inline-start:14px;
+  box-shadow:var(--sh-s);color:var(--ink);transition:border-color .16s}
+.hv-search:hover{border-color:var(--blue)}
+.hv-search-ic{width:18px;height:18px;color:var(--blue)}
+.hv-search-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-weight:700;font-size:14.5px}
+.hv-search-go{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:11px;
+  background:var(--ochre-btn);color:#fff}
+.hv-search-go .ic{width:17px;height:17px;stroke-width:2.2}
+
+.hv-rows{list-style:none;margin:0;padding:0;margin-block-start:12px;display:flex;flex-direction:column;gap:8px}
+.hv-row{display:flex;align-items:center;gap:12px;min-height:72px;
+  border:1px solid var(--line);border-radius:var(--r);padding:10px 10px;padding-inline-start:12px;
+  color:var(--ink);transition:border-color .16s,background-color .16s}
+.hv-row:hover{border-color:var(--blue);background:var(--blue50)}
+
+.hv-av{flex:none;width:44px;height:44px;border-radius:13px;object-fit:cover}
+.hv-av-ini{display:grid;place-items:center;font-family:var(--fd);font-weight:700;font-size:16px;
+  color:var(--ink);background:linear-gradient(150deg,var(--amber),var(--ochre))}
+
+.hv-row-main{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.hv-row-title{display:flex;align-items:center;gap:6px;min-width:0;font-weight:700;font-size:14.5px;color:var(--ink)}
+.hv-row-title-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hv-row-meta{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hv-row-rating{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--muted);
+  font-family:var(--fn);font-variant-numeric:tabular-nums}
+.hv-row-rating b{color:var(--ochre-ink);font-weight:700}
+.hv-star{width:13px;height:13px;fill:var(--amber);stroke:var(--ochre600);stroke-width:1.1}
+
+/* A price: the figure face with tabular figures, never --fd (guardrail 8). */
+.hv-price{flex:none;display:flex;flex-direction:column;align-items:flex-end;text-align:end;line-height:1.25}
+.hv-price b{font-family:var(--fn);font-variant-numeric:tabular-nums;font-weight:800;font-size:14.5px;
+  color:var(--ink);white-space:nowrap}
+.hv-price span{font-size:13px;color:var(--muted);white-space:nowrap}
+.hv-row-cta{flex:none;font-size:13px;font-weight:700;color:var(--blue);white-space:nowrap}
+.hv-chev{flex:none;width:16px;height:16px;color:var(--muted)}
+
+.hv-all{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-height:44px;
+  margin-block-start:6px;padding-inline:4px;font-weight:700;font-size:14px;color:var(--blue)}
+.hv-all:hover{text-decoration:underline;text-underline-offset:4px}
+.hv-all-ic{width:16px;height:16px}
+
+/* The handwritten note. A system hand where there is one — no web font is loaded
+   for it (HOME_V2 E) — and the Arabic face in Arabic (Latin script hands have no
+   Arabic glyphs). On a phone it sits under the card; from 1180px it hangs off
+   the card's inline-end edge, with its arrow pointing back at the rows. */
+.hv-note{position:relative;z-index:2;display:flex;align-items:center;gap:6px;margin-block-start:14px;
+  font-family:var(--fh);font-size:15px;line-height:1.35;color:var(--blue);transform:rotate(-4deg)}
+html[dir=rtl] .hv-note{font-weight:600;transform:rotate(4deg)}
+.hv-note-arrow{flex:none;width:30px;height:auto}
+@media (min-width:1180px){
+  .hv-stage{align-items:flex-start;padding-inline-end:112px}
+  .hv-rays{inset-inline-end:96px}
+  .hv-note{position:absolute;margin:0;inset-block-start:16%;inset-inline-end:0;width:108px;
+    flex-direction:column;align-items:flex-start}
+}
+
+@media (max-width:420px){
+  .hv-card{padding:12px}
+  .hv-row{gap:10px;padding-inline-start:10px}
+  .hv-price b{font-size:14px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .hv-cta,.hv-cta-ic{transition:none}
+  .hv-cta:hover{transform:none}
+  .hv-cta:hover .hv-cta-ic{transform:none}
+  html[dir=rtl] .hv-cta:hover .hv-cta-ic{transform:scaleX(-1)}
+}

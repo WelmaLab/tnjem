@@ -19,6 +19,8 @@ import { assertNoContactInfo, CONTACT_ERROR } from "../lib/contact-guard";
 import { exploreBoostSql, subscriptionIsLiveSql } from "../lib/entitlements";
 import { onSaleClassSql } from "../lib/class-sale";
 import { visibleReviewText } from "../lib/moderation-hide"; // phase-a lane L4 (A28)
+import { publicTutorSql } from "../lib/home-tutors"; // home v2 · B
+import type { HomeTutor } from "@tnajem/shared"; // home v2 · B
 
 /* tutors — createTutor, and the three PUBLIC reads that feed the cached storefront.
 
@@ -352,6 +354,15 @@ export async function tutorRoutes(app: FastifyInstance): Promise<void> {
     return { items, average, count };
   });
 
+  /* ── GET /tutors/home — PUBLIC, anonymous (home v2 · B) ─────────────────────
+     The home page's « real tutors » card: up to 3 public tutors, newest-verified
+     first, no contact data, a price only when real, reviews only from 3 on. The
+     rules and the order are explained in lib/home-tutors.ts. */
+  app.get("/tutors/home", async (): Promise<HomeTutor[]> => {
+    const { getHomeTutors } = await import("../lib/home-tutors");
+    return getHomeTutors();
+  });
+
   /* ── GET /tutors/explore — PUBLIC, anonymous ─────────────────────────────── */
   app.get<{ Querystring: { subject?: string; q?: string; level?: string } }>( // phase-a lane L5 (A18.7): + level
     "/tutors/explore",
@@ -359,7 +370,7 @@ export async function tutorRoutes(app: FastifyInstance): Promise<void> {
       const subject = (req.query.subject ?? "").trim();
       const q = (req.query.q ?? "").trim().slice(0, 60);
 
-      const conds = [eq(tutors.status, "verified"), isNull(tutors.suspendedAt)]; // A blocked account's storefront is suspended (0019): off every public read.
+      const conds = [publicTutorSql]; // verified + not suspended (0019: a blocked account's storefront is off every public read) — home v2 · B: one constant, shared with GET /tutors/home.
       if (subject) conds.push(ilike(tutors.subject, `%${subject}%`));
       // phase-a lane L5 (A18.7): the level filter — a code the tutor chose, never the legacy column.
       const level = (req.query.level ?? "").trim();

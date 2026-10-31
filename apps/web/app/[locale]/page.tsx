@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { Link } from "@/components/Link";
 import { SiteShell } from "@/components/SiteShell";
 import { Reveal } from "@/components/Reveal";
-import { Verified } from "@/components/ui";
 import { Shield, Gift, Forward, Search, Video, Wallet, Users } from "@/components/icons";
 import { bilingual } from "@/lib/i18n";
 import { isLocale, DEFAULT_LOCALE, type AppLocale } from "@/lib/locale";
 import { pageMetadata } from "@/lib/metadata";
 import { PaymentStory } from "@/components/PaymentStory"; // phase-a lane L3 (A22)
-import { PilotTag } from "@/components/PilotTag"; // Phase A+ (P4)
 import "@/components/home/home.css"; // home v2 · E: was an inline <style> string
+import { HeroSection } from "@/components/home/HeroSection"; // home v2 · B
+import { getHomeTutors } from "@/lib/home-tutors"; // home v2 · B
 
 /* ── SERVER COMPONENT (home v2 · E) ────────────────────────────────────────────
    This page was one big "use client" module: the whole page — copy for BOTH
@@ -49,12 +49,13 @@ export const revalidate = 60;
    HONESTY RULES (load-bearing — do not break):
    • Zero lessons taught, zero reviews. The page says so out loud.
    • Never invent tutor names, ratings, review counts, student counts or
-     testimonials. The hero illustration is deliberately generic.
-   • The only number we show is 0 TND for the 1st session, which is real.
+     testimonials. The hero card (home v2 · B) shows REAL verified tutors from
+     GET /tutors/home, then neutral subject rows — a price only when the tutor
+     has one, a rating only from 3 reviews, a photo only when approved.
 
-   MOTION BUDGET: one entrance on the hero panel + one reveal-on-scroll
-   per section. Nothing else. Both are killed by prefers-reduced-motion at
-   the bottom of components/home/home.css.
+   MOTION BUDGET: one reveal-on-scroll per section, nothing on the hero (its
+   H1 is the LCP). Killed by prefers-reduced-motion at the bottom of
+   components/home/home.css.
    ===================================================================== */
 
 const copy = bilingual({
@@ -64,22 +65,7 @@ const copy = bilingual({
     metaDescription:
       "Trouve un prof en direct, du primaire au Bac — toutes les matières, avec des profs tunisiens vérifiés un par un.",
 
-    eyebrow: "Cours particuliers en ligne · Tunisie",
-    h1a: "Un prof ",
-    h1Hi: "vérifié",
-    h1b: ", en ligne, du primaire au Bac.",
-    sub: "Choisis ta matière, réserve une séance en vidéo. Le tarif est affiché avant que tu réserves.",
-    ctaPrimary: "Trouve ton prof",
-    ctaSecondary: "Comment ça marche ?",
-    // phase-a lane L3 (A22): one payment story (D4) — it lives in <PaymentStory>, labelled "Bientôt".
-    heroMicro:
-      "Sans engagement. Tnajem ne prend rien pendant le pilote.",
-
-    // hero illustration (NOT a real listing — generic on purpose)
-    heroAria:
-      "Illustration : une recherche « Maths · Bac » qui affiche des profs vérifiés, chacun avec un lien vers sa page.",
-    heroSearch: "Maths · Bac",
-    cardCta: "Voir la page",
+    // home v2 · B: the hero's copy lives in components/home/HeroSection.tsx and HeroTutorsCard.tsx.
 
     subjectsLabel: "Choisis ta matière",
     seeAll: "Toutes les matières",
@@ -125,20 +111,6 @@ const copy = bilingual({
     metaTitle: "Tnajem — تعلّم مع أستاذك",
     metaDescription:
       "لقّي أستاذ دايركت، من الابتدائي للباك — كل المواد، مع أساتذة توانسة مؤكّدين واحد واحد.",
-
-    eyebrow: "دروس خصوصية أونلاين · تونس",
-    h1a: "أستاذ ",
-    h1Hi: "متثبّت منّو",
-    h1b: "، أونلاين، من الابتدائي للباك.",
-    sub: "اختار المادة، واحجز حصة بالفيديو. الثمن يبان قبل ما تحجز.",
-    ctaPrimary: "لقّي أستاذك",
-    ctaSecondary: "كيفاش يخدم؟",
-    heroMicro: "بلا التزام. Tnajem ما تاخذ والو في فترة التجربة.", // phase-a lane L3 (A22)
-
-    // الرسم التوضيحي متاع الهيرو (موش أساتذة حقيقيين)
-    heroAria: "رسم توضيحي: بحث «رياضيات · باك» يورّي أساتذة متثبّت منهم، وكل واحد فيهم عندو رابط لصفحتو.",
-    heroSearch: "رياضيات · باك",
-    cardCta: "شوف الصفحة",
 
     subjectsLabel: "اختار المادة",
     seeAll: "المواد الكل",
@@ -194,17 +166,6 @@ const SUBJECTS: { slug: string; fr: string; ar: string }[] = [
   { slug: "technique", fr: "Technique", ar: "تقني" },
 ];
 
-// Illustrative (NOT real) result cards for the hero composition. Deliberately
-// generic: no invented tutor names, no fabricated ratings, no invented prices —
-// they must never read as a real listing. Only the free 1st session is shown,
-// which is a real, honoured promise. The three levels (Bac / Lycée / Primaire)
-// simply restate the range already claimed in the <h1>.
-const HERO_CARDS = [
-  { id: "maths", ini: "M", fr: "Prof de Maths", ar: "أستاذ رياضيات", frMeta: "Bac · en ligne", arMeta: "باك · أونلاين" },
-  { id: "physique", ini: "P", fr: "Prof de Physique", ar: "أستاذ فيزياء", frMeta: "Lycée · en ligne", arMeta: "ثانوي · أونلاين" },
-  { id: "francais", ini: "F", fr: "Prof de Français", ar: "أستاذ فرنسية", frMeta: "Primaire · en ligne", arMeta: "ابتدائي · أونلاين" },
-];
-
 // Icon tile tints for the "3 things to know" cards (full class strings so
 // Tailwind's content scanner sees them).
 const TONES = ["bg-green50 text-green-ink", "bg-blue50 text-blue", "bg-ochre-tint text-ochre-ink"];
@@ -249,106 +210,16 @@ export default async function HomePage(props: { params: Promise<{ locale: string
   const c = copy[locale];
   const isAr = locale === "ar";
 
-  // lane B: tutors fetch goes here — `const tutors = await getHomeTutors();`
-  // (callAnonymous only — no cookies()/headers(), or /fr turns dynamic — and it
-  // must resolve to [] when the API is down: `next build` runs with no API.)
+  /* home v2 · B: up to 3 real, verified tutors for the hero card. callAnonymous
+     only (no cookies()/headers(), so /fr stays prerendered), cached 60 s, and []
+     whenever the API is not there — `next build` runs with none (lib/home-tutors.ts). */
+  const tutors = await getHomeTutors();
 
   return (
     <SiteShell>
       {/* ── HERO (lane B) ── */}
-      {/* ── 1) HERO — what it is · one CTA · the subject picker ────────── */}
-      <section className="lp-hero">
-        <div className="lp-wash" aria-hidden="true" />
-        <div className="container">
-          <div className="web-hero">
-            {/* LEFT — headline, one primary CTA, the payment truth */}
-            <div className="flex min-w-0 flex-col gap-5">
-              {/* Phase A+ (P4): the adults-only pilot tag beside the eyebrow. It arrives after
-                  hydration; `reserve` keeps its box (invisible) from the first paint, so its
-                  arrival shifts nothing at any width (home v2 · E). Keep `reserve` when restyling. */}
-              <div className="lp-eyebrow-row">
-                <p className="web-eyebrow">{c.eyebrow}</p>
-                <PilotTag reserve />
-              </div>
-
-              <h1 className="web-h1 max-w-[640px]">
-                {c.h1a}
-                <span className="text-ochre-ink">{c.h1Hi}</span>
-                {c.h1b}
-              </h1>
-
-              <p className="web-lead max-w-[500px]">{c.sub}</p>
-
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                <Link
-                  href="/explore"
-                  className="btn btn-primary lp-cta w-auto px-7 py-4 text-[15.5px]"
-                >
-                  {c.ctaPrimary} <Forward className="h-[18px] w-[18px]" />
-                </Link>
-                {/* Deliberately NOT a second button: the hero has one action. */}
-                <a
-                  href="#etapes"
-                  className="inline-flex min-h-[44px] items-center font-bold text-blue underline-offset-4 hover:underline"
-                >
-                  {c.ctaSecondary}
-                </a>
-              </div>
-
-              <p className="max-w-[440px] text-[13.5px] leading-relaxed text-muted">
-                {c.heroMicro}
-              </p>
-            </div>
-
-            {/* RIGHT — illustration of the actual product (generic on purpose) */}
-            <div className="lp-stage" role="img" aria-label={c.heroAria}>
-              <div className="bg-gray-800 " aria-hidden="true" />
-              <div className="zellige lp-stage-zellige" aria-hidden="true" />
-
-              <div className="lp-panel" aria-hidden="true">
-                <div className="lp-search">
-                  <Search className="h-[18px] w-[18px] flex-none text-blue" />
-                  <span className="lp-t min-w-0 flex-1 truncate text-[13.5px] text-ink">
-                    {c.heroSearch}
-                  </span>
-                  <span className="grid h-8 w-8 flex-none place-items-center rounded-[10px] bg-ochre-btn text-white">
-                    <Forward className="h-[15px] w-[15px]" />
-                  </span>
-                </div>
-
-                <div className="mt-3 flex flex-col gap-2">
-                  {HERO_CARDS.map((card) => (
-                    <div key={card.id} className="lp-hcard">
-                      <div className="avatar sq h-[42px] w-[42px] flex-none text-[16px]">
-                        {card.ini}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="lp-t flex flex-wrap items-center gap-1.5 text-[13.5px] text-ink">
-                          <span className="min-w-0">{isAr ? card.ar : card.fr}</span>
-                          <Verified />
-                        </div>
-                        <div className="mt-0.5 text-[13px] text-muted">
-                          {isAr ? card.arMeta : card.frMeta}
-                        </div>
-                      </div>
-                      {/* WAS a hardcoded "0 TND / 1ère séance" on all three cards.
-                          Two problems, and the illustration disclaimer did not
-                          cover either: it priced a fictional listing at zero, and
-                          it made the free-first-session claim that Step 6 turned
-                          into a per-tutor opt-in. Replaced with the affordance
-                          the card actually leads to — no number, nothing to be
-                          wrong about. */}
-                      <div className="flex-none text-end">
-                        <div className="text-[13px] text-muted">{c.cardCta}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* home v2 · B: the hero and its real-tutors card (components/home/HeroSection.tsx). */}
+      <HeroSection locale={locale} tutors={tutors} />
 
       {/* ── SECTIONS (lane C) ── */}
       {/* Subject picker — the utility, right where the eye lands next. Its own

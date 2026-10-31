@@ -89,3 +89,5 @@ export * from "./student-space";
 export * from "./conversations";
 // student-space-v1 · fixes (H2, C7) — a class is over at start + duration, whatever classes.status says. Pure.
 export * from "./class-state";
+// home v2 · B — the home page's « real tutors » card: its DTO and its two limits. Pure.
+export * from "./home-tutors";
