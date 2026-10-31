@@ -20,7 +20,7 @@ const copy = bilingual({
   ar: { label: "تجربة · للّي عمرهم 18 سنة وفوق" },
 });
 
-export function PilotTag({ adultsOnly }: { adultsOnly?: boolean }) {
+export function PilotTag({ adultsOnly, reserve = false }: { adultsOnly?: boolean; reserve?: boolean }) {
   const { locale } = useLocale();
   const [fetched, setFetched] = useState<boolean | null>(null);
 
@@ -41,7 +41,21 @@ export function PilotTag({ adultsOnly }: { adultsOnly?: boolean }) {
   }, [adultsOnly]);
 
   const show = adultsOnly ?? fetched;
-  if (!show) return null;
+  if (!show) {
+    /* home v2 · E — `reserve` (the home hero): the tag ARRIVES after hydration, and
+       wherever the eyebrow and the tag do not fit on one line (phones, and the
+       two-column hero at 960–1279px in French) its arrival wrapped the row and
+       pushed the H1 and everything under it down — the page's only layout shift.
+       With `reserve` the tag's box is there from the first paint, invisible (and so
+       out of the accessibility tree) and without data-e2e, until /api/pilot says
+       to show it; if the answer is no, the slot simply stays empty. */
+    if (!reserve) return null;
+    return (
+      <Tag kind="neutral" className="pilot-tag" style={{ visibility: "hidden" }}>
+        {copy[locale].label}
+      </Tag>
+    );
+  }
   return (
     <Tag kind="neutral" className="pilot-tag">
       <span data-e2e="pilot-tag">{copy[locale].label}</span>

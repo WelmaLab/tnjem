@@ -1,0 +1,133 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   HOME PAGE (/[locale]) — page-scoped styles, prefix lp-.
+
+   home v2 · E: moved here VERBATIM from the inline <style> of app/[locale]/page.tsx
+   when the page became a Server Component (an inline <style> string re-shipped in
+   every HTML response and in the RSC payload; a stylesheet is cached once).
+   Imported by app/[locale]/page.tsx only. Global CSS by construction (App Router),
+   so every selector stays behind the lp- prefix.
+
+   Everything that can be a Tailwind utility IS one; this file only holds what
+   utilities can't express: the RTL font fallbacks, the edge-bleeding chip scroller,
+   the two surviving animations and their reduced-motion kill-switch.
+   Colours are tokens only (guardrails.mjs §4); logical properties only (§1).
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── rhythm ─────────────────────────────────────────────── */
+.lp-sec{padding-block:clamp(40px,6vw,80px)}
+.lp-sec.lp-tight{padding-block:clamp(26px,3.5vw,48px)}
+.lp-sec[id]{scroll-margin-top:84px} /* sticky header clearance for #etapes */
+
+/* ── titles ─────────────────────────────────────────────────
+   --fd (Space Grotesk) has NO Arabic glyphs and its negative
+   tracking severs Arabic cursive joins → fall back to --fa in RTL.
+   (.web-h1/.web-h2 already do this in globals.css.) */
+.lp-t{font-family:var(--fd);font-weight:700;letter-spacing:-.2px}
+html[dir=rtl] .lp-t{font-family:var(--fa);letter-spacing:normal}
+
+/* Every card on this page is the canonical .u-card + .u-card-pad from
+   globals.css — no local card surface, and no .u-card-int on the
+   step/fact cards because they are not clickable (a hover lift on
+   static content reads as a broken link). One exception below: the
+   teacher cross-link keeps its warm gradient. Loaded after globals.css,
+   so it beats .u-card's flat background. */
+.lp-outro{background:linear-gradient(135deg,var(--paper),var(--blue50))}
+
+/* ── hero ───────────────────────────────────────────────── */
+/* The subject picker used to sit INSIDE .lp-hero, 36px (44px from 640px) under
+   the hero grid, with the hero's bottom padding after it. Since home v2 · E it is
+   its own section (.lp-subjects, below), so the hero's bottom padding is that
+   36/44px gap and the picker's section carries the old bottom padding — same
+   spacing, and the two regions can be replaced independently. */
+.lp-hero{position:relative;overflow:hidden;isolation:isolate;
+  padding-block:clamp(28px,5vw,64px) 36px}
+@media (min-width:640px){.lp-hero{padding-block-end:44px}}
+.lp-subjects{position:relative;overflow:hidden;padding-block-end:clamp(34px,6vw,72px)}
+.lp-wash{position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(720px 420px at 8% 0%,rgba(224,133,46,.10),transparent 60%)}
+/* UI Option A (A1): the blue radial is gone — no cobalt haze behind the hero;
+   only the faint warm wash stays. */
+
+/* ── eyebrow + pilot tag ────────────────────────────────────
+   <PilotTag> asks /api/pilot after hydration (the flag is the running
+   server's, never the build's), so it ARRIVES late. Where the eyebrow and
+   the tag do not fit on one line its arrival wrapped the row and pushed the
+   H1, the CTA and the hero card down — Lighthouse's only CLS on this page
+   at the base (0.021 /fr, 0.025–0.037 /ar, 380px). The page now renders
+   <PilotTag reserve />, whose invisible box holds the slot from the first
+   paint.
+   That is not enough on its own: whether the two FIT on one line then
+   depends on the font. In Arabic the tag's "18" comes from a Latin file of
+   IBM Plex Sans Arabic that is not preloaded, so the tag changes width when
+   it swaps in, and where the line is tight the row flipped from one line to
+   two after first paint (Lighthouse /ar: 0.042). Measured free space on the
+   line (fr / ar, px): 390 −142/−10 · 412 −121/+11 · 560 +16/+147 ·
+   640 +89/+221 · 960 −56/+75 · 1100 +13/+144 · 1280 +63/+195.
+   So wherever it is tight in either locale the eyebrow takes the whole line
+   and the tag always sits on the next one — the wrap is decided by the
+   viewport, never by a font. */
+.lp-eyebrow-row{display:flex;flex-wrap:wrap;align-items:center;column-gap:12px;row-gap:8px;min-height:28px}
+@media (max-width:639.98px), (min-width:960px) and (max-width:1199.98px){
+  .lp-eyebrow-row > .web-eyebrow{flex-basis:100%}
+}
+
+/* primary CTA: lift + arrow nudge. In RTL the arrow already carries
+   .flip (scaleX(-1)); re-declaring transform would silently un-flip
+   it, so the RTL rule composes both. */
+.lp-cta:hover{transform:translateY(-2px);
+  box-shadow:0 20px 32px -14px rgba(224,133,46,.9)}
+.lp-cta .ic{transition:transform .18s ease}
+.lp-cta:hover .ic{transform:translateX(3px)}
+html[dir=rtl] .lp-cta:hover .ic{transform:scaleX(-1) translateX(3px)}
+
+/* ── subject chips ──────────────────────────────────────────
+   Scrolls edge-to-edge on phones (negative margin is safe: .lp-subjects
+   clips it), wraps from 760px up. */
+.lp-chips{display:flex;gap:10px;overflow-x:auto;padding-block:2px 8px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  margin-inline:calc(-1 * clamp(16px,4vw,40px));
+  padding-inline:clamp(16px,4vw,40px)}
+.lp-chips::-webkit-scrollbar{display:none}
+.lp-chip{flex:none;display:inline-flex;align-items:center;min-height:44px;
+  background:var(--paper);border:1.5px solid var(--line);border-radius:999px;
+  padding:10px 17px;font-weight:700;font-size:14px;color:var(--ink);
+  white-space:nowrap;box-shadow:var(--sh-s);transition:.16s}
+.lp-chip:hover{border-color:var(--blue);color:var(--blue)}
+.lp-chip-all{background:var(--blue);border-color:transparent;color:#fff}
+.lp-chip-all:hover{background:var(--blue700);border-color:transparent;color:#fff}
+@media (min-width:760px){
+  .lp-chips{flex-wrap:wrap;overflow-x:visible;margin-inline:0;padding-inline:0}
+}
+
+/* ── hero illustration ──────────────────────────────────── */
+.lp-stage{position:relative;display:flex;align-items:center;justify-content:center;
+  padding-block:10px}
+.lp-stage-bg{position:absolute;inset:6% 2%;border-radius:var(--r-xl);z-index:0;
+  background:linear-gradient(158deg,var(--blue),var(--blue900));opacity:.10}
+.lp-stage-zellige{position:absolute;inset:6% 2%;border-radius:var(--r-xl);z-index:0;opacity:.45}
+.lp-panel{position:relative;z-index:1;width:100%;max-width:376px;
+  background:var(--paper);border:1px solid var(--line);border-radius:var(--r-l);
+  box-shadow:var(--sh-l);padding:14px;
+  animation:lp-rise .6s cubic-bezier(.2,.7,.2,1) both}
+.lp-search{display:flex;align-items:center;gap:9px;border:1.5px solid var(--lineCool);
+  border-radius:14px;padding:10px 12px;box-shadow:var(--sh-s)}
+.lp-hcard{display:flex;align-items:center;gap:10px;border:1px solid var(--line);
+  border-radius:var(--r);padding:10px 11px}
+@keyframes lp-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* ── reveal-on-scroll (one per section) ─────────────────── */
+/* Default = final state (readable with no JS). .lp-armed is added by
+   <Reveal> (components/Reveal.tsx) only to sections that are still
+   off-screen at hydration, and removed when they scroll into view. */
+.lp-rv{transition:opacity .5s cubic-bezier(.2,.7,.2,1),transform .5s cubic-bezier(.2,.7,.2,1)}
+.lp-rv.lp-armed{opacity:0;transform:translateY(18px)}
+
+/* ── reduced motion: no motion, final state ─────────────── */
+@media (prefers-reduced-motion: reduce){
+  .lp-panel{animation:none !important;opacity:1 !important;transform:none !important}
+  .lp-cta:hover{transform:none !important}
+  .lp-cta:hover .ic{transform:none !important}
+  html[dir=rtl] .lp-cta:hover .ic{transform:scaleX(-1) !important}
+  .lp-rv,.lp-rv.lp-armed{opacity:1 !important;transform:none !important;transition:none !important}
+}

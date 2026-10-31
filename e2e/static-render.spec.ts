@@ -27,7 +27,11 @@ test.describe("static rendering and 404s", () => {
     for (const path of ["/fr", "/ar", "/fr/pour-les-profs", "/fr/privacy", "/fr/terms"]) {
       const r = await head(request, path);
       expect(r.status, path).toBe(200);
-      expect(r.headers["x-nextjs-cache"], `${path} is prerendered`).toBe("HIT");
+      /* home v2 · E: /fr and /ar are ISR now (revalidate = 60, so a home page that
+         shows real tutors stays fresh). An entry older than 60 s is served from the
+         cache as STALE while it regenerates in the background — still the prerendered
+         copy, never a per-request render (that would be no header and no-store). */
+      expect(["HIT", "STALE"], `${path} is prerendered`).toContain(r.headers["x-nextjs-cache"]);
     }
   });
 

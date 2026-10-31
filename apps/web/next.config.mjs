@@ -212,6 +212,13 @@ const nextConfig = {
     unoptimized: true,
     remotePatterns: [],
 
+    /* home v2 · E: AVIF first, then WebP — for the day the optimizer is turned
+       back on (Next's default is WebP only). WHILE `unoptimized: true` THIS DOES
+       NOTHING: next/image serves the file as it is, so an image only ships as
+       AVIF/WebP if it is committed in that format (public/images/home/*.webp|avif,
+       with explicit width/height — HOME_V2.md honesty rule 4). */
+    formats: ["image/avif", "image/webp"],
+
     /* SVGs are never optimised, they are passed through — a hostile SVG is a
        script. Explicitly off (also the default). */
     dangerouslyAllowSVG: false,

@@ -1,13 +1,34 @@
-"use client";
+import type { Metadata } from "next";
 import { Link } from "@/components/Link";
-import { useEffect } from "react";
 import { SiteShell } from "@/components/SiteShell";
-import { useLocale } from "@/components/LocaleProvider";
+import { Reveal } from "@/components/Reveal";
 import { Verified } from "@/components/ui";
 import { Shield, Gift, Forward, Search, Video, Wallet, Users } from "@/components/icons";
 import { bilingual } from "@/lib/i18n";
+import { isLocale, DEFAULT_LOCALE, type AppLocale } from "@/lib/locale";
+import { pageMetadata } from "@/lib/metadata";
 import { PaymentStory } from "@/components/PaymentStory"; // phase-a lane L3 (A22)
 import { PilotTag } from "@/components/PilotTag"; // Phase A+ (P4)
+import "@/components/home/home.css"; // home v2 · E: was an inline <style> string
+
+/* ── SERVER COMPONENT (home v2 · E) ────────────────────────────────────────────
+   This page was one big "use client" module: the whole page — copy for BOTH
+   locales included — shipped as JavaScript and hydrated, to render text. It now
+   renders on the server; the only client code left is what needs the browser:
+     • <Link> (locale-aware next/link, client by construction),
+     • <PilotTag> (asks /api/pilot after hydration — the flag is the running
+       server's, never the build's),
+     • <Reveal> (components/Reveal.tsx — the shared reveal-on-scroll; it starts
+       visible and only arms sections that are off-screen at hydration).
+   The locale comes from the URL segment, like the layout and /explore.
+
+   STATIC + ISR. Prerendered per locale at build (the layout's generateStaticParams),
+   re-rendered at most once a minute. Reads no cookies() / headers() /
+   searchParams — any of those would silently make /fr dynamic (static-render.spec
+   asserts x-nextjs-cache: HIT on /fr and /ar). Data for this page must come
+   through callAnonymous() (lib/api.ts) and must FAIL SOFT: `next build` runs with
+   no API, and a throw there fails the build. */
+export const revalidate = 60;
 
 /* =====================================================================
    STUDENT / PARENT LANDING — Tnajem (تنجّم)
@@ -33,11 +54,16 @@ import { PilotTag } from "@/components/PilotTag"; // Phase A+ (P4)
 
    MOTION BUDGET: one entrance on the hero panel + one reveal-on-scroll
    per section. Nothing else. Both are killed by prefers-reduced-motion at
-   the bottom of the scoped <style> block.
+   the bottom of components/home/home.css.
    ===================================================================== */
 
 const copy = bilingual({
   fr: {
+    // <head>: the title and description the layout already gave the home page (unchanged).
+    metaTitle: "Tnajem — apprends avec ton prof",
+    metaDescription:
+      "Trouve un prof en direct, du primaire au Bac — toutes les matières, avec des profs tunisiens vérifiés un par un.",
+
     eyebrow: "Cours particuliers en ligne · Tunisie",
     h1a: "Un prof ",
     h1Hi: "vérifié",
@@ -96,6 +122,10 @@ const copy = bilingual({
   },
 
   ar: {
+    metaTitle: "Tnajem — تعلّم مع أستاذك",
+    metaDescription:
+      "لقّي أستاذ دايركت، من الابتدائي للباك — كل المواد، مع أساتذة توانسة مؤكّدين واحد واحد.",
+
     eyebrow: "دروس خصوصية أونلاين · تونس",
     h1a: "أستاذ ",
     h1Hi: "متثبّت منّو",
@@ -179,150 +209,53 @@ const HERO_CARDS = [
 // Tailwind's content scanner sees them).
 const TONES = ["bg-green50 text-green-ink", "bg-blue50 text-blue", "bg-ochre-tint text-ochre-ink"];
 
-/* Hook: reveal-on-scroll — PROGRESSIVE ENHANCEMENT, never a prerequisite.
+/* Reveal-on-scroll — the SHARED components/Reveal.tsx (home v2 · E deleted the
+   page-local copy of the same rule). Progressive enhancement, never a
+   prerequisite: `.lp-rv` renders at its FINAL state in the server HTML, and the
+   island only arms (`.lp-armed`) a section that is off-screen at hydration. One
+   per section below the hero — not per card — so the page settles fast. */
+const RV = { base: "lp-rv", armedClass: "lp-armed", delayVar: "--lp-d" } as const;
 
-   `.lp-rv` sections render at their FINAL state by default, so the SSR HTML is
-   complete: with the bundle off (or still downloading on 3G) the page is simply
-   a static page. This effect then *arms* the animation by adding `.lp-armed`,
-   and only to sections that are currently off-screen — arming something the
-   reader can already see would be a visible flash-out/flash-in.
-
-   One `.lp-rv` per section below the hero — not per card — so the page settles
-   fast instead of staggering in piece by piece. */
-function useReveal() {
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!("IntersectionObserver" in window)) return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-
-    const io = new IntersectionObserver(
-      (entries, obs) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.remove("lp-armed");
-            obs.unobserve(e.target);
-          }
-        });
-      },
-      /* threshold 0, not 0.1: a section TALLER than the viewport can never reach
-         a fractional visibility ratio, so it would stay armed — and invisible —
-         forever. The negative bottom rootMargin does the "properly on screen"
-         job instead, and is height-independent. */
-      { rootMargin: "0px 0px -8% 0px", threshold: 0 }
-    );
-    for (const n of Array.from(document.querySelectorAll<HTMLElement>(".lp-rv"))) {
-      const r = n.getBoundingClientRect();
-      if (r.bottom > 0 && r.top < window.innerHeight) continue; // already on screen
-      n.classList.add("lp-armed");
-      io.observe(n);
-    }
-    return () => io.disconnect();
-  }, []);
+function localeOf(raw: string): AppLocale {
+  return isLocale(raw) ? raw : DEFAULT_LOCALE;
 }
 
-export default function HomePage() {
-  const { locale } = useLocale();
+/* <head>. Through pageMetadata like every other public route, so the home page
+   gets its canonical and its hreflang set (fr-TN · ar-TN · x-default → /fr) —
+   as a client page it could export no metadata and had neither. The title stays
+   the layout's own (absolute: no "· Tnajem" suffix on the brand page), and the
+   OG image / twitter card are pageMetadata's (the same /og.png as the layout).
+
+   JSON-LD: nothing page-level. The layout already emits Organization + WebSite on
+   every page; a second Organization node here would be a duplicate entity. No
+   WebSite SearchAction either: /explore does NOT read ?q= from the URL today
+   (ExploreClient seeds only ?subject= and ?level=), so a SearchAction pointing at
+   /explore?q={search_term_string} would promise a search that lands on the
+   unfiltered list. Add it to the layout's WebSite node once ?q= works. */
+export async function generateMetadata(props: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const locale = localeOf((await props.params).locale);
+  const c = copy[locale];
+  const m = pageMetadata({ locale, path: "", title: c.metaTitle, description: c.metaDescription });
+  return {
+    ...m,
+    title: { absolute: c.metaTitle },
+    openGraph: { ...m.openGraph, title: c.metaTitle },
+    twitter: { ...m.twitter, title: c.metaTitle },
+  };
+}
+
+export default async function HomePage(props: { params: Promise<{ locale: string }> }) {
+  const locale = localeOf((await props.params).locale);
   const c = copy[locale];
   const isAr = locale === "ar";
 
-  useReveal();
+  // lane B: tutors fetch goes here — `const tutors = await getHomeTutors();`
+  // (callAnonymous only — no cookies()/headers(), or /fr turns dynamic — and it
+  // must resolve to [] when the API is down: `next build` runs with no API.)
 
   return (
     <SiteShell>
-      {/* Scoped styles (prefix lp-). Everything that can be a Tailwind utility
-          IS one; this block only holds what utilities can't express: the RTL
-          font fallbacks, the edge-bleeding chip scroller, the two surviving
-          animations and their reduced-motion kill-switch. */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        /* ── rhythm ─────────────────────────────────────────────── */
-        .lp-sec{padding-block:clamp(40px,6vw,80px)}
-        .lp-sec.lp-tight{padding-block:clamp(26px,3.5vw,48px)}
-        .lp-sec[id]{scroll-margin-top:84px} /* sticky header clearance for #etapes */
-
-        /* ── titles ─────────────────────────────────────────────────
-           --fd (Space Grotesk) has NO Arabic glyphs and its negative
-           tracking severs Arabic cursive joins → fall back to --fa in RTL.
-           (.web-h1/.web-h2 already do this in globals.css.) */
-        .lp-t{font-family:var(--fd);font-weight:700;letter-spacing:-.2px}
-        html[dir=rtl] .lp-t{font-family:var(--fa);letter-spacing:normal}
-
-        /* Every card on this page is the canonical .u-card + .u-card-pad from
-           globals.css — no local card surface, and no .u-card-int on the
-           step/fact cards because they are not clickable (a hover lift on
-           static content reads as a broken link). One exception below: the
-           teacher cross-link keeps its warm gradient. Unlayered, so it beats
-           .u-card's flat background. */
-        .lp-outro{background:linear-gradient(135deg,var(--paper),var(--blue50))}
-
-        /* ── hero ───────────────────────────────────────────────── */
-        .lp-hero{position:relative;overflow:hidden;isolation:isolate;
-          padding-block:clamp(28px,5vw,64px) clamp(34px,6vw,72px)}
-        .lp-wash{position:absolute;inset:0;z-index:-1;pointer-events:none;
-          background:
-            radial-gradient(720px 420px at 8% 0%,rgba(224,133,46,.10),transparent 60%)}
-        /* UI Option A (A1): the blue radial is gone — no cobalt haze behind the hero;
-           only the faint warm wash stays. */
-
-        /* primary CTA: lift + arrow nudge. In RTL the arrow already carries
-           .flip (scaleX(-1)); re-declaring transform would silently un-flip
-           it, so the RTL rule composes both. */
-        .lp-cta:hover{transform:translateY(-2px);
-          box-shadow:0 20px 32px -14px rgba(224,133,46,.9)}
-        .lp-cta .ic{transition:transform .18s ease}
-        .lp-cta:hover .ic{transform:translateX(3px)}
-        html[dir=rtl] .lp-cta:hover .ic{transform:scaleX(-1) translateX(3px)}
-
-        /* ── subject chips ──────────────────────────────────────────
-           Scrolls edge-to-edge on phones (negative margin is safe: .lp-hero
-           clips it), wraps from 760px up. */
-        .lp-chips{display:flex;gap:10px;overflow-x:auto;padding-block:2px 8px;
-          scrollbar-width:none;-webkit-overflow-scrolling:touch;
-          margin-inline:calc(-1 * clamp(16px,4vw,40px));
-          padding-inline:clamp(16px,4vw,40px)}
-        .lp-chips::-webkit-scrollbar{display:none}
-        .lp-chip{flex:none;display:inline-flex;align-items:center;min-height:44px;
-          background:var(--paper);border:1.5px solid var(--line);border-radius:999px;
-          padding:10px 17px;font-weight:700;font-size:14px;color:var(--ink);
-          white-space:nowrap;box-shadow:var(--sh-s);transition:.16s}
-        .lp-chip:hover{border-color:var(--blue);color:var(--blue)}
-        .lp-chip-all{background:var(--blue);border-color:transparent;color:#fff}
-        .lp-chip-all:hover{background:var(--blue700);border-color:transparent;color:#fff}
-        @media (min-width:760px){
-          .lp-chips{flex-wrap:wrap;overflow-x:visible;margin-inline:0;padding-inline:0}
-        }
-
-        /* ── hero illustration ──────────────────────────────────── */
-        .lp-stage{position:relative;display:flex;align-items:center;justify-content:center;
-          padding-block:10px}
-        .lp-stage-bg{position:absolute;inset:6% 2%;border-radius:var(--r-xl);z-index:0;
-          background:linear-gradient(158deg,var(--blue),var(--blue900));opacity:.10}
-        .lp-stage-zellige{position:absolute;inset:6% 2%;border-radius:var(--r-xl);z-index:0;opacity:.45}
-        .lp-panel{position:relative;z-index:1;width:100%;max-width:376px;
-          background:var(--paper);border:1px solid var(--line);border-radius:var(--r-l);
-          box-shadow:var(--sh-l);padding:14px;
-          animation:lp-rise .6s cubic-bezier(.2,.7,.2,1) both}
-        .lp-search{display:flex;align-items:center;gap:9px;border:1.5px solid var(--lineCool);
-          border-radius:14px;padding:10px 12px;box-shadow:var(--sh-s)}
-        .lp-hcard{display:flex;align-items:center;gap:10px;border:1px solid var(--line);
-          border-radius:var(--r);padding:10px 11px}
-        @keyframes lp-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-
-        /* ── reveal-on-scroll (one per section) ─────────────────── */
-        /* Default = final state (readable with no JS). .lp-armed is added by
-           useReveal only to sections that are still off-screen. */
-        .lp-rv{transition:opacity .5s cubic-bezier(.2,.7,.2,1),transform .5s cubic-bezier(.2,.7,.2,1)}
-        .lp-rv.lp-armed{opacity:0;transform:translateY(18px)}
-
-        /* ── reduced motion: no motion, final state ─────────────── */
-        @media (prefers-reduced-motion: reduce){
-          .lp-panel{animation:none !important;opacity:1 !important;transform:none !important}
-          .lp-cta:hover{transform:none !important}
-          .lp-cta:hover .ic{transform:none !important}
-          html[dir=rtl] .lp-cta:hover .ic{transform:scaleX(-1) !important}
-          .lp-rv,.lp-rv.lp-armed{opacity:1 !important;transform:none !important;transition:none !important}
-        }
-      `}} />
-
+      {/* ── HERO (lane B) ── */}
       {/* ── 1) HERO — what it is · one CTA · the subject picker ────────── */}
       <section className="lp-hero">
         <div className="lp-wash" aria-hidden="true" />
@@ -330,11 +263,12 @@ export default function HomePage() {
           <div className="web-hero">
             {/* LEFT — headline, one primary CTA, the payment truth */}
             <div className="flex min-w-0 flex-col gap-5">
-              {/* Phase A+ (P4): the adults-only pilot tag beside the eyebrow. min-h keeps the
-                  row the tag's height either way, so its arrival after hydration shifts nothing. */}
-              <div className="flex min-h-[28px] flex-wrap items-center gap-x-3 gap-y-2">
+              {/* Phase A+ (P4): the adults-only pilot tag beside the eyebrow. It arrives after
+                  hydration; `reserve` keeps its box (invisible) from the first paint, so its
+                  arrival shifts nothing at any width (home v2 · E). Keep `reserve` when restyling. */}
+              <div className="lp-eyebrow-row">
                 <p className="web-eyebrow">{c.eyebrow}</p>
-                <PilotTag />
+                <PilotTag reserve />
               </div>
 
               <h1 className="web-h1 max-w-[640px]">
@@ -413,9 +347,17 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* Subject picker — the utility, right where the eye lands next. */}
-          <div className="mt-9 sm:mt-11">
+      {/* ── SECTIONS (lane C) ── */}
+      {/* Subject picker — the utility, right where the eye lands next. Its own
+          section since home v2 · E (it sat inside the hero <section>), so the hero
+          and the body sections are separate regions; .lp-subjects clips the chip
+          scroller's edge bleed, as .lp-hero did. Spacing unchanged. */}
+      <section className="lp-subjects">
+        <div className="container">
+          <div>
             {/* Body font + no letter-spacing on purpose: uppercase/tracking is
                 meaningless in Arabic and positive tracking severs its joins. */}
             <p className="mb-3 text-[13px] font-bold text-ink2">{c.subjectsLabel}</p>
@@ -436,7 +378,7 @@ export default function HomePage() {
       {/* ── 2) HOW IT WORKS — the backbone of the page ─────────────────── */}
       <section id="etapes" className="lp-sec">
         <div className="container">
-          <div className="lp-rv">
+          <Reveal {...RV}>
             <h2 className="web-h2 max-w-[620px]">{c.howTitle}</h2>
 
             <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -458,7 +400,7 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -468,7 +410,7 @@ export default function HomePage() {
           promise we made ourselves: zero lessons, zero reviews, no fakes. */}
       <section className="lp-sec border-y border-solid border-line bg-band">
         <div className="container">
-          <div className="lp-rv">
+          <Reveal {...RV}>
             <h2 className="web-h2 max-w-[620px]">{c.knowTitle}</h2>
 
             <div className="grid-3 mt-7">
@@ -504,7 +446,7 @@ export default function HomePage() {
               </span>
               <p className="min-w-0 text-[13.5px] leading-relaxed text-ink2">{c.honestNote}</p>
             </div> */}
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -529,7 +471,7 @@ export default function HomePage() {
              already carries a "Devenir prof" link + button). ───────────── */}
       <section className="lp-sec lp-tight">
         <div className="container">
-          <div className="u-card u-card-pad lp-outro lp-rv flex-row flex-wrap items-center justify-between gap-4">
+          <Reveal {...RV} className="u-card u-card-pad lp-outro flex-row flex-wrap items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3.5">
               <span
                 aria-hidden="true"
@@ -548,9 +490,10 @@ export default function HomePage() {
             >
               {c.profCta}
             </Link>
-          </div>
+          </Reveal>
         </div>
       </section>
+      {/* ── /SECTIONS (lane C) ── */}
     </SiteShell>
   );
 }
