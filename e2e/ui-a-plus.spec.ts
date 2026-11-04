@@ -79,31 +79,9 @@ test.describe("U2 — the header CTA is cobalt, never orange", () => {
 /* ── U3: "En direct" is never green ───────────────────────────────────────────── */
 const GREENS = ["rgb(23, 133, 95)", "rgb(27, 156, 111)", "rgb(227, 244, 237)"]; // --green-btn, --green, --green50
 
-async function liveLabels(page: Page) {
-  // Every element whose own text is the live label, with its and its parent's background.
-  return page.locator("body *").evaluateAll((els) =>
-    els
-      .filter((el) => /^(en direct|live|دايركت|مباشر)$/i.test((el.textContent ?? "").trim()) && el.children.length <= 2)
-      .map((el) => ({
-        text: (el.textContent ?? "").trim(),
-        bg: getComputedStyle(el).backgroundColor,
-        parentBg: el.parentElement ? getComputedStyle(el.parentElement).backgroundColor : "",
-        dot: getComputedStyle(el, "::before").backgroundColor,
-      })),
-  );
-}
-
+/* profs-v2 · B: /pour-les-profs' phone mock, and its EN DIRECT pill, went away with the
+   new hero, so its check did too. The rule still holds on the real pill, below. */
 test.describe("U3 — 'En direct' is a paper pill with a rose dot, never green", () => {
-  test("/fr/pour-les-profs: the phone mock's EN DIRECT is not green", async ({ page }) => {
-    await page.goto("/fr/pour-les-profs");
-    const labels = await liveLabels(page);
-    expect(labels.length, "the mock shows a live label").toBeGreaterThan(0);
-    for (const l of labels) {
-      expect(GREENS, JSON.stringify(l)).not.toContain(l.bg);
-      expect(GREENS, JSON.stringify(l)).not.toContain(l.parentBg);
-    }
-  });
-
   test("the tutor dashboard: a class happening now shows 'En direct', not green, with a rose dot", async ({ browser }) => {
     const profile = await seedProfile({ role: "tutor", birthYear: 1990 });
     const tutor = await seedTutor({ status: "verified", profileId: profile.id });

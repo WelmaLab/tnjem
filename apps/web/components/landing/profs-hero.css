@@ -1,0 +1,121 @@
+/* ── profs-v2 · B — the hero of /pour-les-profs (ProfsHero) ────────────────────
+   Prefix ph-. Logical properties only (guardrail 1), token colours only (guardrail 4),
+   unlayered like components/home/*.css. The peach is --ochre let down into --cream: no
+   new token. */
+
+.ph-hero{
+  /* 11 % keeps --muted at 4.7:1 and --ochre-ink at 4.9:1 on the wash. */
+  --ph-wash:color-mix(in srgb,var(--ochre) 11%,var(--cream));
+  /* Behind the photo until it arrives: close to the file's flat peach. */
+  --ph-peach:color-mix(in srgb,var(--ochre) 52%,var(--sand));
+  position:relative;overflow:hidden;isolation:isolate;
+  padding-block:clamp(28px,5vw,64px) clamp(40px,6vw,72px);
+  background:linear-gradient(180deg,var(--ph-wash) 0%,var(--ph-wash) 72%,var(--bg) 100%)}
+/* The peach gathers around the photo and stays off the small print, so the file's tan
+   sits in a warm field instead of landing on a pale page. */
+.ph-hero::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(70% 34% at 50% 84%,color-mix(in srgb,var(--ochre) 24%,var(--cream)),transparent 72%)}
+@media (min-width:1024px){
+  .ph-hero::before{background:radial-gradient(44% 84% at 76% 46%,color-mix(in srgb,var(--ochre) 24%,var(--cream)),transparent 72%)}
+  html[dir=rtl] .ph-hero::before{background:radial-gradient(44% 84% at 24% 46%,color-mix(in srgb,var(--ochre) 24%,var(--cream)),transparent 72%)}
+}
+
+/* 44px on a phone: room for the blob above the photo, and the photo starts low enough
+   in Lighthouse's 412 × 823 that the H1 stays the largest thing in the first screen. */
+.ph-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:44px;align-items:center}
+@media (min-width:1024px){.ph-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:40px}}
+
+/* ── left: the copy ─────────────────────────────────────────────────────────── */
+.ph-copy{display:flex;flex-direction:column;gap:20px;min-width:0}
+
+/* Above the LCP, so its wrap is decided by the viewport and never by a font: one line
+   from 380px (the two measure 329px, the column 348px there), two below. */
+.ph-tags{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+@media (max-width:379.98px){.ph-tags{flex-direction:column;align-items:flex-start;gap:8px}}
+.ph-pill{display:inline-flex;align-items:center;gap:6px;flex:none;padding:6px 14px;padding-inline-start:11px;
+  border-radius:999px;background:var(--ochre-tint);color:var(--ochre-ink);font-weight:700;font-size:13px}
+.ph-pill-ic{width:15px;height:15px;stroke-width:2.2}
+html[dir=rtl] .ph-pill,html[dir=rtl] .ph-tags .tag{font-size:14px}
+
+/* Four lines, written (<br>), not left to the wrap. The size follows the viewport so that the longest line (« Tes cours en direct. ») always fits: on a phone
+   100vw less the container's 2 × 16px, with room to spare for the fallback face. */
+.ph-h1{font-family:var(--fd);font-weight:700;color:var(--ink);
+  font-size:min(var(--fs-hero),calc((100vw - 32px) / 10));line-height:var(--lh-hero);letter-spacing:-1.5px}
+/* A figure: the figure face (C1). Ochre-ink: --ochre itself fails on this ground. */
+.ph-h1-hi{font-family:var(--fn);font-variant-numeric:tabular-nums;color:var(--ochre-ink);white-space:nowrap}
+/* --fd has no Arabic glyphs and negative tracking severs the joins. The four lines are
+   reserved so that the H1 is the same height whichever face paints first (home/hero.css
+   has the measurements behind this: Plex is never the shorter one). */
+html[dir=rtl] .ph-h1{font-family:var(--fa);letter-spacing:normal;min-height:calc(4em * var(--lh-hero))}
+
+.ph-lead{max-width:500px;text-wrap:pretty}
+/* Two lines in Arabic at every width, with either face: at 500px Plex took two and the
+   fallback one, and the swap moved the whole stage (a 0.135 CLS at 1280). */
+html[dir=rtl] .ph-lead{max-width:400px;min-height:calc(2 * 1.6em)}
+
+.ph-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.ph-cta{width:auto;padding:16px 26px;font-size:15.5px;transition:transform .18s ease,box-shadow .18s ease}
+.ph-cta:hover{transform:translateY(-2px);box-shadow:0 20px 32px -14px rgba(224,133,46,.9)}
+.ph-cta-ic{width:18px;height:18px;flex:none;transition:translate .18s ease}
+/* `translate`, not transform: transform is the arrow's .flip in RTL. */
+.ph-cta:hover .ph-cta-ic{translate:3px 0}
+html[dir=rtl] .ph-cta:hover .ph-cta-ic{translate:-3px 0}
+.ph-ghost{width:auto;padding:15px 22px;font-size:15px;background:var(--paper);
+  transition:border-color .16s,color .16s}
+.ph-ghost:hover{border-color:var(--blue);color:var(--blue)}
+.ph-play{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:999px;
+  border:1.5px solid currentColor;color:var(--blue)}
+.ph-play .ic{width:12px;height:12px}
+/* Stacked well before the two stop fitting (478px in French), so that no face decides. */
+@media (max-width:539.98px){.ph-cta,.ph-ghost{width:100%}}
+
+/* Honesty rule 1, small and muted: under the actions, never hidden. */
+.ph-later{max-width:520px;font-size:13px;line-height:1.55;color:var(--muted);text-wrap:pretty}
+/* Arabic: Plex sets this on more lines than the fallback does around 340, 510 and from
+   480 to 530px, so its text lines are reserved, the link's 28px besides (measured from
+   320 to 1600 with both faces; re-measure if the AR line changes). */
+html[dir=rtl] .ph-later{font-size:14px;line-height:1.7;min-height:calc(4 * 1.7em + 28px)}
+@media (min-width:352px){html[dir=rtl] .ph-later{min-height:calc(3 * 1.7em + 28px)}}
+@media (min-width:528px){html[dir=rtl] .ph-later{min-height:calc(2 * 1.7em + 28px)}}
+/* On its own line, a real 44px target. Inside the sentence its fit at the end of the
+   last line changed with the face, and that line count moved everything under it. */
+.ph-later-link{display:flex;width:fit-content;margin-block-start:-6px;margin-block-end:-10px}
+
+/* ── right: the stage ───────────────────────────────────────────────────────── */
+/* The photo and the card share one grid cell, so the stage is as tall as whichever ends
+   lower and the card can never leave it. The card's top is a % of the stage's WIDTH (a
+   block margin's %), as the photo's height is: on a phone it starts under her chin. */
+.ph-stage{position:relative;display:grid;width:100%;max-width:520px;margin-inline:auto;min-width:0}
+.ph-photo,.ph-card-wrap{grid-area:1/1;align-self:start}
+
+.ph-blob{position:absolute;z-index:0;inset-block-start:-6%;inset-inline-start:-3%;width:94%;height:auto}
+/* The step between the pale wash and the photo's tan. (.hv2-doodle-blob.is-ochre is two
+   classes: this has to out-rank it.) */
+.ph-stage .ph-blob.is-ochre{color:color-mix(in srgb,var(--ochre) 26%,var(--cream))}
+
+/* No cut-out exists, so she stands in a shape rather than floating as a rectangle: an
+   arch, soft at the top and uneven at the foot. The corners are written once: `scale`
+   mirrors the shape along with the picture, so she still turns towards the card in
+   Arabic. Nothing is lettered in this picture, so nothing reads backwards. */
+.ph-photo{position:relative;z-index:1;justify-self:start;width:84%;overflow:hidden;background:var(--ph-peach);
+  border-radius:50% 50% 30% 44% / 36% 36% 12% 18%}
+html[dir=rtl] .ph-photo{scale:-1 1}
+.ph-img{display:block;width:100%;height:auto}
+
+.ph-card-wrap{position:relative;z-index:2;justify-self:end;width:max(206px,56%);margin-block-start:36%}
+.ph-rays{position:absolute;z-index:1;inset-block-start:-28px;inset-inline-end:-6px;width:38px;height:auto}
+/* A narrow card: the same rows, a little tighter, so it does not run far below her. */
+@media (max-width:479.98px){
+  .ph-card-wrap .lk-dash-row{min-height:40px;padding-block:4px}
+  .ph-card-wrap .lk-dash-body{gap:6px}
+}
+@media (min-width:1024px){
+  .ph-photo{width:78%}
+  .ph-card-wrap{width:max(206px,48%);margin-block-start:20%}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .ph-cta,.ph-cta-ic,.ph-ghost{transition:none}
+  .ph-cta:hover{transform:none}
+  .ph-cta:hover .ph-cta-ic,html[dir=rtl] .ph-cta:hover .ph-cta-ic{translate:none}
+}

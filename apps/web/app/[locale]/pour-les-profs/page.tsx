@@ -18,8 +18,8 @@
    income, features, how, founding tutors, FAQ, final). A tutor needs five
    answers — free page in 2 minutes · you set your price · you keep 100 % · we
    verify you by hand · you teach live — so it now runs five sections and one
-   repeated CTA (→ /signup/prof). The hero scene shows the TUTOR'S PAGE, not a
-   money counter: what you get, not what you might earn.
+   repeated CTA (→ /signup/prof). The hero (components/landing/ProfsHero) shows the
+   TUTOR'S PAGE, not a money counter: what you get, not what you might earn.
 
    Self-contained: bilingual copy (FR + Tunisian Derija) lives in `copy` below.
    Uses the app design system (globals.css tokens + classes), SiteShell, useLocale.
@@ -29,10 +29,11 @@ import React, { useState } from "react";
 import { Link } from "@/components/Link";
 import { SiteShell } from "@/components/SiteShell";
 import { useLocale } from "@/components/LocaleProvider";
-import { Wallet, Video, Share, Shield, Check, Users, Bolt, Forward } from "@/components/icons";
+import { Wallet, Video, Share, Shield, Users, Bolt, Forward } from "@/components/icons";
 import { bilingual } from "@/lib/i18n";
 import { Reveal as SharedReveal, useReveal } from "@/components/Reveal";
 import { PaymentStory } from "@/components/PaymentStory"; // phase-a lane L3 (A22)
+import { ProfsHero } from "@/components/landing/ProfsHero";
 import { classLimitRule, COMMISSION_PCT, commissionOn, PLANS, requirePlan, tnd } from "@tnajem/shared";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -45,7 +46,6 @@ import { classLimitRule, COMMISSION_PCT, commissionOn, PLANS, requirePlan, tnd }
    it; this page did not, so it was free to drift, and it had: it advertised a
    subscription floor of 29 TND while /tarifs shows a 0 TND tier as its first card.
    ═══════════════════════════════════════════════════════════════════════════ */
-const FREE_PLAN = requirePlan("gratuit");
 /** The cheapest LISTED plan that allows `n` classes open at once. */
 function planForOpenClasses(n: number) {
   return [...PLANS]
@@ -78,32 +78,7 @@ const nf = (v: number) => v.toLocaleString("fr-FR");
    ═══════════════════════════════════════════════════════════════════════════ */
 const copy = bilingual({
   fr: {
-    crossTop: "Tu es élève ?",
-    eyebrow: "Pour les profs",
-    h1a: "Ta page de prof.",
-    h1b: "Tes cours en direct.",
-    h1c: "Tu gardes 100 % pendant le pilote.",
-    // phase-a lane L3 (A22): one payment story (D4) — <PaymentStory audience="tutor"> in the income section.
-    sub: "Crée ta page gratuitement en 2 minutes, fixe ton tarif, et donne tes cours en direct. Pendant le pilote, Tnajem ne prend rien.",
     ctaPrimary: "Crée ta page de prof",
-    ctaGhost: "Voir les profs sur Tnajem",
-    micro: `Gratuit pendant le pilote. Plus tard : ${COMMISSION_PCT} % sur chaque élève payant, uniquement sur les paiements traités par Tnajem, plus un abonnement — gratuit avec ${FREE_PLAN.maxClasses} séance publiée à la fois, à partir de ${nf(tnd(requirePlan("essentiel").monthlyMillimes))} TND/mois au-delà.`,
-    tarifsCta: "Voir les tarifs",
-    pilotChip: "Pilote — 0 % aujourd'hui",
-
-    // hero phone (illustration — pas de vraies données)
-    phoneName: "Ta page de prof",
-    phoneSubject: "Maths · primaire → Bac",
-    live: "EN DIRECT",
-    sessionTitle: "Intégrales — révision express",
-    sessionMeta: "Sam 14h · 90 min",
-    priceExample: "20 TND",
-    shareLinkLabel: "Ton lien",
-    shareLinkExample: "tnajem.com/ta-page",
-    classFilling: "Classe en cours de remplissage",
-    phoneBadges: ["0 % aujourd'hui", "Ton tarif"], // phase-a lane L3 (A22)
-    heroSceneLabel: "Illustration : une page de prof Tnajem — nom, matière, un cours en direct et le lien à partager.",
-
     // ce que tu obtiens
     featEyebrow: "Ce que tu obtiens",
     featTitle: "Une boutique de prof, prête en 2 minutes",
@@ -166,30 +141,7 @@ const copy = bilingual({
     crossBottom: "Tu es élève ? Trouve ton prof",
   },
   ar: {
-    crossTop: "إنتي تلميذ ؟",
-    eyebrow: "للأساتذة",
-    h1a: "صفحتك متاع أستاذ.",
-    h1b: "دروسك مباشرة.",
-    h1c: "وتحتفظ بـ \u2066100 %\u2069 في فترة التجربة.",
-    sub: "اعمل صفحتك فابور في دقيقتين، حدّد تعريفتك، واعطي دروسك مباشرة. في فترة التجربة، Tnajem ما تاخذ والو.", // phase-a lane L3 (A22)
     ctaPrimary: "اعمل صفحتك متاع أستاذ",
-    ctaGhost: "شوف الأساتذة في Tnajem",
-    micro: `فابور في فترة التجربة. من بعد : \u2066${COMMISSION_PCT} %\u2069 على كل تلميذ خلّص، كان على الخلاص اللي يعدّي من Tnajem، زائد اشتراك — فابور بـ ${FREE_PLAN.maxClasses} حصة منشورة في نفس الوقت، ومن ${nf(tnd(requirePlan("essentiel").monthlyMillimes))} دينار في الشهر لفوق.`,
-    tarifsCta: "شوف الأسعار",
-    pilotChip: "تجربة — \u20660 %\u2069 اليوم",
-
-    phoneName: "صفحتك متاع أستاذ",
-    phoneSubject: "رياضيات · من الابتدائي للباك",
-    live: "مباشر",
-    sessionTitle: "التكامل — مراجعة سريعة",
-    sessionMeta: "السبت 14س · 90 دقيقة",
-    priceExample: "20 دينار",
-    shareLinkLabel: "اللينك متاعك",
-    shareLinkExample: "tnajem.com/صفحتك",
-    classFilling: "القسم في طور التعمير",
-    phoneBadges: ["\u20660 %\u2069 اليوم", "ثمنك إنتي"], // phase-a lane L3 (A22)
-    heroSceneLabel: "رسم توضيحي : صفحة أستاذ في Tnajem — إسم، مادة، درس مباشر واللينك اللي تشاركو.",
-
     featEyebrow: "شنوّة باش تاخذ",
     featTitle: "بوتيك متاع أستاذ، حاضرة في دقيقتين",
     f1t: "صفحتك، ولينكك",
@@ -261,128 +213,6 @@ function Reveal(props: {
   style?: React.CSSProperties;
 }) {
   return <SharedReveal {...props} base="lpp-reveal" armedClass="lpp-armed" delayVar="--lpp-d" />;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   HERO SCENE — the tutor's own Tnajem page, floating.
-   It shows WHAT THEY GET (page, live class, price they set, shareable link),
-   never an invented balance. role="img" describes the whole scene.
-   ═══════════════════════════════════════════════════════════════════════════ */
-function HeroScene({ c }: { c: Copy }) {
-  const { locale } = useLocale();
-  const seatInits = locale === "ar" ? ["أ", "س", "م", "ر"] : ["A", "S", "M", "R"];
-  /* Seat offsets are derived from --phone-w rather than hardcoded, because the
-     two have to stay related: at a flat +-120px these avatars sat INSIDE a
-     300px-wide phone and landed on top of its content — the "A" covered the "1"
-     of "1er cours offert", so the hero of the page tutors share to recruit other
-     tutors literally read "ler cours offert". Anchoring them to the phone's half
-     width plus a gap means they can never re-enter the content box, at any
-     viewport, in either language. */
-  /* Each seat's initial is checked at BOTH ends of its gradient (the letter sits
-     mid-tile, and a gradient's lighter end is the one a glance misses). White on
-     amber was 1.66:1. The seats are aria-hidden, but a low-vision reader still
-     sees the letters, so the colour has to pass, not just the markup:
-       amber→ochre      ink    9.98 / 5.98
-       blue→blue700     paper  6.93 / 9.45   (was blue300→blue: nothing passes both ends)
-       mint→green       ink    9.16 / 4.76
-       ochre300→ochre   ink    8.27 / 5.98   (was →ochre600: ink 4.38)
-     Pinned in tools/ui-audit/contrast.mjs. */
-  const seats = [
-    { grad: "linear-gradient(150deg,var(--amber),var(--ochre))", fg: "var(--ink)", x: "calc(var(--phone-w) / -2 - 26px)", y: -54, d: 0.6 },
-    { grad: "linear-gradient(150deg,var(--blue),var(--blue700))", fg: "var(--paper)", x: "calc(var(--phone-w) / 2 + 28px)", y: -30, d: 1.2 },
-    { grad: "linear-gradient(150deg,var(--mint),var(--green))", fg: "var(--ink)", x: "calc(var(--phone-w) / -2 - 30px)", y: 64, d: 1.8 },
-    { grad: "linear-gradient(150deg,var(--ochre300),var(--ochre))", fg: "var(--ink)", x: "calc(var(--phone-w) / 2 + 24px)", y: 86, d: 2.4 },
-  ];
-
-  return (
-    <div role="img" aria-label={c.heroSceneLabel} className="lpp-scene">
-      <div className="lpp-wash" aria-hidden="true" />
-      <div className="lpp-zellige-wash zellige" aria-hidden="true" />
-      <div className="lpp-glow" aria-hidden="true" />
-
-      {/* class filling around the phone (decorative) */}
-      <div className="lpp-seats" aria-hidden="true">
-        {seats.map((s, idx) => (
-          <span
-            key={idx}
-            className="lpp-seat"
-            style={{
-              ["--sx" as any]: s.x,
-              ["--sy" as any]: `${s.y}px`,
-              ["--sd" as any]: `${s.d}s`,
-              background: s.grad,
-              color: s.fg,
-            }}
-          >
-            {seatInits[idx]}
-          </span>
-        ))}
-      </div>
-
-      <div className="lpp-phone-wrap" aria-hidden="true">
-        <div className="lpp-phone">
-          <div className="zellige hero-blue lpp-screen">
-            <div className="lpp-notch" />
-
-            {/* header: avatar + name + LIVE */}
-            <div className="flex items-center gap-3">
-              <div
-                className="avatar sq"
-                style={{
-                  width: 42, height: 42, fontSize: 18, flex: "none",
-                  background: "linear-gradient(150deg,var(--amber),var(--ochre))",
-                  borderColor: "rgba(255,255,255,.3)",
-                }}
-              >
-                ي
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="lpp-phone-name">{c.phoneName}</div>
-                <div className="lpp-phone-sub">{c.phoneSubject}</div>
-              </div>
-            </div>
-
-            {/* the class the tutor published: their title, their price */}
-            <div className="lpp-card">
-              <div className="flex items-center gap-[11px]">
-                <div className="lpp-card-ic">
-                  <Video />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="lpp-card-t">{c.sessionTitle}</div>
-                  <div className="lpp-card-m">{c.sessionMeta}</div>
-                </div>
-                <div className="lpp-card-price">{c.priceExample}</div>
-              </div>
-              <div className="flex gap-1.5 mt-2.5 flex-wrap">
-                {/* Phase A+ (U3): the shared live pill — paper, ink, a rose dot. Was green. */}
-                <span className="tag tag-live">{c.live}</span>
-                <span className="lpp-mini">
-                  <Users className="w-3 h-3" /> {c.classFilling}
-                </span>
-              </div>
-            </div>
-
-            {/* the shareable link */}
-            <div className="lpp-card">
-              <div className="lpp-card-lbl">
-                <Share className="w-[13px] h-[13px]" />
-                {c.shareLinkLabel}
-              </div>
-              <div className="lpp-link" dir="ltr">{c.shareLinkExample}</div>
-            </div>
-
-            {/* pilot truths — no payment rails */}
-            <div className="mt-auto flex gap-[7px] justify-center flex-wrap">
-              {c.phoneBadges.map((p) => (
-                <span key={p} className="lpp-badge">{p}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 /* Feature card — equal heights inside a grid row (h-full + column + mt-auto). */
@@ -575,15 +405,6 @@ export default function PourLesProfsPage() {
           __html: `
         @keyframes lpp-float { 0%,100% { transform: translateY(0) rotate(-.4deg); } 50% { transform: translateY(-12px) rotate(.4deg); } }
         @keyframes lpp-glow { 0%,100% { opacity: .7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }
-        @keyframes lpp-wash { 0%,100% { transform: translate3d(-2%, -1%, 0) scale(1.05); } 50% { transform: translate3d(2%, 2%, 0) scale(1.12); } }
-        @keyframes lpp-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.6); } }
-        @keyframes lpp-ring { 0% { box-shadow: 0 0 0 0 rgba(27,156,111,.5); } 70%,100% { box-shadow: 0 0 0 9px rgba(27,156,111,0); } }
-        @keyframes lpp-seat-in {
-          0% { opacity: 0; transform: translate(calc(var(--sx) * .55), calc(var(--sy) * .55)) scale(.5); }
-          60% { opacity: 1; transform: translate(var(--sx), var(--sy)) scale(1.08); }
-          100% { opacity: 1; transform: translate(var(--sx), var(--sy)) scale(1); }
-        }
-        @keyframes lpp-seat-float { 0%,100% { translate: 0 0; } 50% { translate: 0 -6px; } }
 
         /* ---- scroll reveal ---- */
         /* Default state is the FINAL state, so the SSR HTML is readable with no JS.
@@ -595,95 +416,14 @@ export default function PourLesProfsPage() {
         .lpp-dark { background: linear-gradient(158deg,var(--blue),var(--blue900)); color: #fff; border-color: transparent;
           box-shadow: var(--sh-l), 0 30px 60px -40px rgba(14,90,166,.5); border-radius: var(--r-l); }
 
-        /* ---- hero scene ---- */
-        /* --phone-w is the scene's single source of truth: the phone uses it for
-           its width and the floating avatars derive their offsets from it, so
-           the two cannot drift apart and collide again. */
-        .lpp-scene { --phone-w: min(340px, 86vw);
-          position: relative; width: 100%; min-height: 470px; display: flex; justify-content: center; isolation: isolate; }
-        .lpp-wash {
-          position: absolute; inset: -12% 10%; z-index: 0; border-radius: 40px;
-          background:
-            /* UI Option A (A8): the cobalt radial (rgba(14,90,166,.30)) is gone — no blue
-               haze behind the headline on narrow screens, where the scene stacks under it.
-               The warm sand + amber washes stay, softer. */
-            radial-gradient(48% 52% at 76% 70%, rgba(241,231,214,.7), transparent 72%),
-            radial-gradient(40% 44% at 70% 18%, rgba(243,194,75,.20), transparent 70%);
-          filter: blur(6px); animation: lpp-wash 14s ease-in-out infinite;
-        }
-        /* inset: -6% 0 — a symmetric -6% also bled 6% of the scene width past
-           BOTH edges, which is what put horizontal scroll on the page at 320,
-           380 and 768px. The soft edge is wanted vertically, not horizontally. */
-        .lpp-zellige-wash { position: absolute; inset: -6% 0; z-index: 0; opacity: .5; border-radius: 36px; }
-        .lpp-zellige-wash::before { opacity: .10; }
-        /* Centred with inset-inline + auto margins, not inset-inline-start:50%
-           + translate:-50%. translate is PHYSICAL and inset-inline-start is
-           LOGICAL, so in Arabic the two pulled in the same direction and threw
-           the glow ~350px off-canvas — the page scrolled sideways to 670px on a
-           320px screen. Same trick .toast already uses in globals.css.
-           width:min(...,100%) so it can never be wider than the scene either. */
-        .lpp-glow {
-          position: absolute; inset-block-start: 8%; inset-inline: 0; margin-inline: auto;
-          width: min(340px, 100%); aspect-ratio: 1; z-index: 0; border-radius: 999px;
-          background: radial-gradient(circle, rgba(243,194,75,.22), transparent 68%); /* UI Option A (A8): warm, was a cobalt glow */
-          filter: blur(10px); animation: lpp-glow 6s ease-in-out infinite;
-        }
-        .lpp-phone-wrap { position: relative; z-index: 2; animation: lpp-float 7s ease-in-out infinite; }
-        .lpp-phone {
-          position: relative; width: var(--phone-w); border-radius: 38px; padding: 12px;
-          background: linear-gradient(160deg,var(--ink800),var(--ink900));
-          box-shadow: var(--sh-l), 0 50px 90px -50px rgba(14,90,166,.55);
-          border: 1px solid rgba(255,255,255,.08);
-        }
-        .lpp-screen { border-radius: 28px; overflow: hidden; display: flex; flex-direction: column; gap: 12px;
-          padding: 20px 16px 18px; min-height: 430px; box-shadow: inset 0 1px 0 rgba(255,255,255,.10); }
-        .lpp-notch { width: 96px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.25); margin: 0 auto 2px; flex: none; }
-        .lpp-phone-name { font-family: var(--fd); font-weight: 700; font-size: 14.5px; color: #fff;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .lpp-phone-sub { font-size: 13px; color: var(--on-blue-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .lpp-card { background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.14);
-          border-radius: var(--r); padding: 13px 14px; }
-        .lpp-card-ic { width: 40px; height: 40px; flex: none; border-radius: 12px; background: rgba(255,255,255,.14);
-          color: #fff; display: grid; place-items: center; }
-        /* Wraps to two lines instead of ellipsing. "Integrales - revision express"
-           never fits one line beside the icon and the price, in either language,
-           so nowrap+ellipsis guaranteed a cut-off class title in the hero of the
-           page tutors share to recruit other tutors. */
-        .lpp-card-t { font-weight: 700; font-size: 13px; color: #fff; margin-bottom: 2px;
-          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-          overflow: hidden; line-height: 1.3; }
-        .lpp-card-m { font-size: 13px; color: var(--on-blue-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .lpp-card-price { font-family: var(--fn); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 14px; color: var(--amber); flex: none; white-space: nowrap; }
-        .lpp-card-lbl { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--on-blue-soft); font-weight: 600; margin-bottom: 7px; }
-        .lpp-link { font-family: var(--fd); font-weight: 700; font-size: 14px; color: #fff; text-align: start;
-          background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16); border-radius: 10px;
-          padding: 9px 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .lpp-mini { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--on-blue-soft); min-width: 0; }
-        /* a .chip is inline-flex: beside shrinking text in a flex row it deforms */
-        .lpp-card .chip, .lpp-scene .chip { flex: none; }
-        .lpp-badge { font-family: var(--fd); font-size: 13px; font-weight: 700; color: #fff;
-          background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding: 5px 11px; }
-        .lpp-seats { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; pointer-events: none; }
-        .lpp-seat {
-          position: absolute; width: 46px; height: 46px; border-radius: 15px;
-          display: grid; place-items: center; font-family: var(--fd); font-weight: 700; font-size: 17px;
-          border: 2.5px solid var(--cream); box-shadow: var(--sh); opacity: 0;
-          animation:
-            lpp-seat-in .7s cubic-bezier(.2,.8,.2,1) forwards var(--sd, .6s),
-            lpp-seat-float 5s ease-in-out infinite calc(var(--sd, .6s) + .7s);
-        }
-        @media (max-width: 520px) { .lpp-seats { display: none; } .lpp-scene { min-height: 0; } }
-
         /* ---- CTA ---- */
         .lpp-cta-primary { transition: transform .18s cubic-bezier(.2,.7,.2,1), box-shadow .18s, background .16s; }
         .lpp-cta-primary:hover { transform: translateY(-2px); box-shadow: 0 20px 34px -16px rgba(224,133,46,.95); }
         .lpp-cta-primary:active { transform: translateY(0); }
-        .lpp-cta-primary:focus-visible, .lpp-cta-ghost:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+        .lpp-cta-primary:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
         .lpp-cta-primary .ic { transition: transform .2s; }
         .lpp-cta-primary:hover .ic { transform: translateX(3px); }
         html[dir="rtl"] .lpp-cta-primary:hover .ic { transform: translateX(-3px); }
-        .lpp-cta-ghost { transition: transform .18s, border-color .16s, color .16s; }
-        .lpp-cta-ghost:hover { transform: translateY(-2px); border-color: var(--blue); color: var(--blue); }
 
         /* ---- feature cards ---- */
         .lpp-feature { transition: transform .2s cubic-bezier(.2,.7,.2,1), box-shadow .2s, border-color .2s; }
@@ -762,8 +502,7 @@ export default function PourLesProfsPage() {
         .lpp-bolt { animation: lpp-float 5s ease-in-out infinite; }
 
         /* ---- Arabic: --fd has no Arabic glyphs; negative tracking breaks joins ---- */
-        html[dir="rtl"] .lpp-phone-name, html[dir="rtl"] .lpp-card-price, html[dir="rtl"] .lpp-badge,
-        html[dir="rtl"] .lpp-link, html[dir="rtl"] .lpp-seat, html[dir="rtl"] .lpp-node,
+        html[dir="rtl"] .lpp-node,
         html[dir="rtl"] .lpp-feature-t, html[dir="rtl"] .lpp-step-t, html[dir="rtl"] .lpp-faq-q,
         html[dir="rtl"] .lpp-amount, html[dir="rtl"] .lpp-eq {
           font-family: var(--fa); letter-spacing: normal;
@@ -775,71 +514,16 @@ export default function PourLesProfsPage() {
         /* ---- reduced motion: freeze everything to final state ---- */
         @media (prefers-reduced-motion: reduce) {
           .lpp-reveal, .lpp-reveal.lpp-armed { opacity: 1 !important; transform: none !important; transition: none !important; }
-          .lpp-phone-wrap, .lpp-glow, .lpp-wash, .lpp-live, .lpp-live-dot, .lpp-seat, .lpp-bolt, .lpp-final::after {
+          .lpp-bolt, .lpp-final::after {
             animation: none !important;
           }
-          .lpp-seat { opacity: 1; transform: translate(var(--sx), var(--sy)); }
           .lpp-split-you { transition: none; }
         }
       `,
         }}
       />
 
-      {/* ═══ 1. HERO ═══ */}
-      <section className="web-section pt-[clamp(20px,4vw,52px)] pb-[clamp(40px,6vw,84px)]">
-        <div className="container">
-          <div className="mb-[clamp(18px,3vw,28px)]">
-            <CrossLink label={c.crossTop} />
-          </div>
-
-          <div className="web-hero">
-            {/* LEFT — copy + CTAs */}
-            <div className="flex flex-col gap-[22px] min-w-0">
-              <Reveal className="flex items-center gap-2.5 flex-wrap">
-                <span className="web-eyebrow">{c.eyebrow}</span>
-                {/* Pre-launch, not "live activity" — we claim newness, not traffic. */}
-                {/* Phase A+ (U3): information, so neutral — green is Vérifié/success only. */}
-                <span className="tag tag-neutral">{c.pilotChip}</span>
-              </Reveal>
-
-              <Reveal delay={70} as="h1" className="web-h1">
-                {c.h1a}
-                <br />
-                <span>{c.h1b}</span>{/* UI Option A (A8): ink, like line 1 — one accent (the green 100 %) per headline */}
-                <br />
-                <span className="text-green-ink">{c.h1c}</span>
-              </Reveal>
-
-              <Reveal delay={140} as="p" className="web-lead max-w-[540px]">
-                {c.sub}
-              </Reveal>
-
-              <Reveal delay={210} className="cluster gap-3.5">
-                <Cta label={c.ctaPrimary} />
-                <Link
-                  href="/explore"
-                  className="btn btn-ghost lpp-cta-ghost w-auto px-6 py-[15px] text-[15px] max-w-full"
-                >
-                  {c.ctaGhost}
-                </Link>
-              </Reveal>
-
-              <Reveal delay={280} as="p" className="text-[13px] text-muted flex items-start gap-[7px]">
-                <Check className="w-[15px] h-[15px] text-green flex-none mt-[3px]" />
-                <span className="min-w-0">
-                  {c.micro}{" "}
-                  <Link href="/tarifs" className="linklike linklike-inline">
-                    {c.tarifsCta}
-                  </Link>
-                </span>
-              </Reveal>
-            </div>
-
-            {/* RIGHT — the tutor's page, floating */}
-            <HeroScene c={c} />
-          </div>
-        </div>
-      </section>
+      <ProfsHero locale={locale} />
 
       {/* ═══ 2. WHAT YOU GET ═══ */}
       <section
