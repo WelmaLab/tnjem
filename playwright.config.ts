@@ -120,6 +120,9 @@ export default defineConfig({
         NEXT_PUBLIC_SOCIAL_INSTAGRAM: "",
         NEXT_PUBLIC_SOCIAL_FACEBOOK: "",
         NEXT_PUBLIC_SOCIAL_LINKEDIN: "",
+        /* profs-v2 · D: pinned unset like the socials, so the « Voir la démo » button stays
+           hidden on /pour-les-profs whatever the developer's .env holds (lib/prof-demo.ts). */
+        NEXT_PUBLIC_PROF_DEMO_URL: "",
         // phase-a lane L2 (A24): the same switch as the API, so the signup copy matches it.
         /* phase-a lane L5 (A18.1): the guardian-consent form only renders while
            ALLOW_MINORS=1 (app/[locale]/auth/consent/layout.tsx). The suite keeps
@@ -151,6 +154,9 @@ export default defineConfig({
         NEXT_PUBLIC_SOCIAL_INSTAGRAM: "",
         NEXT_PUBLIC_SOCIAL_FACEBOOK: "",
         NEXT_PUBLIC_SOCIAL_LINKEDIN: "",
+        /* profs-v2 · D: pinned unset like the socials, so the « Voir la démo » button stays
+           hidden on /pour-les-profs whatever the developer's .env holds (lib/prof-demo.ts). */
+        NEXT_PUBLIC_PROF_DEMO_URL: "",
         ALLOW_MINORS: "", // blank beats .env, as with MAIL_* above
       },
     },

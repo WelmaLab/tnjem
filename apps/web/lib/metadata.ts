@@ -15,7 +15,7 @@ import type { Metadata } from "next";
    the route file), so FR/AR parity stays compiler- and guardrail-checked where the
    words are. */
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.com";
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tnajem.com";
 
 /* Same cache-busted image as the root layout (app/[locale]/layout.tsx). Bump both
    together when og.png is rebuilt. */
@@ -27,6 +27,7 @@ export function pageMetadata({
   title,
   description,
   noindex = false,
+  ogImage = OG_IMAGE,
 }: {
   locale: "fr" | "ar";
   /** Locale-less route path, e.g. "/pour-les-profs". */
@@ -36,6 +37,8 @@ export function pageMetadata({
   description: string;
   /** Private surfaces (dashboard, student, onboarding): kept out of search results. */
   noindex?: boolean;
+  /** A 1200×630 card of this page's own (og: AND twitter:). Defaults to the brand /og.png. */
+  ogImage?: string;
 }): Metadata {
   const ar = locale === "ar";
   const canonical = `/${locale}${path}`;
@@ -55,9 +58,9 @@ export function pageMetadata({
       alternateLocale: ar ? ["fr_TN"] : ["ar_TN"],
       title: shareTitle,
       description,
-      images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: shareTitle }],
+      images: [{ url: ogImage, width: 1200, height: 630, alt: shareTitle }],
     },
-    twitter: { card: "summary_large_image", title: shareTitle, description, images: [OG_IMAGE] },
+    twitter: { card: "summary_large_image", title: shareTitle, description, images: [ogImage] },
     robots: noindex ? { index: false, follow: false } : { index: true, follow: true },
   };
 }

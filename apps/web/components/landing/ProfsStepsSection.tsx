@@ -13,12 +13,12 @@ import "./profs-sections.css";
 const copy = bilingual({
   fr: {
     eyebrow: "Comment ça marche",
-    title: "De zéro à ta 1ʳᵉ réservation",
+    title: "De zéro à ta 1re réservation",
     steps: [
       { t: "Crée ta page", p: "Nom, matière, une phrase sur toi. Deux minutes, sans engagement." },
       { t: "Fais-toi vérifier", p: "Envoie ta pièce d'identité. On vérifie à la main, puis ta page est publique." },
       // phase-a lane L3 (A22)
-      { t: "Partage et enseigne", p: "Poste ton lien, publie ton cours, au tarif que tu affiches. Tu veux offrir la 1ʳᵉ séance ? Tu l'actives depuis ton tableau de bord — c'est ton choix, pas une règle Tnajem." },
+      { t: "Partage et enseigne", p: "Poste ton lien, publie ton cours, au tarif que tu affiches. Tu veux offrir la 1re séance ? Tu l'actives depuis ton tableau de bord — c'est ton choix, pas une règle Tnajem." },
     ],
   },
   ar: {

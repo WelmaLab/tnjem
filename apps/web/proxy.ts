@@ -125,7 +125,8 @@ export async function proxy(req: NextRequest) {
   if (card) {
     const parent = card[1];
     const one = parent.slice(1);
-    if (matchRoute(parent) === "class/[id]" || (!one.includes("/") && isValidSlug(one))) return NextResponse.next();
+    const route = matchRoute(parent); // profs-v2 · D: /pour-les-profs has a card of its own too (a reserved slug)
+    if (route === "class/[id]" || route === "pour-les-profs" || (!one.includes("/") && isValidSlug(one))) return NextResponse.next();
     return notFound(req, locale, bare);
   }
 

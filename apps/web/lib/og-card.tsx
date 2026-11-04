@@ -293,6 +293,40 @@ export async function classCard(input: ClassCardInput): Promise<ImageResponse> {
   );
 }
 
+/* /pour-les-profs: tutors forward this link to recruit other tutors, so its card
+   speaks to a tutor. No pilot or pricing wording, on purpose (see the truth rule at
+   the top): a PNG sits in WhatsApp's cache long after the pilot could have ended. */
+const PROFS_COPY = {
+  fr: { pill: "Pour les profs", title: "Donne tes cours en ligne", sub: "Ta page de prof. Tes cours en direct." },
+  ar: { pill: "للأساتذة", title: "اعطي دروسك أونلاين", sub: "صفحتك متاع أستاذ. دروسك مباشرة." },
+} as const;
+
+export async function profsCard(locale: "fr" | "ar", displayUrl: string): Promise<ImageResponse> {
+  const rtl = locale === "ar";
+  const c = PROFS_COPY[locale];
+  const logo = await logoUri();
+  return new ImageResponse(
+    (
+      <Frame
+        rtl={rtl}
+        logo={logo}
+        footerStart={
+          <Pill bg={P.ochreTint} color={P.ochreInk} rtl={rtl}>
+            <Line text={c.pill} size={30} family="Jakarta" color={P.ochreInk} rtl={rtl} />
+          </Pill>
+        }
+        footerEnd={<Line text={displayUrl} size={26} family="Jakarta" weight={500} color={P.muted} />}
+      >
+        <div style={{ display: "flex", flexDirection: "column", alignItems: rtl ? "flex-end" : "flex-start", gap: 20 }}>
+          <Line text={c.title} size={76} family="Grotesk" color={P.ink} rtl={rtl} />
+          <Line text={c.sub} size={38} family="Jakarta" weight={500} color={P.ink2} rtl={rtl} />
+        </div>
+      </Frame>
+    ),
+    await options(),
+  );
+}
+
 /** The plain brand card, for a slug or class that is not public. */
 export async function fallbackCard(locale: "fr" | "ar"): Promise<ImageResponse> {
   const rtl = locale === "ar";

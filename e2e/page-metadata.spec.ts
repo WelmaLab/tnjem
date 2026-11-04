@@ -46,7 +46,9 @@ for (const locale of ["fr", "ar"] as const) {
       expect(seen.get(h.title), `${url} shares its title with ${seen.get(h.title)}`).toBeUndefined();
       seen.set(h.title, url);
       expect(h.ogTitle, `${url} og:title`).toBeTruthy();
-      expect(h.ogImage, `${url} og:image — a child openGraph must not drop the image`).toContain("/og.png");
+      /* profs-v2 · D: /pour-les-profs has its own tutor-facing card, every other route the brand one. */
+      const card = path === "/pour-les-profs" ? `/${locale}/pour-les-profs/opengraph-image` : "/og.png";
+      expect(h.ogImage, `${url} og:image — a child openGraph must not drop the image`).toContain(card);
       expect(h.twitterTitle, `${url} twitter:title must describe this page, not the home page`).toBe(h.ogTitle);
       expect(h.robots, `${url} is public`).not.toContain("noindex");
     }
@@ -55,11 +57,17 @@ for (const locale of ["fr", "ar"] as const) {
 
 test("/pour-les-profs shares a tutor-facing card, not the student pitch", async ({ request }) => {
   const fr = await read(request, "/fr/pour-les-profs");
-  expect(fr.ogTitle).toContain("Pour les profs");
+  expect(fr.ogTitle).toBe("Donne tes cours en ligne · Tnajem");
   expect(fr.ogTitle).not.toContain("apprends avec ton prof");
 
   const ar = await read(request, "/ar/pour-les-profs");
-  expect(ar.title).toContain("للأساتذة");
+  expect(ar.title).toBe("اعطي دروسك أونلاين · Tnajem");
+
+  for (const locale of ["fr", "ar"]) {
+    const card = await request.get(`/${locale}/pour-les-profs/opengraph-image`);
+    expect(card.status(), `/${locale} card`).toBe(200);
+    expect(card.headers()["content-type"]).toContain("image/png");
+  }
 });
 
 test("dashboard, student space and onboarding are noindex, with their own titles", async ({ browser, baseURL }) => {
