@@ -58,10 +58,13 @@ const EXPLORE_SLUG: Partial<Record<SubjectCode, string>> = {
 /* The neutral rows — today's three (Maths · Bac, Physique · Lycée, Français ·
    Primaire). k real tutors cover at most k of them and leave 3 − k to fill, so
    three is always enough. « Lycée » links to the « secondaire » level code. */
-const NEUTRAL: { code: SubjectCode; level: LevelCode; lyceeLabel?: boolean }[] = [
-  { code: "math", level: "bac" },
-  { code: "physique", level: "secondaire", lyceeLabel: true },
-  { code: "francais", level: "primaire" },
+/** SubjectIcon slugs (components/home/SubjectIcon.tsx) — a .tsx this plain module cannot import. */
+type NeutralIcon = "maths" | "physique" | "francais";
+
+const NEUTRAL: { code: SubjectCode; icon: NeutralIcon; level: LevelCode; lyceeLabel?: boolean }[] = [
+  { code: "math", icon: "maths", level: "bac" },
+  { code: "physique", icon: "physique", level: "secondaire", lyceeLabel: true },
+  { code: "francais", icon: "francais", level: "primaire" },
 ];
 
 export type HeroRow =
@@ -82,7 +85,9 @@ export type HeroRow =
       kind: "subject";
       key: string;
       href: string;
-      initials: string;
+      /** A subject icon, not a letter: the row is no person, and a Latin initial
+          (« M », « P ») read wrong on the Arabic page (home v2 · G). */
+      icon: NeutralIcon;
       title: string;
       meta: string;
       cta: string;
@@ -151,7 +156,7 @@ export function heroRows(tutors: readonly HomeTutor[], locale: Loc): HeroRow[] {
       kind: "subject",
       key: `s-${n.code}`,
       href: exploreHref(n.code, n.level),
-      initials: [...SUBJECT_LABELS[n.code].fr][0] ?? "",
+      icon: n.icon,
       title: c.profOf(label),
       meta: `${n.lyceeLabel ? c.lycee : LEVEL_LABELS[n.level][locale]} · ${c.online}`,
       cta: c.seeProfs,

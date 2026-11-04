@@ -171,6 +171,11 @@ export function ExploreClient({ initial, adultsOnly = false }: { initial: Explor
     // phase-a lane L5 (A18.7): ?level=<code> too.
     const level = new URLSearchParams(window.location.search).get("level");
     if (isLevelCode(level)) setLvl(level);
+    /* home v2 · G: ?q=<text> seeds the search box. This is what makes the WebSite
+       SearchAction in the layout's JSON-LD true: /explore?q=… now lands on that
+       search, not on the unfiltered list. Capped like a typed query would be. */
+    const query = new URLSearchParams(window.location.search).get("q")?.trim().slice(0, 80);
+    if (query) setQ(query);
   }, []);
 
   useEffect(() => {

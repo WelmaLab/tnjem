@@ -91,11 +91,9 @@ function localeOf(raw: string): AppLocale {
    OG image / twitter card are pageMetadata's (the same /og.png as the layout).
 
    JSON-LD: nothing page-level. The layout already emits Organization + WebSite on
-   every page; a second Organization node here would be a duplicate entity. No
-   WebSite SearchAction either: /explore does NOT read ?q= from the URL today
-   (ExploreClient seeds only ?subject= and ?level=), so a SearchAction pointing at
-   /explore?q={search_term_string} would promise a search that lands on the
-   unfiltered list. Add it to the layout's WebSite node once ?q= works. */
+   every page; a second Organization node here would be a duplicate entity. The
+   WebSite SearchAction → /explore?q={search_term_string} lives on the layout's
+   WebSite node too, since ExploreClient seeds its search box from ?q= (home v2 · G). */
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const locale = localeOf((await props.params).locale);
   const c = copy[locale];

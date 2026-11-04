@@ -51,7 +51,8 @@ const SWEEP: [file: string, pairs: [msa: string, derija: string][]][] = [
   ["components/dashboard/new-pack/NewPackForm.tsx", [["أمشي لـ « التثبّت »", "امشي لـ « التثبّت »"]]],
   ["components/WrongRoleNotice.tsx", [["حسابك ما عندوش نفاذ لهذه الصفحة.", "حسابك ما ينجّمش يدخل للصفحة هاذي."]]],
   ["app/[locale]/layout.tsx", [["لقّي أستاذ في المباشر،", "لقّي أستاذ دايركت،"]]],
-  ["app/[locale]/page.tsx", [["من أول كليك للدرس المباشر،", "من أول كليك للحصة الدايركت،"]]],
+  // home v2 · C: the home page's steps copy moved to the section component (the eyebrow now, no comma).
+  ["components/home/StepsSection.tsx", [["من أول كليك للدرس المباشر", "من أول كليك للحصة الدايركت"]]],
   ["app/[locale]/signup/eleve/page.tsx", [["في الدروس المباشرة متاع", "في الحصص الدايركت متاع"]]],
   ["app/[locale]/student/layout.tsx", [["دروسك المباشرة الجاية", "حصصك الدايركت الجاية"]]],
   ["app/[locale]/privacy/page.tsx", [

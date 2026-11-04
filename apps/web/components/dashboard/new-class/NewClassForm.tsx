@@ -246,6 +246,15 @@ export function NewClassForm() {
   const [levels, setLevels] = useState<LevelCode[]>([]);
   const [draftKey, setDraftKey] = useState<string | null>(null);
   const [draftState, setDraftState] = useState<"none" | "saved" | "restored">("none");
+  /* home v2 · G (found by the gate): restoring a draft changes `f`, which ran the
+     autosave below, which re-wrote the same draft and flipped « Brouillon repris » to
+     « Brouillon enregistré » 600 ms later. The restore itself is not an edit: skip
+     that one save, so « repris » stays until the tutor changes something. */
+  const skipRestoreSave = useRef(false);
+  /* home v2 · G (found by the gate): the save the last keystroke scheduled, so publishing
+     can cancel it. It could otherwise fire after the draft was cleared and write the
+     published class back as a draft, which the next « Nouvelle classe » then reopened. */
+  const pendingSave = useRef<number | undefined>(undefined);
   const [duplicatedFrom, setDuplicatedFrom] = useState<string | null>(null);
   const [dupOpen, setDupOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -289,6 +298,7 @@ export function NewClassForm() {
         if (!from) {
           const d = readDraft(key);
           if (d && !isBlank(d)) {
+            skipRestoreSave.current = true;
             setF(d);
             setDraftState("restored");
             if (d.videoUrl || d.whiteboardUrl || d.quizUrl) setToolsOpen(true);
@@ -310,9 +320,14 @@ export function NewClassForm() {
   useEffect(() => {
     if (!draftKey) return;
     if (isBlank(f)) return;
+    if (skipRestoreSave.current) {
+      skipRestoreSave.current = false;
+      return;
+    }
     const id = window.setTimeout(() => {
       if (writeDraft(draftKey, f)) setDraftState("saved");
     }, 600);
+    pendingSave.current = id;
     return () => window.clearTimeout(id);
   }, [f, draftKey]);
 
@@ -423,6 +438,7 @@ export function NewClassForm() {
     if (res.ok) {
       setDemo(Boolean(res.demo));
       setPlanLimit(null);
+      window.clearTimeout(pendingSave.current);
       if (draftKey) clearDraft(draftKey);
       setDraftState("none");
       setPublished({ id: res.id ?? null, title: f.title, wall: f.datetime });

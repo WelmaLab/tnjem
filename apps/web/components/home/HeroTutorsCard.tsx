@@ -7,6 +7,7 @@ import { Verified } from "@/components/ui";
 import { Forward, Search, Star } from "@/components/icons";
 import { Doodle } from "@/components/home/Doodle";
 import { heroRows } from "@/components/home/hero-rows";
+import { SubjectIcon } from "@/components/home/SubjectIcon";
 
 /* home v2 · B — the hero's right side: a search pill, three rows, « Voir tous les
    profs », and the handwritten note. SERVER component: the rows arrive with the
@@ -80,8 +81,12 @@ export function HeroTutorsCard({ locale, tutors }: { locale: AppLocale; tutors: 
                     unoptimized
                     className="hv-av"
                   />
-                ) : (
+                ) : r.kind === "tutor" ? (
                   <span className="hv-av hv-av-ini" aria-hidden="true">{r.initials}</span>
+                ) : (
+                  <span className="hv-av hv-av-ini hv-av-icon" aria-hidden="true">
+                    <SubjectIcon subject={r.icon} />
+                  </span>
                 )}
 
                 <span className="hv-row-main">

@@ -97,7 +97,9 @@ for (const locale of ["fr", "ar"] as const) {
 }
 
 test("a chip's filter really returns that subject's tutors", async ({ page }) => {
-  const maths = await seedTutor({ status: "verified" }); // subject 'Mathématiques'
+  // A unique first name: /explore answers 60 cards at most, and the full suite seeds far more
+  // maths tutors than that, so the maths half narrows by name with ?q= (home v2 · G).
+  const maths = await seedTutor({ status: "verified", fullName: "Hvdeuxmaths Test" }); // subject 'Mathématiques'
   const fr = await seedTutor({ status: "verified" });
   // The stored-code form of the subject — the case the « Français » term missed.
   await sql`update tutors set subject = 'francais' where id = ${fr.id}`;
@@ -113,7 +115,11 @@ test("a chip's filter really returns that subject's tutors", async ({ page }) =>
   await page.locator('[data-e2e=home-subjects] a[href="/fr/explore?subject=maths"]').click();
   await expect(page).toHaveURL(/\/fr\/explore\?subject=maths$/);
   await expect(page.locator("#main").getByRole("button", { name: "Maths", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(`a[href="/fr/${maths.slug}"]`)).toBeVisible();
+  await expect(page.locator(`a[href="/fr/${fr.slug}"]`)).toHaveCount(0);
+  // The same maths filter, narrowed to the seeded tutor's name: he is in it.
+  await page.goto("/fr/explore?subject=maths&q=Hvdeuxmaths");
+  await expect(page.locator("#main").getByRole("button", { name: "Maths", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(`a[href="/fr/${maths.slug}"]`).first()).toBeVisible({ timeout: 20_000 });
   await expect(page.locator(`a[href="/fr/${fr.slug}"]`)).toHaveCount(0);
 });
 

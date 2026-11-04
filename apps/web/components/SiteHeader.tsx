@@ -1,4 +1,5 @@
 "use client";
+import "./SiteHeader.css";
 import { Link } from "@/components/Link";
 import { Logo } from "@/components/Logo";
 import { usePathname } from "next/navigation";
@@ -57,8 +58,8 @@ const NAV = {
   },
 } as const;
 
-/* Page-scoped CSS (`qh-`), injected with dangerouslySetInnerHTML — an inline
-   <style>{`…`}</style> in a client component triggers hydration errors. It is
+/* Page-scoped CSS (`qh-`) lives in ./SiteHeader.css (home v2 · G: it was an inline
+   <style> shipped in every page's HTML and in the JS bundle). It is
    UNLAYERED, so it beats globals.css's @layer components without !important.
 
    Fixes it carries:
@@ -69,61 +70,6 @@ const NAV = {
      The toggle is `compact` and the Arabic wordmark hides under 420px.
    • The dropdown gets a max-height + scroll so a long menu can't exceed the
      viewport, and logical properties keep it RTL-correct. */
-const CSS = `
-/* min-height:44px — as a link this is a tap target, and it measured 86x34. */
-.qh-brand{min-width:0;flex:none;min-height:44px}
-@media (max-width:419px){
-  .site-header .qh-brand{font-size:17px;gap:8px}
-  /* Scale by height and let width follow the intrinsic ratio from the img's
-     width/height attributes — that keeps the box reserved, so shrinking the
-     mark on small screens costs no layout shift. */
-  .site-header .qh-brand img{height:32px;width:auto}
-  .site-header .qh-brand .ar{display:none}
-}
-.qh-nav{display:none;align-items:center;gap:22px;font-weight:600;font-size:14.5px;min-width:0}
-/* home v2 · F: a 44px tap target (it measured 108x30 in French, 59x34 in Arabic). */
-.qh-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;
-  color:var(--ink2);transition:.15s;white-space:nowrap;padding:0 2px;border-radius:8px}
-.qh-nav a:hover{color:var(--blue)}
-.qh-nav a[aria-current="page"]{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ochre)}
-.qh-right{display:flex;align-items:center;gap:8px;margin-inline-start:auto;min-width:0}
-.qh-signin{display:none;font-weight:700;font-size:14px;color:var(--ink2);white-space:nowrap;
-  padding:10px 10px;border-radius:10px;min-height:44px;align-items:center}
-.qh-signin:hover{color:var(--blue)}
-.qh-cta{display:none!important}
-/* home v2 · D (UI_options/home-v2-reference.png): signed out, « Créer ma page » is a
-   FILLED cobalt button, as in the mockup. Still never orange (Phase A+ U2): the page's
-   own main action stays the only ochre button in view. Signed in, « Mon espace » /
-   « Tableau de bord » / « Espace parent » keep the cobalt outline: a way in, not a
-   call to action. White on --blue / --blue700 is in tools/ui-audit/contrast.mjs. */
-.qh-cta-fill{background:var(--blue);border:1.5px solid var(--blue);color:#fff}
-.qh-cta-fill:hover{background:var(--blue700);border-color:var(--blue700)}
-.qh-burger{display:grid;place-items:center;width:44px;height:44px;border-radius:11px;
-  border:1px solid var(--line);background:var(--paper);cursor:pointer;color:var(--ink);flex:none}
-@media (min-width:600px){ .qh-cta{display:inline-flex!important} }
-/* 1024, not 900: at 900–1023px the brand + 2 nav links + toggle + sign-in + CTA
-   overflow the 64px row. Below that the burger carries every destination. */
-@media (min-width:1024px){
-  .qh-nav{display:flex}
-  .qh-signin{display:inline-flex}
-  .qh-burger{display:none}
-}
-/* mobile dropdown */
-.qh-menu{position:absolute;inset-block-start:100%;inset-inline:0;background:var(--paper);
-  border-block-end:1px solid var(--line);box-shadow:var(--sh);display:flex;flex-direction:column;
-  padding:10px;z-index:51;max-height:calc(100vh - 64px);overflow-y:auto;gap:2px}
-.qh-menu .qh-group{font-size:13px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
-  color:var(--muted);padding:12px 12px 6px}
-.qh-menu a{display:flex;align-items:center;gap:10px;padding:13px 12px;border-radius:11px;
-  font-weight:600;font-size:15px;color:var(--ink);min-height:48px}
-.qh-menu a:hover,.qh-menu a:focus-visible{background:var(--blue50);color:var(--blue)}
-.qh-menu a[aria-current="page"]{background:var(--sand);color:var(--ink)}
-/* home v2 · D: the menu's CTA is the same filled cobalt as the header's. */
-.qh-menu .qh-menu-cta{justify-content:center;background:var(--blue);color:#fff;border:1.5px solid var(--blue);margin-top:8px}
-.qh-menu .qh-menu-cta:hover,.qh-menu .qh-menu-cta:focus-visible{background:var(--blue700);border-color:var(--blue700);color:#fff}
-.qh-menu .qh-sep{height:1px;background:var(--line);margin:8px 4px}
-html[dir="rtl"] .qh-menu .qh-group{letter-spacing:normal}
-`;
 
 /* Responsive top navigation. Auth-aware (student-space-v1 · A, three states): a
    signed-in student gets « Mon espace » (→ /student), a prof « Tableau de bord », a
@@ -173,7 +119,6 @@ export function SiteHeader() {
 
   return (
     <header className="site-header">
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="container">
         <Link href="/" className="brand-mark qh-brand" aria-label="Tnajem">
           <Logo variant="full" height={38} priority />

@@ -39,7 +39,9 @@ test.describe("U1 — info notes are blue, and the payment sentence starts its o
       const n = await stories.count();
       expect(n, path).toBeGreaterThan(0);
       for (let i = 0; i < n; i++) {
-        expect(await stories.nth(i).evaluate((el) => getComputedStyle(el).display), `${path} #${i}`).toBe("block");
+        /* Block-LEVEL is the rule (the sentence starts its own line): the home page's
+           payment card lays it out as a flex pill row (home v2 · C), still its own line. */
+        expect(["block", "flex"], `${path} #${i}`).toContain(await stories.nth(i).evaluate((el) => getComputedStyle(el).display));
       }
     }
   });

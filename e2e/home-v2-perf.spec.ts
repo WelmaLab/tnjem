@@ -40,7 +40,7 @@ for (const locale of ["fr", "ar"] as const) {
   });
 }
 
-test("/fr structured data: one Organization, one WebSite, no rating, no SearchAction yet", async ({ request }) => {
+test("/fr structured data: one Organization, one WebSite with a SearchAction to /explore?q=, no rating", async ({ request }) => {
   const { body } = await html(request, "/fr");
   const nodes = [...body.matchAll(/<script type="application\/ld\+json">([^<]*)<\/script>/g)]
     .flatMap((m) => [JSON.parse(m[1])].flat()) as { "@type": string; potentialAction?: unknown }[];
@@ -48,11 +48,11 @@ test("/fr structured data: one Organization, one WebSite, no rating, no SearchAc
   expect(nodes.filter((n) => n["@type"] === "WebSite")).toHaveLength(1);
   const all = JSON.stringify(nodes);
   expect(all, "truth rule: no rating markup").not.toMatch(/AggregateRating|"Review"/);
-  /* /explore reads ?subject= and ?level= from the URL, NOT ?q= — a SearchAction to
-     /explore?q={search_term_string} would promise a search that lands on the full list.
-     When ExploreClient seeds its search box from ?q=, add the SearchAction to the
-     layout's WebSite node and flip this. */
-  expect(all).not.toContain("SearchAction");
+  /* home v2 · G: ExploreClient now seeds its search box from ?q=, so the WebSite node
+     carries a SearchAction to the locale's /explore?q= (proved in home-v2.spec.ts). */
+  const site = nodes.find((n) => n["@type"] === "WebSite") as { potentialAction?: { "@type": string; target: { urlTemplate: string } } };
+  expect(site.potentialAction?.["@type"]).toBe("SearchAction");
+  expect(site.potentialAction?.target.urlTemplate).toMatch(/\/fr\/explore\?q=\{search_term_string\}$/);
 });
 
 test("with JavaScript off, every section is visible (the reveal never hides content)", async ({ browser, baseURL }) => {

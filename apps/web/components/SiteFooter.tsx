@@ -1,4 +1,5 @@
 "use client";
+import "./SiteFooter.css";
 import { Link } from "@/components/Link";
 import { Logo } from "@/components/Logo";
 import { SOCIAL_LINKS, type SocialNetwork } from "@/lib/social";
@@ -9,8 +10,8 @@ import { useRoleHint } from "./role-hint";
    (students/parents · tutors), then legal. A visitor who scrolled to the bottom
    without deciding still sees exactly two doors.
    Bilingual + RTL-safe: logical properties only, no left/right.
-   Page-scoped CSS is prefixed `qf-` and injected with dangerouslySetInnerHTML
-   (inline <style>{`…`}</style> in a client component triggers hydration errors).
+   Page-scoped CSS is prefixed `qf-` and lives in ./SiteFooter.css (home v2 · G:
+   it was an inline <style> shipped in every page's HTML and in the JS bundle).
 
    AUTH-AWARE (student-space-v1 · A), read after hydration from the role hint (./role-hint.ts)
    so the server HTML — the logged-out footer — stays cacheable and /[slug] stays ISR:
@@ -103,44 +104,6 @@ function SocialIcon({ network }: { network: SocialNetwork }) {
   );
 }
 
-const CSS = `
-.site-footer .container.qf-grid{
-  display:grid;grid-template-columns:1fr;gap:28px;align-items:start;justify-content:initial;
-  padding-top:44px;padding-bottom:28px;
-}
-@media (min-width:560px){
-  .site-footer .container.qf-grid{grid-template-columns:1fr 1fr;gap:28px 24px}
-  .qf-brand{grid-column:1 / -1}
-}
-@media (min-width:900px){
-  .site-footer .container.qf-grid{grid-template-columns:1.5fr 1fr 1fr 1fr;gap:36px}
-  .qf-brand{grid-column:auto}
-}
-.qf-brand p{margin-top:12px;max-width:34ch;font-size:13.5px;line-height:1.6;color:var(--muted)}
-.qf-col h2{font-family:var(--fd);font-size:13px;letter-spacing:.4px;text-transform:uppercase;
-  color:var(--ink);margin-bottom:12px}
-html[dir="rtl"] .qf-col h2{font-family:var(--fa);letter-spacing:normal}
-.qf-col ul{list-style:none;display:flex;flex-direction:column;gap:2px}
-/* min-width:44px (home v2 · F): the short labels were narrower than a finger —
-   « Tarifs » 35px, « دخول » 31px, « لوحتي » 32px. */
-.qf-col a{display:inline-flex;align-items:center;min-height:44px;min-width:44px;font-size:13.5px;font-weight:600;
-  color:var(--muted);transition:.15s}
-.qf-col a:hover{color:var(--blue)}
-.qf-bottom{border-top:1px solid var(--line)}
-.site-footer .container.qf-bottom-in{
-  display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
-  padding-top:16px;padding-bottom:26px;font-size:13px;color:var(--muted);
-}
-/* min-height:44px — as a bare run of text this mailto measured 106x16. */
-.qf-bottom-in a{word-break:break-word;display:inline-flex;align-items:center;min-height:44px}
-.qf-bottom-end{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;min-width:0}
-.qf-social{list-style:none;display:flex;align-items:center;gap:2px;margin:0;padding:0}
-.qf-bottom-in .qf-social a{justify-content:center;min-width:44px;color:var(--muted);border-radius:10px;transition:.15s}
-.qf-bottom-in .qf-social a:hover{color:var(--blue);background:var(--blue50)}
-.qf-social .ic{width:18px;height:18px}
-.qf-bottom-in .qf-mail{color:var(--muted)}
-.qf-bottom-in .qf-mail:hover{color:var(--blue)}
-`;
 
 export function SiteFooter() {
   const { t, locale } = useLocale();
@@ -149,7 +112,6 @@ export function SiteFooter() {
 
   return (
     <footer className="site-footer">
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       <div className="container qf-grid">
         <div className="qf-brand">

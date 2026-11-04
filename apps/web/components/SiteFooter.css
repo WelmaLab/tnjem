@@ -1,0 +1,40 @@
+/* SiteFooter — moved out of an inline <style> in SiteFooter.tsx (home v2 · G): as a
+   client component's string it shipped in every page's HTML, in its RSC payload
+   AND in the JS bundle; as a stylesheet it is one cacheable request. Unlayered, and
+   loaded after globals.css, as the inline <style> was. */
+.site-footer .container.qf-grid{
+  display:grid;grid-template-columns:1fr;gap:28px;align-items:start;justify-content:initial;
+  padding-top:44px;padding-bottom:28px;
+}
+@media (min-width:560px){
+  .site-footer .container.qf-grid{grid-template-columns:1fr 1fr;gap:28px 24px}
+  .qf-brand{grid-column:1 / -1}
+}
+@media (min-width:900px){
+  .site-footer .container.qf-grid{grid-template-columns:1.5fr 1fr 1fr 1fr;gap:36px}
+  .qf-brand{grid-column:auto}
+}
+.qf-brand p{margin-top:12px;max-width:34ch;font-size:13.5px;line-height:1.6;color:var(--muted)}
+.qf-col h2{font-family:var(--fd);font-size:13px;letter-spacing:.4px;text-transform:uppercase;
+  color:var(--ink);margin-bottom:12px}
+html[dir="rtl"] .qf-col h2{font-family:var(--fa);letter-spacing:normal}
+.qf-col ul{list-style:none;display:flex;flex-direction:column;gap:2px}
+/* min-width:44px (home v2 · F): the short labels were narrower than a finger —
+   « Tarifs » 35px, « دخول » 31px, « لوحتي » 32px. */
+.qf-col a{display:inline-flex;align-items:center;min-height:44px;min-width:44px;font-size:13.5px;font-weight:600;
+  color:var(--muted);transition:.15s}
+.qf-col a:hover{color:var(--blue)}
+.qf-bottom{border-top:1px solid var(--line)}
+.site-footer .container.qf-bottom-in{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+  padding-top:16px;padding-bottom:26px;font-size:13px;color:var(--muted);
+}
+/* min-height:44px — as a bare run of text this mailto measured 106x16. */
+.qf-bottom-in a{word-break:break-word;display:inline-flex;align-items:center;min-height:44px}
+.qf-bottom-end{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;min-width:0}
+.qf-social{list-style:none;display:flex;align-items:center;gap:2px;margin:0;padding:0}
+.qf-bottom-in .qf-social a{justify-content:center;min-width:44px;color:var(--muted);border-radius:10px;transition:.15s}
+.qf-bottom-in .qf-social a:hover{color:var(--blue);background:var(--blue50)}
+.qf-social .ic{width:18px;height:18px}
+.qf-bottom-in .qf-mail{color:var(--muted)}
+.qf-bottom-in .qf-mail:hover{color:var(--blue)}

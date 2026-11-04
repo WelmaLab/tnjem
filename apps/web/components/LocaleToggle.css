@@ -1,0 +1,16 @@
+/* LocaleToggle — moved out of an inline <style> in LocaleToggle.tsx (home v2 · G): as a
+   client component's string it shipped in every page's HTML, in its RSC payload
+   AND in the JS bundle; as a stylesheet it is one cacheable request. Unlayered, and
+   loaded after globals.css, as the inline <style> was. */
+.qlt{display:flex;align-items:center;border-radius:999px;padding:3px;flex:none}
+.qlt button{
+  border:0;cursor:pointer;padding:8px 14px;border-radius:999px;font-weight:700;font-size:13px;
+  min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;
+  background:transparent;transition:.15s;white-space:nowrap;
+}
+.qlt .qlt-short{display:none}
+@media (max-width:1139px){
+  .qlt-compact button{padding:8px 12px}
+  .qlt-compact .qlt-long{display:none}
+  .qlt-compact .qlt-short{display:inline}
+}

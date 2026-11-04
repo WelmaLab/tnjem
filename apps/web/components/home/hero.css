@@ -25,6 +25,16 @@ html[dir=rtl] .hv-hero::before{background:radial-gradient(720px 420px at 92% 0%,
   font-size:var(--fs-hero);line-height:var(--lh-hero);letter-spacing:-1.5px}
 /* --fd has no Arabic glyphs and negative tracking severs the joins. */
 html[dir=rtl] .hv-h1{font-family:var(--fa);letter-spacing:normal}
+/* home v2 · G: the Arabic H1 is the LCP and sits above the whole hero, so its line
+   count must not change when IBM Plex Sans Arabic swaps in. next/font tunes the
+   fallback's metrics on Latin glyphs, so the fallback sets this H1 on FEWER lines
+   than Plex does (measured, Chromium, this copy: ≤413px 2 vs 3 lines, 600–820px 1
+   vs 2, ≥1370px 2 vs 3) — a 0.046 CLS on a phone. Plex is never the shorter one,
+   so reserving Plex's line count removes the shift whichever face paints first.
+   Re-measure if the AR H1 copy changes (e2e/home-v2.spec.ts checks it). */
+html[dir=rtl] .hv-h1{min-height:calc(3em * var(--lh-hero))}
+@media (min-width:414px){html[dir=rtl] .hv-h1{min-height:calc(2em * var(--lh-hero))}}
+@media (min-width:1370px){html[dir=rtl] .hv-h1{min-height:calc(3em * var(--lh-hero))}}
 .hv-h1-hi{color:var(--ochre-ink)}
 
 .hv-lead{max-width:500px}
@@ -80,6 +90,9 @@ html[dir=rtl] .hv-cta:hover .hv-cta-ic{transform:scaleX(-1) translateX(3px)}
 .hv-av{flex:none;width:44px;height:44px;border-radius:13px;object-fit:cover}
 .hv-av-ini{display:grid;place-items:center;font-family:var(--fd);font-weight:700;font-size:16px;
   color:var(--ink);background:linear-gradient(150deg,var(--amber),var(--ochre))}
+/* home v2 · G: a neutral row is no person → its subject's icon on the soft blue tile, not a letter. */
+.hv-av-icon{background:var(--blue50);color:var(--blue)}
+.hv-av-icon .hv2-sic{width:22px;height:22px}
 
 .hv-row-main{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
 .hv-row-title{display:flex;align-items:center;gap:6px;min-width:0;font-weight:700;font-size:14.5px;color:var(--ink)}

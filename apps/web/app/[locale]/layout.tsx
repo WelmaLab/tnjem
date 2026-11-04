@@ -131,8 +131,8 @@ export default async function LocaleLayout({
       <body>
         <DemoBanner locale={locale} />
         {/* Site-wide structured data — truthful + static; identifies the Tnajem entity
-            and site to search engines and AI assistants. No SearchAction (search is
-            client-side; a search endpoint would be a claim we can't back yet). */}
+            and site to search engines and AI assistants. The SearchAction points at
+            /explore?q=, which ExploreClient reads into its search box (home v2 · G). */}
         <JsonLd
           data={[
             {
@@ -153,6 +153,13 @@ export default async function LocaleLayout({
               alternateName: "تنجّم",
               url: SITE_URL,
               inLanguage: ["fr", "ar"],
+              /* home v2 · G: /explore?q= seeds the search box (ExploreClient), so the
+                 search this promises is the one the reader lands on. */
+              potentialAction: {
+                "@type": "SearchAction",
+                target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/${locale}/explore?q={search_term_string}` },
+                "query-input": "required name=search_term_string",
+              },
             },
           ]}
         />
