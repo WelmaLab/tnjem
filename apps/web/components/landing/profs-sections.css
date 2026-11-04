@@ -1,0 +1,122 @@
+/* ── profs-v2 · C — /pour-les-profs body sections (prefix ps-) ──────────────────
+   Roles · Features · Steps · Calculator · FAQ · Banner · Student line. The kit's own
+   pieces (RoleChoiceCard, FeatureGrid, PilotBanner: kit.css) and StepCard carry their
+   styles; this file lays them out and restyles the calculator and the FAQ.
+   Logical properties only (guardrail 1), token colours only (guardrail 4: #fff is the
+   one literal allowed, the label on a dark fill). Unlayered, like components/home/*.css.
+   Arabic: --fd and --fb already resolve to --fa and tracking is already normal under
+   html[dir=rtl] (globals.css), so only the 13px lines need a rule here (last block). */
+
+/* ── rhythm ─────────────────────────────────────────────────────────────────── */
+.ps-sec{padding-block:clamp(36px,5vw,64px)}
+.ps-sec-roles{padding-block:clamp(16px,2.4vw,28px) 0}
+.ps-sec-pilot{padding-block:clamp(36px,5vw,64px) clamp(14px,2.4vw,28px)}
+.ps-band{background:var(--band-blue)}
+.ps-eyebrow{margin-block-end:10px}
+.ps-center{text-align:center}
+/* The mockup's section titles are quieter than .web-h2 at full size: the H1 leads. */
+.ps-h2{font-size:clamp(23px,2.7vw,32px);text-wrap:balance}
+
+/* ── 1. roles ───────────────────────────────────────────────────────────────── */
+.ps-roles{padding:clamp(18px,3vw,32px);border:1px solid var(--lineCool);border-radius:var(--r-xl);
+  background:var(--paper);box-shadow:var(--sh-card)}
+/* At least 14px above and between the cards: a card's pill sits 12px over its top border. */
+.ps-roles-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(14px,2vw,22px);
+  margin-block-start:clamp(16px,2.4vw,24px)}
+@media (min-width:768px){.ps-roles-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ── 2. features ────────────────────────────────────────────────────────────── */
+.ps-features-h2{margin-block-end:clamp(20px,3vw,32px)}
+
+/* ── 3. steps ───────────────────────────────────────────────────────────────────
+   Three cards, not .hv2-steps' four. Two columns would strand the third card alone,
+   so it goes straight from one column to three. */
+.ps-steps{margin-block-start:clamp(22px,3vw,32px)}
+@media (min-width:640px){.ps-steps{grid-template-columns:minmax(0,1fr)}}
+@media (min-width:768px){.ps-steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* ── 4. calculator ──────────────────────────────────────────────────────────── */
+.ps-income{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(22px,3vw,44px);align-items:center}
+@media (min-width:880px){.ps-income{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}}
+.ps-income-lead{margin-block:12px 18px}
+.ps-eq{display:flex;flex-wrap:wrap;gap:10px;list-style:none}
+.ps-eq>li{display:inline-flex;align-items:center;gap:10px;min-width:0;padding-block:8px;padding-inline:8px 14px;
+  border:1px solid var(--lineCool);border-radius:14px;background:var(--paper);box-shadow:var(--sh-s);
+  font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:14.5px;font-weight:700;color:var(--ink)} /* live-fixes-3 · F: « 20 TND / séance » (C1) */
+.ps-eq-ic{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:10px;
+  background:var(--blue50);color:var(--blue)}
+.ps-eq-ic .ic{width:16px;height:16px}
+
+.ps-calc{min-width:0;padding:clamp(20px,3vw,32px);border-radius:var(--r-xl);box-shadow:var(--sh-card);
+  background:linear-gradient(158deg,var(--blue),var(--blue900));color:var(--on-blue)}
+.ps-calc-note{font-size:13px;line-height:1.5;color:var(--on-blue-soft)}
+.ps-calc-gross{margin-block-end:10px;font-weight:600}
+.ps-calc-keep{display:flex;align-items:center;gap:7px;margin-block-end:4px;
+  font-family:var(--fd);font-size:13px;font-weight:600;color:var(--on-blue)}
+.ps-calc-keep .ic{flex:none;width:16px;height:16px}
+/* The class name is pinned by e2e/lf3-f-price-font.spec.ts. */
+.lpp-amount{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:clamp(34px,5.5vw,52px);font-weight:700;
+  letter-spacing:-1.4px;color:var(--amber);line-height:1.05;overflow-wrap:anywhere}
+
+/* The full bar is the DEFAULT, so it is drawn correctly with no JS; the armed state
+   (.lp-armed on the section's <Reveal>) is the empty bar it grows out of. */
+.ps-split{position:relative;height:12px;margin-block-start:18px;border-radius:999px;overflow:hidden;background:var(--on-blue-rule)}
+.ps-split-you{position:absolute;inset-block:0;inset-inline-start:0;width:100%;
+  background:linear-gradient(90deg,var(--mint),var(--green));
+  transform-origin:left;transition:transform 1.1s cubic-bezier(.2,.7,.2,1) .15s}
+html[dir=rtl] .ps-split-you{transform-origin:right}
+.lp-armed .ps-split-you{transform:scaleX(0)}
+.ps-split-labels{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-block-start:8px;
+  font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;color:var(--on-blue-soft)}
+.ps-split-labels>span{display:inline-flex;align-items:center;gap:5px}
+.ps-split-dot{flex:none;width:8px;height:8px;border-radius:999px;background:var(--mint)}
+
+.ps-later{margin-block-start:16px;padding-block-start:14px;border-block-start:1px solid var(--on-blue-rule)}
+.ps-later-lbl{font-weight:600}
+.ps-later-row{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px;margin-block:4px}
+.ps-later-net{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:19px;font-weight:700;color:var(--on-blue)}
+.ps-later-fee{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;color:var(--on-blue-soft)}
+.ps-calc-trust{margin-block-start:18px}
+/* .trust .ic and .trust-dark .ic are meant for the shield; they also caught the clock in
+   the « Bientôt » tag, at 22px and in mint on the tag's cream. */
+.ps-calc-trust .tag .ic{width:13px;height:13px;margin:0;color:inherit}
+
+/* ── 5. FAQ ─────────────────────────────────────────────────────────────────── */
+.ps-faq-list{display:flex;flex-direction:column;gap:12px;margin-block-start:clamp(22px,3vw,32px)}
+.ps-faq{border:1px solid var(--line);border-radius:var(--r-l);background:var(--paper);
+  transition:box-shadow .2s,border-color .2s}
+.ps-faq[open]{border-color:var(--lineCool);box-shadow:var(--sh-card)}
+.ps-faq-sum{display:flex;align-items:center;gap:14px;min-height:44px;cursor:pointer;list-style:none;
+  padding-block:clamp(14px,2vw,18px);padding-inline:clamp(16px,2.4vw,24px);border-radius:var(--r-l);color:var(--ink)}
+.ps-faq-sum::-webkit-details-marker{display:none}
+.ps-faq-sum:focus-visible{outline:3px solid var(--blue);outline-offset:-3px}
+.ps-faq-q{flex:1;min-width:0;font-family:var(--fd);font-size:16px;font-weight:700;line-height:1.35}
+.ps-faq-ic{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;
+  background:var(--blue50);color:var(--blue);transition:background-color .2s,color .2s}
+.ps-faq-ic .ic{width:16px;height:16px;transition:transform .2s}
+.ps-faq[open] .ps-faq-ic{background:var(--blue);color:#fff}
+.ps-faq[open] .ps-faq-ic .ic{transform:rotate(45deg)}
+.ps-faq-a{padding-block-end:clamp(15px,2vw,20px);padding-inline:clamp(16px,2.4vw,24px);
+  font-size:14.5px;line-height:1.65;color:var(--ink2)}
+
+/* ── 6. student line ────────────────────────────────────────────────────────── */
+.ps-student{display:flex;justify-content:center;padding-block:clamp(14px,2.4vw,24px) clamp(36px,5vw,64px);padding-inline:16px}
+.ps-cross{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding-block:10px;padding-inline:16px;
+  border-radius:999px;background:var(--blue50);color:var(--blue);font-size:13.5px;font-weight:700;
+  transition:background-color .16s}
+.ps-cross:hover{background:var(--blue100)}
+.ps-cross-arrow{flex:none;width:15px;height:15px}
+
+/* ── reduced motion: final state, no transition ─────────────────────────────── */
+@media (prefers-reduced-motion: reduce){
+  .ps-split-you,.ps-faq,.ps-faq-ic,.ps-faq-ic .ic,.ps-cross{transition:none}
+}
+
+/* ── Arabic: the 13px lines one step up (hard to read at 13, as on the home page) ── */
+html[dir=rtl] .ps-calc-note,
+html[dir=rtl] .ps-calc-keep,
+html[dir=rtl] .ps-split-labels,
+html[dir=rtl] .ps-later-fee,
+html[dir=rtl] .ps-calc-trust p,
+html[dir=rtl] .ps-calc-trust .tag,
+html[dir=rtl] .ps-cross{font-size:14px}
