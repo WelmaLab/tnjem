@@ -1,0 +1,167 @@
+/* ── profs-v2 · A — the landing kit (prefix lk-) ──────────────────────────────────
+   RoleChoiceCard, FeatureGrid/FeatureItem, PilotBanner, MockDashboardCard.
+   Image: UI_options/pour-les-profs-v2-reference.png.
+   Unlayered like components/home/*.css. Logical properties only (guardrail 1), token
+   colours only (guardrail 4: #fff is the one literal, the label on a dark fill).
+   --fd has no Arabic glyphs and negative tracking severs the joins, so every display
+   title goes back to --fa under html[dir=rtl]. */
+
+/* ── the tinted icon tile ─────────────────────────────────────────────────────── */
+.lk-tile{display:grid;place-items:center;flex:none;border-radius:16px}
+.lk-tone-blue{background:var(--blue50);color:var(--blue)}
+.lk-tone-teal{background:var(--teal-tint);color:var(--teal-ink)}
+.lk-tone-green{background:var(--green50);color:var(--green-ink)}
+.lk-tone-violet{background:var(--violet-tint);color:var(--violet-ink)}
+.lk-tone-ochre{background:var(--ochre-tint);color:var(--ochre600)}
+
+/* ── RoleChoiceCard ───────────────────────────────────────────────────────────── */
+.lk-role{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
+  gap:clamp(12px,1.6vw,20px);height:100%;min-height:112px;
+  padding-block:clamp(18px,2vw,24px);padding-inline:clamp(16px,2vw,24px);
+  border:1.5px solid;border-radius:var(--r);color:var(--ink);box-shadow:var(--sh-s);
+  transition:translate .18s cubic-bezier(.2,.7,.2,1),box-shadow .18s cubic-bezier(.2,.7,.2,1),border-color .18s}
+.lk-role:hover{translate:0 -2px;box-shadow:var(--sh-card)}
+/* The wash is the tile's own tint at half strength, so the tile still reads as a tile. */
+.lk-role-blue{--lk-wash:color-mix(in srgb,var(--blue50) 45%,var(--paper));
+  border-color:color-mix(in srgb,var(--blue) 50%,var(--paper))}
+.lk-role-blue:hover{border-color:var(--blue)}
+.lk-role-ochre{--lk-wash:color-mix(in srgb,var(--ochre-tint) 45%,var(--paper));border-color:var(--ochre300)}
+.lk-role-ochre:hover{border-color:var(--ochre)}
+.lk-role-blue,.lk-role-ochre{background:linear-gradient(135deg,var(--lk-wash),var(--paper) 70%)}
+html[dir=rtl] .lk-role-blue,html[dir=rtl] .lk-role-ochre{background:linear-gradient(225deg,var(--lk-wash),var(--paper) 70%)}
+
+.lk-role-tile{width:clamp(52px,5vw,64px);height:clamp(52px,5vw,64px)}
+.lk-role-tile .ic{width:clamp(26px,2.6vw,32px);height:clamp(26px,2.6vw,32px);stroke-width:1.7}
+.lk-role-main{display:flex;flex-direction:column;gap:5px;min-width:0}
+.lk-role-title{font-family:var(--fd);font-size:clamp(16.5px,1.5vw,18px);font-weight:700;line-height:1.3;
+  letter-spacing:-.2px;color:var(--ink)}
+.lk-role-text{font-size:14px;line-height:1.5;color:var(--ink2)}
+.lk-role-arrow{width:20px;height:20px}
+.lk-role-blue .lk-role-arrow{color:var(--blue)}
+.lk-role-ochre .lk-role-arrow{color:var(--ochre600)}
+/* Rides the top border at the inline end, so it never takes room from the title. */
+.lk-role-pill{position:absolute;inset-block-start:-12px;inset-inline-end:16px;box-shadow:0 0 0 2px var(--paper)}
+html[dir=rtl] .lk-role-title{font-family:var(--fa);letter-spacing:normal}
+html[dir=rtl] .lk-role-pill{font-size:14px}
+
+/* ── FeatureGrid / FeatureItem ────────────────────────────────────────────────────
+   Phone: one column, tile beside the text, a rule between rows. Tablet: two columns,
+   the fifth centred across both. Desktop: five columns with vertical dividers. */
+.lk-features{--lk-rule:color-mix(in srgb,var(--lineCool),var(--muted) 18%);
+  list-style:none;display:grid;grid-template-columns:minmax(0,1fr)}
+.lk-feature{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:14px;align-content:start;
+  padding-block:16px}
+.lk-feature+.lk-feature{border-block-start:1px solid var(--lk-rule)}
+.lk-feature-tile{grid-row:span 2;width:52px;height:52px}
+.lk-feature-tile .ic{width:26px;height:26px;stroke-width:1.75}
+.lk-feature-title{align-self:end;font-family:var(--fd);font-size:16px;font-weight:700;line-height:1.3;
+  letter-spacing:-.2px;color:var(--ink)}
+.lk-feature-text{margin-block-start:3px;font-size:14px;line-height:1.5;color:var(--ink2)}
+html[dir=rtl] .lk-feature-title{font-family:var(--fa);letter-spacing:normal}
+
+@media (min-width:640px){
+  .lk-feature{grid-template-columns:minmax(0,1fr);justify-items:center;padding-block:0;
+    padding-inline:clamp(12px,1.5vw,20px);text-align:center}
+  .lk-feature+.lk-feature{border-block-start:0}
+  .lk-feature-tile{grid-row:auto;margin-block-end:12px}
+  .lk-feature-title,.lk-feature-text{text-wrap:balance}
+  .lk-feature-title{align-self:auto}
+}
+@media (min-width:640px) and (max-width:1023.98px){
+  .lk-features{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:28px}
+  .lk-feature:nth-child(even){border-inline-start:1px solid var(--lk-rule)}
+  .lk-feature:last-child:nth-child(odd){grid-column:1/-1}
+}
+@media (min-width:1024px){
+  .lk-features{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .lk-feature+.lk-feature{border-inline-start:1px solid var(--lk-rule)}
+}
+
+/* ── PilotBanner ──────────────────────────────────────────────────────────────────
+   Phone: the rocket rides beside the title, then checks, then a full-width button.
+   Tablet: rocket | text, the button under the text. Desktop: rocket | text | button
+   with the vertical divider. The text is checked at the gradient's light end. */
+.lk-banner{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);
+  border-radius:var(--r-l);box-shadow:var(--sh-card);color:var(--on-blue);
+  background:linear-gradient(105deg,var(--blue),var(--blue700))}
+html[dir=rtl] .lk-banner{background:linear-gradient(255deg,var(--blue),var(--blue700))}
+.lk-banner-art{position:absolute;inset-block-start:10px;inset-inline-end:6px;z-index:-1;width:96px;pointer-events:none}
+.lk-rocket{display:block;width:100%;height:auto;overflow:visible}
+.lk-rocket-sky{display:none}
+html[dir=rtl] .lk-rocket{scale:-1 1}
+.lk-banner-body{min-width:0;padding-block:clamp(22px,3vw,34px) 0;padding-inline:clamp(20px,3vw,28px)}
+.lk-banner-title{padding-inline-end:84px;font-family:var(--fd);font-size:clamp(24px,2.1vw,28px);font-weight:700;
+  line-height:1.2;letter-spacing:-.5px;color:#fff}
+/* A figure: the figure face, tabular (guardrail 8). Large text, so --ochre300 clears 3:1. */
+.lk-banner-title b,.lk-banner-title strong{font-family:var(--fn);font-variant-numeric:tabular-nums;
+  font-weight:800;color:var(--ochre300);white-space:nowrap}
+html[dir=rtl] .lk-banner-title{font-family:var(--fa);letter-spacing:normal;line-height:1.35}
+.lk-banner-checks{list-style:none;display:flex;flex-direction:column;gap:10px;margin-block-start:16px;
+  font-size:15px;font-weight:600;line-height:1.35;color:var(--on-blue)}
+.lk-banner-checks>li{display:flex;align-items:center;gap:10px}
+.lk-banner-tick{display:grid;place-items:center;flex:none;width:22px;height:22px;border-radius:999px;
+  background:var(--green);color:#fff}
+.lk-banner-tick .ic{width:13px;height:13px;stroke-width:3}
+.lk-banner-action{padding-block:20px clamp(22px,3vw,34px);padding-inline:clamp(20px,3vw,28px)}
+.lk-banner-cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;
+  padding-block:12px;padding-inline:26px;border-radius:14px;background:#fff;color:var(--ink);
+  font-size:15.5px;font-weight:700;line-height:1.25;text-align:center;box-shadow:var(--sh);
+  transition:background-color .16s,translate .18s cubic-bezier(.2,.7,.2,1)}
+.lk-banner-cta:hover{background:var(--blue50);translate:0 -2px}
+.lk-banner-cta:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.lk-banner-cta-ic{width:20px;height:20px;transition:translate .18s ease}
+.lk-banner-cta:hover .lk-banner-cta-ic{translate:3px 0}
+html[dir=rtl] .lk-banner-cta:hover .lk-banner-cta-ic{translate:-3px 0}
+
+@media (min-width:640px){
+  .lk-banner{grid-template-columns:clamp(150px,22vw,210px) minmax(0,1fr)}
+  .lk-banner-art{position:relative;inset:auto;z-index:0;grid-row:span 2;align-self:end;width:100%}
+  .lk-rocket-sky{display:inline}
+  .lk-banner-body{padding-inline:clamp(8px,1.5vw,20px) clamp(20px,3vw,32px)}
+  .lk-banner-title{padding-inline-end:0}
+  .lk-banner-action{padding-inline:clamp(8px,1.5vw,20px) clamp(20px,3vw,32px)}
+  .lk-banner-cta{display:inline-flex}
+}
+@media (min-width:1024px){
+  .lk-banner{grid-template-columns:clamp(160px,14vw,190px) minmax(0,1fr) auto;align-items:center}
+  .lk-banner-art{grid-row:auto}
+  .lk-banner-body{padding-block:clamp(26px,3vw,34px)}
+  .lk-banner-action{display:flex;align-items:center;min-height:96px;margin-inline-end:clamp(28px,3.6vw,48px);
+    padding-block:0;padding-inline:clamp(24px,3vw,48px) 0;border-inline-start:1px solid var(--on-blue-rule)}
+  .lk-banner-cta{white-space:nowrap}
+}
+
+/* ── MockDashboardCard ────────────────────────────────────────────────────────────
+   A picture, not UI: no hover, no pointer. The caller positions it. The tilt uses the
+   `rotate` property, so a caller's transform or translate composes with it. */
+.lk-dash{--lk-dash-tilt:3deg;width:100%;max-width:320px;overflow:hidden;rotate:var(--lk-dash-tilt);
+  border:1px solid var(--lineCool);border-radius:var(--r-l);background:var(--band-blue);
+  box-shadow:var(--sh);pointer-events:none;user-select:none}
+html[dir=rtl] .lk-dash{rotate:calc(-1 * var(--lk-dash-tilt))}
+.lk-dash-head{padding-block:18px 56px;padding-inline:20px;color:#fff;
+  background:linear-gradient(120deg,var(--blue700),var(--blue))}
+html[dir=rtl] .lk-dash-head{background:linear-gradient(240deg,var(--blue700),var(--blue))}
+.lk-dash-title{font-family:var(--fd);font-size:18px;font-weight:700;line-height:1.3;letter-spacing:-.2px;color:#fff}
+html[dir=rtl] .lk-dash-title{font-family:var(--fa);letter-spacing:normal}
+.lk-dash-headline{display:block;width:96px;height:6px;margin-block-start:8px;border-radius:999px;background:var(--on-blue-rule)}
+.lk-dash-body{display:flex;flex-direction:column;gap:8px;margin-block-start:-40px;padding-block-end:14px;padding-inline:14px}
+.lk-dash-profile{display:flex;align-items:center;gap:12px;margin-block-end:2px;padding:12px;
+  border:1px solid var(--lineCool);border-radius:var(--r-s);background:var(--paper);box-shadow:var(--sh-s)}
+.lk-dash-avatar{display:grid;place-items:center;flex:none;width:48px;height:48px;border-radius:999px;
+  background:var(--blue100);color:var(--blue700)}
+.lk-dash-avatar .ic{width:26px;height:26px}
+.lk-dash-lines{display:flex;flex:1;flex-direction:column;gap:8px;min-width:0}
+.lk-dash-line{display:block;height:8px;border-radius:999px;background:var(--lineCool)}
+.lk-dash-line-short{width:62%}
+.lk-dash-chev{width:16px;height:16px;color:var(--muted)}
+.lk-dash-row{display:flex;align-items:center;gap:10px;min-height:46px;padding-block:7px;padding-inline:10px;
+  border:1px solid var(--lineCool);border-radius:var(--r-s);background:var(--paper);box-shadow:var(--sh-s);
+  font-size:14px;font-weight:700;line-height:1.25;color:var(--ink)}
+.lk-dash-tile{width:32px;height:32px;border-radius:10px}
+.lk-dash-tile .ic{width:18px;height:18px}
+
+@media (prefers-reduced-motion:reduce){
+  .lk-role,.lk-banner-cta,.lk-banner-cta-ic{transition:none}
+  .lk-role:hover,.lk-banner-cta:hover,.lk-banner-cta:hover .lk-banner-cta-ic{translate:none}
+  html[dir=rtl] .lk-banner-cta:hover .lk-banner-cta-ic{translate:none}
+}
