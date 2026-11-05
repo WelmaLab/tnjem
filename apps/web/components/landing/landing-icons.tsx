@@ -33,6 +33,7 @@ const MASK = {
   wallet: "lk-mi-wallet",
   pencil: "lk-mi-pencil",
   share: "lk-mi-share",
+  store: "lk-mi-store",
 } as const;
 
 function mask(name: keyof typeof MASK, flip = false) {
@@ -67,3 +68,4 @@ export const IconPlus = mask("plus");
 export const IconWallet = mask("wallet");
 export const IconPencil = mask("pencil");
 export const IconShare = mask("share");
+export const IconStore = mask("store");

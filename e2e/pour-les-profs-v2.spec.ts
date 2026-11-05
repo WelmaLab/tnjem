@@ -19,6 +19,12 @@ const SECTIONS = [
   "profs-income", "profs-faq", "profs-banner", "profs-student-line",
 ];
 const SOON = { fr: "Bientôt", ar: "قريب" } as const;
+const DASH_ROWS = {
+  fr: ["Ma vitrine", "Mes classes", "Mes élèves", "Mes fiches"],
+  ar: ["واجهتي", "حصصي", "تلامذتي", "ملفاتي"],
+} as const;
+/** The founder's no-show answer (FAQ 3): it must be what the page and the JSON-LD say. */
+const FAQ3_START = { fr: "Pendant le pilote, aucun paiement ne passe par Tnajem", ar: "في فترة التجربة، حتى خلاص ما يعدّي من Tnajem" } as const;
 
 /** Thin and normal no-break spaces (fr-FR grouping) as plain spaces. */
 const flat = (s: string) => s.replace(/[  ]/g, " ").replace(/\s+/g, " ").trim();
@@ -44,7 +50,10 @@ for (const locale of LOCALES) {
       expect(over, "horizontal page overflow (px)").toBeLessThanOrEqual(0);
       await expect(page.locator('a[href="#"]'), "never a dead « # » link").toHaveCount(0);
       // Honesty rule 4: the floating card shows only what the prof space has.
-      await expect(page.locator("[data-e2e=profs-dash-card]")).not.toContainText(/revenus|مداخيل|\d/);
+      const dash = page.locator("[data-e2e=profs-dash-card]");
+      await expect(dash).not.toContainText(/revenus|مداخيل|\d/);
+      // Exactly the four rows, in order, with the prof sidebar's own labels (nav.tsx).
+      expect((await dash.locator(".lk-dash-row").allTextContents()).map((t) => t.trim())).toEqual([...DASH_ROWS[locale]]);
       await ctx.close();
     });
   }
@@ -139,6 +148,7 @@ for (const locale of LOCALES) {
       })),
     );
     expect(shown.length).toBeGreaterThanOrEqual(3);
+    expect(shown[2].a.startsWith(FAQ3_START[locale]), "FAQ 3 is the no-show answer").toBe(true);
     expect(qs.map((q) => ({ q: q.name, a: q.acceptedAnswer.text }))).toEqual(shown);
     for (const q of qs) {
       expect(q["@type"]).toBe("Question");

@@ -6,7 +6,10 @@ import type { AppLocale } from "@/lib/locale";
    (FaqSection) AND the FAQPage JSON-LD (lane D): one question list, so what a search
    engine reads cannot drift from what the page shows.
 
-   The answers are WORD FOR WORD those of the page before v2 (PROFS_V2 §C.5). The
+   a1 and a2 are WORD FOR WORD those of the page before v2 (PROFS_V2 §C.5); a3 is the
+   founder's rewrite, which answers the no-show it is asked about. True as of writing:
+   nothing releases a no-show's seat, and the booking's conversation stays open
+   THREAD_CLOSE_DAYS after the class. The
    subscription floor comes from the plan catalogue, as it always did: a typed-in
    « 29 » is how this page once contradicted /tarifs. A plain module, no JSX and no
    hooks, so a Server Component and the JSON-LD can both call it. */
@@ -23,7 +26,7 @@ const copy = bilingual({
     q2: "Faut-il un diplôme ?",
     a2: "Non. Maîtrise ta matière, une bonne connexion, et tu démarres aujourd'hui. On vérifie ton identité à la main avant que ta page soit publiée.",
     q3: "Si un élève ne vient pas ?",
-    a3: "Tu peux déplacer la séance depuis ton tableau de bord — tes élèves sont prévenus, et ceux qui avaient réservé l'ancien horaire peuvent annuler sans frais.", // phase-a lane L3 (A22)
+    a3: "Pendant le pilote, aucun paiement ne passe par Tnajem, donc personne ne perd d'argent. Sa place reste réservée jusqu'à la fin de la séance, et tu peux lui écrire depuis Messages pour proposer une autre date.",
   },
   ar: {
     q1: "قدّاش تاخذ Tnajem ؟",
@@ -32,7 +35,7 @@ const copy = bilingual({
     q2: "يلزم شهادة ؟",
     a2: "لا. اتقن مادتك، كنكسيون مليحة، وتبدا اليوم. نتثبّتو من هويتك بيدينا قبل ما تتنشر صفحتك.",
     q3: "كان التلميذ ما جاش ؟",
-    a3: "تنجّم تبدّل وقت الحصة من لوحتك — تلامذتك يتعلمو، واللي كانو حاجزين الوقت القديم ينجّمو يلغيو بلا خسارة.", // phase-a lane L3 (A22)
+    a3: "في فترة التجربة، حتى خلاص ما يعدّي من Tnajem، يعني حتى حد ما يخسر فلوس. بلاصتو تقعد محجوزة لين توفى الحصة، وتنجم تبعثلو من الرسائل باش تقترح عليه وقت آخر.", // phase-a lane L3 (A22)
   },
 });
 
