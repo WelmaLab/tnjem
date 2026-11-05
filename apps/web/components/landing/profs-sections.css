@@ -113,6 +113,7 @@ html[dir=rtl] .ps-split-you{transform-origin:right}
 }
 
 /* ── Arabic: the 13px lines one step up (hard to read at 13, as on the home page) ── */
+html[dir=rtl] .ps-eyebrow,
 html[dir=rtl] .ps-calc-note,
 html[dir=rtl] .ps-calc-keep,
 html[dir=rtl] .ps-split-labels,

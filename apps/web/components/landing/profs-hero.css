@@ -96,22 +96,32 @@ html[dir=rtl] .ph-later{font-size:14px;line-height:1.7;min-height:calc(4 * 1.7em
 /* No cut-out exists, so she stands in a shape rather than floating as a rectangle: an
    arch, soft at the top and uneven at the foot. The corners are written once: `scale`
    mirrors the shape along with the picture, so she still turns towards the card in
-   Arabic. Nothing is lettered in this picture, so nothing reads backwards. */
-.ph-photo{position:relative;z-index:1;justify-self:start;width:84%;overflow:hidden;background:var(--ph-peach);
-  border-radius:50% 50% 30% 44% / 36% 36% 12% 18%}
+   Arabic. Nothing is lettered in this picture, so nothing reads backwards.
+   LCP STAYS THE H1 (profs-v2 · E). The browser counts an image by its rendered box, and
+   the H1's text entry is smaller than its box (in Arabic about 0.8 of it: 106k px² at
+   1280). At 379 × 470 (178k) the photo won at 1280 and 1440 in both locales, and at 390
+   in French by its first-screen slice. So she is framed as the mockup frames her, cut
+   under the tablet (the file's top 760 of 992 px, its empty sides cropped), and the box
+   stays under ~0.85 of the smallest H1 entry: 253 × 351 from 1280. Whenever the photo, the
+   card or the H1 changes, re-read the browser's largest-contentful-paint entries at
+   1440, 1280, 412, 390 and 360, both locales. Not at 768 × 1024: there she fills the
+   first screen and stays the LCP (146k against the H1's 60k). */
+.ph-photo{position:relative;z-index:1;justify-self:start;width:68%;aspect-ratio:547/760;overflow:hidden;
+  background:var(--ph-peach);border-radius:50% 50% 30% 44% / 36% 36% 12% 18%}
 html[dir=rtl] .ph-photo{scale:-1 1}
-.ph-img{display:block;width:100%;height:auto}
+.ph-img{display:block;width:100%;height:100%;object-fit:cover;object-position:58% 0}
 
-.ph-card-wrap{position:relative;z-index:2;justify-self:end;width:max(206px,56%);margin-block-start:36%}
+.ph-card-wrap{position:relative;z-index:2;justify-self:end;width:max(206px,56%);margin-block-start:30%}
 .ph-rays{position:absolute;z-index:1;inset-block-start:-28px;inset-inline-end:-6px;width:38px;height:auto}
-/* A narrow card: the same rows, a little tighter, so it does not run far below her. */
-@media (max-width:479.98px){
+/* The same rows, a little tighter, so the card does not run far below her: on a phone,
+   and on a desktop, where she is framed smaller (above). */
+@media (max-width:479.98px),(min-width:1024px){
   .ph-card-wrap .lk-dash-row{min-height:40px;padding-block:4px}
   .ph-card-wrap .lk-dash-body{gap:6px}
 }
 @media (min-width:1024px){
-  .ph-photo{width:78%}
-  .ph-card-wrap{width:max(206px,48%);margin-block-start:20%}
+  .ph-photo{width:52%;margin-inline-start:14%}
+  .ph-card-wrap{width:max(206px,44%);margin-block-start:7%}
 }
 
 @media (prefers-reduced-motion:reduce){

@@ -52,8 +52,8 @@ const copy = bilingual({
     h1c: "وتحتفظ بـ ",
     h1Hi: "⁦100 %⁩",
     h1d: "في فترة التجربة.",
-    lead: "اعمل صفحتك، انشر دروسك، حدّد تعريفتك وتصرّف في حجوزاتك، بكل بساطة.",
-    cta: "اعمل صفحتي متاع أستاذ",
+    lead: "اعمل صفحتك، انشر دروسك، حدّد تعريفتك وتصرّف في حجوزاتك، بالساهل.",
+    cta: "اعمل صفحتك متاع أستاذ",
     demo: "شوف الديمو (دقيقتين)",
     seeTutors: "شوف الأساتذة في Tnajem",
     micro: `فابور في فترة التجربة. من بعد : ⁦${COMMISSION_PCT} %⁩ على كل تلميذ خلّص، كان على الخلاص اللي يعدّي من Tnajem، زائد اشتراك — فابور بـ ${FREE_PLAN.maxClasses} حصة منشورة في نفس الوقت، ومن ${ESSENTIEL_TND} دينار في الشهر لفوق.`,
@@ -139,7 +139,7 @@ export function ProfsHero({ locale }: { locale: AppLocale }) {
                 width={800}
                 height={992}
                 loading="lazy"
-                sizes="(min-width: 1024px) 400px, 84vw"
+                sizes="(min-width: 1024px) 260px, 68vw"
                 className="ph-img"
               />
             </div>

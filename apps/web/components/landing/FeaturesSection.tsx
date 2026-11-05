@@ -41,7 +41,7 @@ const copy = bilingual({
     visibilityT: "الظهور",
     visibilityP: "خلّي صفحتك تبان في Tnajem.",
     verifiedT: "التثبّت",
-    verifiedP: "بروفيل متثبّت منو يعطي الثقة.",
+    verifiedP: "بروفيل متثبّت منّو يطمّن الناس.",
   },
 });
 
