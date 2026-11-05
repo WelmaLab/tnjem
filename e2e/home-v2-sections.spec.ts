@@ -22,14 +22,14 @@ const SLUGS = ["maths", "physique", "svt", "francais", "anglais", "arabe", "phil
 
 const HONEST = {
   fr: {
-    step4: "Réserve la suivante ou passe au mois avec ton prof.",
+    step4: "Réserve la suivante ou passe au mois si ton prof le propose.",
     checks: ["Sans engagement", "Annulation libre jusqu'à 48h avant", "Des profs vérifiés"],
     prof: "Crée ta page gratuitement en 2 minutes, fixe ton tarif, et garde 100 % pendant le pilote.",
     soon: "Bientôt",
     stepsTitle: "En 4 étapes, c'est simple.",
   },
   ar: {
-    step4: "احجز الحصة الجاية، ولا اعمل اشتراك شهري مع أستاذك.",
+    step4: "احجز الحصة الجاية، ولا اعمل اشتراك شهري كان أستاذك يقترحو.",
     checks: ["بلا التزام", "تنجّم تلغي حتى 48 ساعة قبل", "أساتذة متثبّت منهم"],
     prof: "اعمل صفحتك فابور في دقيقتين، حدّد ثمنك، و⁦100 %⁩ متاعك في فترة التجربة.",
     soon: "قريب",

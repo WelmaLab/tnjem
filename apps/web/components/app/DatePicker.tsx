@@ -34,6 +34,10 @@ import { freeBand, placePopover, type Placement } from "./popover-place"; // liv
 
 /** The calendar's height before it is measured: a title row and up to six weeks of 44px days. */
 const DP_POP_ESTIMATE = 390;
+/** Under this window height a six-row month always uses compact days. */
+const DP_COMPACT_BELOW = 760;
+/** What compact days save on a six-row month: six rows of 44px → 38px (.is-compact). */
+const DP_COMPACT_SAVING = 36;
 /** The visible field a calendar hangs from (the input box, not the whole wrapper). */
 const fieldOf = (wrap: HTMLElement | null): Element | null => wrap?.querySelector(".aps-dp-inp") ?? wrap;
 
@@ -169,6 +173,18 @@ export function DatePicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
+  // The month on screen: the focused day's, Monday-first, padded to whole weeks.
+  const first: YMD = { y: focus.y, m: focus.m, d: 1 };
+  const start = addDays(first, -weekday(first));
+  const weeks: YMD[][] = [];
+  for (let w = 0, day = start; w < 6; w++) {
+    const row: YMD[] = [];
+    for (let i = 0; i < 7; i++, day = addDays(day, 1)) row.push(day);
+    if (w > 3 && row[0].m !== focus.m) break;
+    weeks.push(row);
+  }
+  const sixRows = weeks.length === 6;
+
   const wrapRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const gridRef = useRef<HTMLTableElement>(null);
@@ -178,10 +194,25 @@ export function DatePicker({
      the page towards the wrong side), then measured once it is there. */
   const popRef = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<Placement>("below");
+  const [compact, setCompact] = useState(false);
   useLayoutEffect(() => {
     const a = fieldOf(wrapRef.current);
     if (!open || !popRef.current || !a) return;
     const h = popRef.current.offsetHeight;
+    /* A six-row month is 46px taller than a five-row one, and the full calendar then
+       ran under the action bar (November 2026: 16–25px). So its days go compact, on a
+       short window, and on any window where the page cannot scroll further and the
+       full calendar fits on neither side of the field. Tall windows with room keep
+       the 44px days. */
+    const fullH = h + (compact ? DP_COMPACT_SAVING : 0);
+    const free = freeBand(a);
+    const atPageEnd = document.documentElement.scrollHeight - window.innerHeight - window.scrollY <= 1;
+    const noRoom = free.bottom - free.rect.bottom - 6 < fullH && free.rect.top - free.top - 6 < fullH;
+    const wantCompact = sixRows && (window.innerHeight < DP_COMPACT_BELOW || (atPageEnd && noRoom));
+    if (wantCompact !== compact) {
+      setCompact(wantCompact); // measured again at its new height, before it paints
+      return;
+    }
     const p = placePopover(a, h);
     setPlace(p);
     /* live-fixes-1 · K: with the field mid-screen on a short window (1440×674) NEITHER
@@ -196,7 +227,7 @@ export function DatePicker({
     const spare = (n: number) => Math.max(0, n);
     if (popBottom > bottom - gap) window.scrollBy(0, Math.min(popBottom - (bottom - gap), spare(popTop - (top + gap))));
     else if (popTop < top + gap) window.scrollBy(0, -Math.min(top + gap - popTop, spare(bottom - gap - popBottom)));
-  }, [open]);
+  }, [open, sixRows, compact]);
 
   // Click outside closes; focus goes nowhere surprising.
   useEffect(() => {
@@ -276,16 +307,6 @@ export function DatePicker({
     }
   }
 
-  // The month on screen: the focused day's, Monday-first, padded to whole weeks.
-  const first: YMD = { y: focus.y, m: focus.m, d: 1 };
-  const start = addDays(first, -weekday(first));
-  const weeks: YMD[][] = [];
-  for (let w = 0, day = start; w < 6; w++) {
-    const row: YMD[] = [];
-    for (let i = 0; i < 7; i++, day = addDays(day, 1)) row.push(day);
-    if (w > 3 && row[0].m !== focus.m) break;
-    weeks.push(row);
-  }
   const today = todayTunis();
   const selected = fromIso(value);
   const title = `${c.months[focus.m - 1]} ${focus.y}`;
@@ -326,7 +347,7 @@ export function DatePicker({
       {open && (
         <div
           ref={popRef}
-          className={`aps-pop aps-dp-pop${place === "above" ? " is-above" : ""}`}
+          className={`aps-pop aps-dp-pop${place === "above" ? " is-above" : ""}${compact ? " is-compact" : ""}`}
           role="dialog"
           aria-modal="true"
           aria-label={c.choose}

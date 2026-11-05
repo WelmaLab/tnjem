@@ -972,6 +972,7 @@ html[dir="rtl"] * { letter-spacing: normal !important }
   .aps-dp-grid td{text-align:center;padding:0}
   .aps-dp-day{width:100%;height:44px;border:0;border-radius:10px;background:transparent;font:inherit;font-size:14px;font-weight:600;
     color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums}
+  .aps-dp-pop.is-compact .aps-dp-day{height:38px} /* a six-row month with no room: DatePicker */
   .aps-dp-day:hover{background:var(--blue50);color:var(--blue)}
   .aps-dp-day.is-out{color:var(--muted)}
   .aps-dp-day.is-today{box-shadow:inset 0 0 0 1.5px var(--blue)}

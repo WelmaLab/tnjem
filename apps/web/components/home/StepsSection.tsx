@@ -24,7 +24,7 @@ const copy = bilingual({
       { t: "Cherche ton prof", p: "Par matière et par niveau, du primaire au Bac." },
       { t: "Réserve ta séance", p: "Tu vois le tarif, tu choisis l'horaire." },
       { t: "Suis le cours en direct", p: "En vidéo, depuis ton téléphone ou ton PC." },
-      { t: "Continue si ça te plaît", p: "Réserve la suivante ou passe au mois avec ton prof." },
+      { t: "Continue si ça te plaît", p: "Réserve la suivante ou passe au mois si ton prof le propose." },
     ],
   },
   ar: {
@@ -34,7 +34,7 @@ const copy = bilingual({
       { t: "لوّج على أستاذك", p: "حسب المادة والمستوى، من الابتدائي للباك." },
       { t: "احجز حصتك", p: "تشوف الثمن، وإنتي تختار الوقت." },
       { t: "احضر الحصة دايركت", p: "بالفيديو، من تليفونك ولا من الكمبيوتر." },
-      { t: "كمّل كان عجبك", p: "احجز الحصة الجاية، ولا اعمل اشتراك شهري مع أستاذك." },
+      { t: "كمّل كان عجبك", p: "احجز الحصة الجاية، ولا اعمل اشتراك شهري كان أستاذك يقترحو." },
     ],
   },
 });
