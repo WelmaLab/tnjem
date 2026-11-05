@@ -9,7 +9,7 @@
 
    Size and place it from the caller (`className`); --lk-dash-tilt overrides the
    tilt, which mirrors in Arabic. Server component. */
-import { Book, Forward } from "@/components/icons";
+import { IconBook as Book, IconForward as Forward } from "./landing-icons";
 import { bilingual } from "@/lib/i18n";
 import type { AppLocale } from "@/lib/locale";
 import { IconCalendar, IconPerson, IconUsers, IconVideo } from "./landing-icons";

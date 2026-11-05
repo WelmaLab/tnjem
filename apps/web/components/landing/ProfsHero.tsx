@@ -4,7 +4,7 @@ import type { AppLocale } from "@/lib/locale";
 import { bilingual } from "@/lib/i18n";
 import { PROF_DEMO_URL } from "@/lib/prof-demo";
 import { Link } from "@/components/Link";
-import { Board, Play } from "@/components/icons";
+import { IconBoard as Board, IconPlay as Play } from "./landing-icons";
 import { Doodle } from "@/components/home/Doodle";
 import { IconArrow } from "./landing-icons";
 import { MockDashboardCard } from "./MockDashboardCard";

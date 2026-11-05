@@ -1,5 +1,5 @@
 import { Reveal } from "@/components/Reveal";
-import { Pencil, Share, Shield } from "@/components/icons";
+import { IconPencil as Pencil, IconShare as Share, IconShieldCheck as Shield } from "./landing-icons";
 import { StepCard } from "@/components/home/StepCard";
 import { HS_RV } from "@/components/home/reveal";
 import { bilingual } from "@/lib/i18n";

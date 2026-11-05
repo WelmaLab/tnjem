@@ -1,6 +1,6 @@
 import { Reveal } from "@/components/Reveal";
 import { PaymentStory } from "@/components/PaymentStory"; // phase-a lane L3 (A22)
-import { Shield, Users, Video, Wallet } from "@/components/icons";
+import { IconShieldCheck as Shield, IconUsers as Users, IconVideo as Video, IconWallet as Wallet } from "./landing-icons";
 import { HS_RV } from "@/components/home/reveal";
 import { bilingual } from "@/lib/i18n";
 import type { AppLocale } from "@/lib/locale";

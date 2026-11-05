@@ -1,5 +1,5 @@
 import { Reveal } from "@/components/Reveal";
-import { Plus } from "@/components/icons";
+import { IconPlus as Plus } from "./landing-icons";
 import { HS_RV } from "@/components/home/reveal";
 import { bilingual } from "@/lib/i18n";
 import type { AppLocale } from "@/lib/locale";

@@ -6,7 +6,7 @@
    (profs-banner → profs-banner-cta). Server component. */
 import type { ReactNode } from "react";
 import { Link } from "@/components/Link";
-import { Check } from "@/components/icons";
+import { IconCheck as Check } from "./landing-icons";
 import { IconArrow } from "./landing-icons";
 import "./kit.css";
 

@@ -1,5 +1,5 @@
 import { Link } from "@/components/Link";
-import { Forward } from "@/components/icons";
+import { IconForward as Forward } from "./landing-icons";
 import { bilingual } from "@/lib/i18n";
 import type { AppLocale } from "@/lib/locale";
 import "./profs-sections.css";
