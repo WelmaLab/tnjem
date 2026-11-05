@@ -13,6 +13,7 @@ import { db } from "../db";
 import { checkRateLimit } from "../lib/rate-limit";
 import { isUniqueViolation } from "../lib/db-errors";
 import { getSession, rotateSession } from "../lib/session";
+import { parseBody } from "../lib/parse-body";
 
 /* profile — becomeTutor, saveStudentProfile, getOnboardingState.
 
@@ -86,7 +87,7 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
 
   /* ── POST /profile/student ──────────────────────────────────────────────── */
   app.post("/profile/student", async (req, reply) => {
-    const parsed = studentProfileBody.safeParse(req.body);
+    const parsed = parseBody(studentProfileBody, req.body);
     if (!parsed.success) return reply.code(400).send({ error: "bad-request" });
 
     // ONE validator, shared with the web's demo-mode branch — see profile-input.ts.

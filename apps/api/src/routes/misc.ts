@@ -23,6 +23,7 @@ import { recomputeTutorStats } from "../lib/stats";
 import { auditAdmin } from "../lib/audit";
 import { logEvent } from "@tnajem/shared/observability";
 import { isUniqueViolation } from "../lib/db-errors"; // phase-a lane L3 (A16)
+import { parseBody } from "../lib/parse-body";
 import { reviewEligibility } from "@tnajem/shared"; // espace prof v2 · pro (P7): the one review rule
 import { renderNotification } from "@tnajem/shared/notification-messages";
 
@@ -292,7 +293,7 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
 
   /* ── POST /notifications/read ────────────────────────────────────────────── */
   app.post("/notifications/read", async (req, reply) => {
-    const parsed = markReadBody.safeParse(req.body ?? {});
+    const parsed = parseBody(markReadBody, req.body ?? {});
     if (!parsed.success) return reply.code(400).send({ error: "bad-request" });
 
     const session = await getSession(req);

@@ -32,7 +32,7 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "nodemailer": "^10.0.13",
-    "zod": "^3.23.8"
+    "nodemailer": "^10.1.4",
+    "zod": "^4.6.6"
   }
 }

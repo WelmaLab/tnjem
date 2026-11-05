@@ -35,17 +35,17 @@ export const classLimitsSchema = z.object({
   title: z.string().trim().min(L.titleMin, "invalid-title").max(L.titleMax, "title-too-long"),
   description: z.string().trim().max(L.descriptionMax, "description-too-long").optional(),
   durationMin: z
-    .number({ invalid_type_error: "invalid-duration" })
+    .number({ error: "invalid-duration" })
     .int("invalid-duration")
     .min(L.durationMin, "invalid-duration")
     .max(L.durationMax, "invalid-duration"),
   seats: z
-    .number({ invalid_type_error: "invalid-seats" })
+    .number({ error: "invalid-seats" })
     .int("invalid-seats")
     .min(L.seatsMin, "invalid-seats")
     .max(L.seatsMax, "invalid-seats"),
   priceTnd: z
-    .number({ invalid_type_error: "invalid-price" })
+    .number({ error: "invalid-price" })
     .finite("invalid-price")
     .min(0, "negative-price")
     .max(L.priceMax, "price-too-high"),

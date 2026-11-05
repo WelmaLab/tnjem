@@ -20,12 +20,12 @@ const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-
 export const offerInputSchema = z.object({
   title: z.string().trim().min(3, "invalid-title").max(OFFER_TITLE_MAX, "title-too-long"),
   sessionsPerMonth: z
-    .number({ invalid_type_error: "invalid-sessions" })
+    .number({ error: "invalid-sessions" })
     .int("invalid-sessions")
     .min(OFFER_SESSIONS_MIN, "invalid-sessions")
     .max(OFFER_SESSIONS_MAX, "invalid-sessions"),
   priceTnd: z
-    .number({ invalid_type_error: "invalid-price" })
+    .number({ error: "invalid-price" })
     .finite("invalid-price")
     .gt(0, "price-must-be-positive")
     .max(OFFER_PRICE_MAX, "price-too-high"),
@@ -41,7 +41,7 @@ export const PROMO_MAX_DAYS = 180;
 export const promotionInputSchema = z
   .object({
     percent: z
-      .number({ invalid_type_error: "percent-out-of-range" })
+      .number({ error: "percent-out-of-range" })
       .int("percent-out-of-range")
       .min(PROMO_PERCENT_MIN, "percent-out-of-range")
       .max(PROMO_PERCENT_MAX, "percent-out-of-range"),
@@ -52,7 +52,7 @@ export const promotionInputSchema = z
       .pipe(z.string().regex(/^[A-Z0-9-]{3,20}$/, "invalid-code"))
       .nullable()
       .optional(),
-    scope: z.enum(PROMO_SCOPES, { errorMap: () => ({ message: "invalid-scope" }) }),
+    scope: z.enum(PROMO_SCOPES, { error: "invalid-scope" }),
     targetId: uuid.nullable().optional(),
     /** ISO instants. Absent start = now. */
     startsAt: z.string().datetime({ offset: true, message: "invalid-dates" }).optional(),

@@ -20,6 +20,7 @@ import { exploreBoostSql, subscriptionIsLiveSql } from "../lib/entitlements";
 import { onSaleClassSql } from "../lib/class-sale";
 import { visibleReviewText } from "../lib/moderation-hide"; // phase-a lane L4 (A28)
 import { publicTutorSql } from "../lib/home-tutors"; // home v2 · B
+import { parseBody } from "../lib/parse-body";
 import type { HomeTutor } from "@tnajem/shared"; // home v2 · B
 
 /* tutors — createTutor, and the three PUBLIC reads that feed the cached storefront.
@@ -50,7 +51,7 @@ const createTutorBody = z.object({
 export async function tutorRoutes(app: FastifyInstance): Promise<void> {
   /* ── POST /tutors (create or update the caller's storefront) ─────────────── */
   app.post("/tutors", async (req, reply) => {
-    const parsed = createTutorBody.safeParse(req.body);
+    const parsed = parseBody(createTutorBody, req.body);
     if (!parsed.success) return reply.code(400).send({ error: "bad-request" });
     const input = parsed.data;
 
