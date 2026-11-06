@@ -88,7 +88,7 @@
   --sh-l:0 26px 60px -26px rgba(16,31,51,.50);
   --fd:var(--font-display),'Space Grotesk',system-ui,sans-serif;
   --fb:var(--font-body),'Plus Jakarta Sans',system-ui,sans-serif;
-  --fa:var(--font-ar),'IBM Plex Sans Arabic',system-ui,sans-serif;
+  --fa:var(--font-ar),'IBM Plex Sans Arabic','Tnajem Ar Noto Sans','Tnajem Ar Noto Naskh','Tnajem Ar DejaVu',system-ui,sans-serif;
   /* live-fixes-1 · C1 — FIGURES (prices, « TND », counters): the brand's text face with
      tabular figures, never --fd. Space Grotesk descends from Space Mono, and its capitals
      and figures read as a monospace font: « 0 TND », « — TND ». In Arabic --fb is the
@@ -102,6 +102,27 @@
 @keyframes live-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
 /* The live dot pulses ONLY for visitors who have not asked for reduced motion. */
 @media (prefers-reduced-motion: no-preference){.tag-live::before{animation:live-pulse 1.4s ease-in-out infinite}}
+
+/* ── ARABIC FALLBACKS WITHOUT ARIAL ───────────────────────────────────────────
+   next/font's only fallback is local("Arial"), which Linux and Android do not have.
+   There the browser picked its own Arabic face before Plex arrived, and DejaVu Sans
+   Bold is 27 % wider than Plex: on Ubuntu the /ar H1 took an extra line at 21 of 60
+   widths, and the swap to Plex shifted the page (CLS 0.20 at 390px).
+
+   One face per system font, size-adjust measured against Plex on the real /ar copy.
+   The bold face also serves weight 600, and sits just under the H1's ratio so the H1
+   never wraps more than in Plex. Ascent and descent are Plex's, divided by size-adjust
+   because it scales them too. The range is Plex's Arabic subset plus the space, which
+   otherwise comes unscaled from the system face and re-wraps body text; other Latin
+   keeps its system face. These sit after next/font's Arial in --fa, so nothing changes
+   where Arial exists. Re-measure if the face or the AR copy changes much
+   (e2e/home-v2.spec.ts checks the H1). */
+@font-face{font-family:'Tnajem Ar Noto Sans';font-weight:400;src:local("Noto Sans Arabic Regular"),local("NotoSansArabic-Regular"),local("Noto Sans Arabic UI Regular"),local("NotoSansArabicUI-Regular");size-adjust:94%;ascent-override:115.43%;descent-override:44.15%;line-gap-override:0%;unicode-range:U+0020,U+0600-06FF,U+0750-077F,U+0870-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
+@font-face{font-family:'Tnajem Ar Noto Sans';font-weight:700;src:local("Noto Sans Arabic Bold"),local("NotoSansArabic-Bold"),local("Noto Sans Arabic UI Bold"),local("NotoSansArabicUI-Bold");size-adjust:88.5%;ascent-override:122.60%;descent-override:46.89%;line-gap-override:0%;unicode-range:U+0020,U+0600-06FF,U+0750-077F,U+0870-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
+@font-face{font-family:'Tnajem Ar Noto Naskh';font-weight:400;src:local("Noto Naskh Arabic Regular"),local("NotoNaskhArabic-Regular"),local("Noto Naskh Arabic UI Regular"),local("NotoNaskhArabicUI-Regular");size-adjust:104%;ascent-override:104.33%;descent-override:39.90%;line-gap-override:0%;unicode-range:U+0020,U+0600-06FF,U+0750-077F,U+0870-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
+@font-face{font-family:'Tnajem Ar Noto Naskh';font-weight:700;src:local("Noto Naskh Arabic Bold"),local("NotoNaskhArabic-Bold"),local("Noto Naskh Arabic UI Bold"),local("NotoNaskhArabicUI-Bold");size-adjust:104.5%;ascent-override:103.83%;descent-override:39.71%;line-gap-override:0%;unicode-range:U+0020,U+0600-06FF,U+0750-077F,U+0870-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
+@font-face{font-family:'Tnajem Ar DejaVu';font-weight:400;src:local("DejaVu Sans"),local("DejaVuSans");size-adjust:88%;ascent-override:123.30%;descent-override:47.16%;line-gap-override:0%;unicode-range:U+0020,U+0600-06FF,U+0750-077F,U+0870-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
+@font-face{font-family:'Tnajem Ar DejaVu';font-weight:700;src:local("DejaVu Sans Bold"),local("DejaVuSans-Bold");size-adjust:78.5%;ascent-override:138.22%;descent-override:52.87%;line-gap-override:0%;unicode-range:U+0020,U+0600-06FF,U+0750-077F,U+0870-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
 
 @layer base {
   *{box-sizing:border-box;margin:0;padding:0}

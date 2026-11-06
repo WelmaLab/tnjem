@@ -31,7 +31,8 @@ html[dir=rtl] .hv-h1{font-family:var(--fa);letter-spacing:normal}
    than Plex does (measured, Chromium, this copy: ≤413px 2 vs 3 lines, 600–820px 1
    vs 2, ≥1370px 2 vs 3) — a 0.046 CLS on a phone. Plex is never the shorter one,
    so reserving Plex's line count removes the shift whichever face paints first.
-   Re-measure if the AR H1 copy changes (e2e/home-v2.spec.ts checks it). */
+   Without Arial, globals.css' calibrated faces keep this true. Re-measure if the AR H1
+   copy changes (e2e/home-v2.spec.ts checks it). */
 html[dir=rtl] .hv-h1{min-height:calc(3em * var(--lh-hero))}
 @media (min-width:414px){html[dir=rtl] .hv-h1{min-height:calc(2em * var(--lh-hero))}}
 @media (min-width:1370px){html[dir=rtl] .hv-h1{min-height:calc(3em * var(--lh-hero))}}

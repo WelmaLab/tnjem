@@ -185,24 +185,59 @@ test("/explore?q= lands on that search (the WebSite SearchAction is true)", asyn
 
 /* ── 5. the Arabic font swap moves nothing ─────────────────────────────────
    The H1 is the LCP and sits above the hero; hero.css reserves the line count
-   IBM Plex Sans Arabic needs, so the H1 is the same height before the web font
-   arrives (blocked here) and after. A copy change that breaks this fails here. */
+   IBM Plex Sans Arabic needs, and globals.css sizes the fallback faces to Plex, so the
+   H1 is the same height before the web font arrives (blocked here) and after. A copy
+   change that breaks this fails here.
+
+   Only a calibrated face can hold that promise, so the test asks the browser what it
+   painted (document.fonts.check says nothing about system fonts) and skips anywhere
+   else. The GitHub runner paints DejaVu Sans, so it runs in CI. */
+
+const CALIBRATED_AR_FACES = ["Arial", "Noto Sans Arabic", "Noto Sans Arabic UI", "Noto Naskh Arabic", "Noto Naskh Arabic UI", "DejaVu Sans"];
+const H1_WIDTHS = [360, 390, 414, 600, 768, 1024, 1280, 1440];
+
+/** The family that painted most of the H1's glyphs, from Chromium's own record. */
+async function h1Face(page: Page): Promise<string> {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("DOM.enable");
+  await cdp.send("CSS.enable");
+  const { root } = await cdp.send("DOM.getDocument");
+  const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector: "h1" });
+  const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId });
+  return [...fonts].sort((x, y) => y.glyphCount - x.glyphCount)[0].familyName;
+}
 
 test("/ar: the H1 is as tall in the fallback face as in IBM Plex Sans Arabic (no shift at the font swap)", async ({ browser }) => {
-  const heights = async (blockFonts: boolean) => {
+  const measure = async (blockFonts: boolean) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await ctx.newPage();
     if (blockFonts) await page.route(/\.woff2?(\?|$)/, (r) => r.abort());
     await page.goto("/ar", { waitUntil: "networkidle" });
-    const out: number[] = [];
-    for (const w of [360, 390, 414, 600, 768, 1024, 1280, 1440]) {
+    const heights: number[] = [];
+    for (const w of H1_WIDTHS) {
       await page.setViewportSize({ width: w, height: 900 });
-      out.push(await page.locator("h1").evaluate((h) => Math.round(h.getBoundingClientRect().height)));
+      heights.push(await page.locator("h1").evaluate((h) => Math.round(h.getBoundingClientRect().height)));
     }
+    const face = await h1Face(page);
     await ctx.close();
-    return out;
+    return { heights, face };
   };
-  expect(await heights(true)).toEqual(await heights(false));
+
+  const fallback = await measure(true);
+  test.skip(
+    !CALIBRATED_AR_FACES.includes(fallback.face),
+    `this machine paints Arabic in ${fallback.face}, not a face calibrated in globals.css (${CALIBRATED_AR_FACES.join(", ")})`,
+  );
+  const plex = await measure(false);
+  expect(plex.face, "the unblocked run really is in the web font").toBe("IBM Plex Sans Arabic");
+
+  // ±2px: subpixel rounding differs by platform, a whole extra line is 30px or more.
+  const apart = H1_WIDTHS.flatMap((w, i) =>
+    Math.abs(fallback.heights[i] - plex.heights[i]) > 2
+      ? [`${w}px: ${fallback.heights[i]}px in ${fallback.face}, ${plex.heights[i]}px in Plex`]
+      : [],
+  );
+  expect(apart).toEqual([]);
 });
 
 /* ── 6. nojs ─────────────────────────────────────────────────────────────── */
