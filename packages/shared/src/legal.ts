@@ -118,3 +118,39 @@ export const PUBLIC_TEACHER_DECLARATION = {
   fr: "Je déclare ne pas exercer comme enseignant·e dans un établissement d'enseignement public.",
   ar: "نصرّح إنّي ما نخدمش كأستاذ في مؤسسة تعليم عمومية.",
 } as const;
+
+/* ── Company identity (december-sprint · D15) ─────────────────────────────── */
+
+/* Empty until the founder gives them. Every surface that shows them (the footer,
+   the home page's « Qui sommes-nous ») HIDES an empty value — never a placeholder.
+   /terms and /privacy keep their own bracketed placeholders: their sentences are
+   counsel's to change (R6), so these values are not wired into them. */
+
+/** LEGAL-REVIEW: the company's registered name (dénomination sociale). */
+export const COMPANY_NAME = "";
+/** LEGAL-REVIEW: the legal form (SUARL, SARL, …). */
+export const LEGAL_FORM = "";
+/** LEGAL-REVIEW: the registered office address (siège social). */
+export const ADDRESS = "";
+/** LEGAL-REVIEW: the tax identification number (matricule fiscal). */
+export const MATRICULE_FISCAL = "";
+/** LEGAL-REVIEW: the national business register number (RNE). */
+export const RNE = "";
+/** LEGAL-REVIEW: the INPDP declaration or authorisation number. */
+export const INPDP_NUMBER = "";
+
+/* ── Centre leads (december-sprint · D13, gate 9) ───────────────────────────── */
+
+/** The sentence under the centre lead form.
+    LEGAL-REVIEW: whether this is enough as the basis for calling a lead back
+    (consent vs legitimate interest), and whether /privacy must list this form. */
+export const CENTRE_LEAD_CONSENT_TEXT = {
+  fr: "En envoyant ce formulaire, vous acceptez d'être recontacté par Tnajem.",
+  ar: "كي تبعث الفورمولار هذا، توافق إنّ Tnajem تتّصل بيك.",
+} as const;
+
+/** LEGAL-REVIEW: how long a centre lead (a name and a phone number, table
+    centre_leads) is kept. NOT DECIDED and NOT ENFORCED: no purge is built yet
+    (founder decision at the december gate). Until counsel sets a period, leads
+    are kept until an admin deletes them by hand. */
+export const CENTRE_LEAD_RETENTION_DAYS: number | null = null;

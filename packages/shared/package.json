@@ -21,6 +21,7 @@
     "./password-check": "./src/password-check.ts",
     "./unsubscribe": "./src/unsubscribe.ts",
     "./growth-input": "./src/growth-input.ts",
+    "./centre-lead-input": "./src/centre-lead-input.ts",
     "./notification-messages": "./src/notification-messages.ts"
   },
   "scripts": {

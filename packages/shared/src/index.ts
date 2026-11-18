@@ -46,6 +46,8 @@ export * from "./plans";
 export * from "./thread-state";
 /* The support WhatsApp link, from NEXT_PUBLIC_SUPPORT_WHATSAPP (A12). Pure. */
 export * from "./support-contact";
+/* december-sprint · S: the centre packs and their switches. Pure constants. */
+export * from "./centres";
 // end phase-a lane L1
 // phase-a lane L2 — birth month + year, isAdult, the ALLOW_MINORS switch (A24). Pure.
 export * from "./age";

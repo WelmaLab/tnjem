@@ -212,6 +212,8 @@ export const tutors = pgTable("tutors", {
   pendingFullName: text("pending_full_name"),
   // espace prof v2 · shell (0036): the first time the owner copied or shared their own link. NULL = never.
   linkSharedAt: timestamp("link_shared_at", { withTimezone: true }),
+  // december-sprint · A (0043): a live-test account. Off every public list, noindex, direct links still work.
+  isTest: boolean("is_test").notNull().default(false),
 }, (t) => ({
   /* /explore: `where status = 'verified' order by rating desc` (getExploreTutors),
      the sitemap's `where status = 'verified'`, and the admin queue's
@@ -299,6 +301,8 @@ export const classes = pgTable("classes", {
   // espace prof v2 · pro (0039): the tutor's reminders, one per class (apps/api/src/lib/reminders.ts).
   tutorReminder24hSentAt: timestamp("tutor_reminder_24h_sent_at", { withTimezone: true }),
   tutorReminder1hSentAt: timestamp("tutor_reminder_1h_sent_at", { withTimezone: true }),
+  // december-sprint · E (0045): bookable by its direct link and QR code, absent from every public list.
+  unlisted: boolean("unlisted").notNull().default(false),
 }, (t) => ({
   /* THE storefront query: getStorefront() does `where tutor_id = ?` on every
      viral page hit; getDashboard does the same; getExploreTutors aggregates
@@ -1129,4 +1133,28 @@ export const promotions = pgTable("promotions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   tutorIdx: index("promotions_tutor_id_created_at_idx").on(t.tutorId, t.createdAt),
+}));
+
+/* CENTRE LEADS (december-sprint · B, 0044). Personal data: served only by the API
+   behind requireAdmin. No raw IP. status: new | contacted | won | lost (CHECK). */
+export const centreLeads = pgTable("centre_leads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  name: text("name").notNull(),
+  centreName: text("centre_name").notNull(),
+  city: text("city").notNull(),
+  phone: text("phone").notNull(),
+  teachersCount: integer("teachers_count"),
+  levels: text("levels").array().notNull().default([]),
+  message: text("message"),
+  locale: text("locale").notNull(),
+  page: text("page").notNull(),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  referrer: text("referrer"),
+  status: text("status").notNull().default("new"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  createdAtIdx: index("centre_leads_created_at_idx").on(t.createdAt),
 }));
