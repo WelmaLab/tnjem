@@ -635,6 +635,10 @@ export function NewClassForm() {
                   />
                 </div>
               </Field>
+              {/* december-sprint · E (D18): link / QR only. In section 1, ABOVE the date field:
+                  who sees the class belongs with what it is, and the page below the date
+                  field keeps its height (e2e/calendar-six-rows.spec.ts, 1440×900 page end). */}
+              <UnlistedRow checked={Boolean(f.unlisted)} onChange={(v) => set("unlisted", v)} />
             </FormSection>
 
             <FormSection n={2} title={c.s2} id="nc-s2">
@@ -731,8 +735,6 @@ export function NewClassForm() {
                   <Link href="/dashboard/settings?tab=vitrine#free-first" className="linklike nc-ff-off-a">{c.ffOffCta}</Link>
                 </p>
               ) : null}
-              {/* december-sprint · E (D18): link / QR only. */}
-              <UnlistedRow checked={Boolean(f.unlisted)} onChange={(v) => set("unlisted", v)} />
             </FormSection>
 
             {/* Folded: most tutors use the room Tnajem opens for them. */}
