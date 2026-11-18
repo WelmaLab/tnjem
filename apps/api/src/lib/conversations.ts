@@ -19,6 +19,7 @@ import {
 } from "@tnajem/shared";
 import { db } from "../db";
 import { onSaleClassSql } from "./class-sale";
+import { listedClassSql } from "./class-listed"; // december-sprint · E (D18)
 import { visibleMessageBody } from "./moderation-hide";
 import { bookingState } from "./thread-state";
 
@@ -239,7 +240,7 @@ async function nextOnSale(tutorId: string): Promise<ConversationClass | null> {
   const [c] = await db
     .select({ id: classes.id, title: classes.title, scheduledAt: classes.scheduledAt })
     .from(classes)
-    .where(and(eq(classes.tutorId, tutorId), onSaleClassSql))
+    .where(and(eq(classes.tutorId, tutorId), onSaleClassSql, listedClassSql)) // december-sprint · E (D18): never offers an unlisted class (a booked one comes from the bookings above)
     .orderBy(asc(classes.scheduledAt))
     .limit(1);
   return c ? { classId: c.id, title: c.title, startsAt: new Date(c.scheduledAt).toISOString(), booked: false } : null;

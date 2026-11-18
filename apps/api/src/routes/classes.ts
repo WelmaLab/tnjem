@@ -23,6 +23,7 @@ import { classPhase } from "@tnajem/shared"; // phase-a lane L5 (A18.10)
 import { effectiveClassStatus } from "@tnajem/shared"; // student-space-v1 · fixes (H2, C7)
 import { viewerBookings } from "../lib/viewer-booking"; // student-space-v1 · fixes (H1)
 import { checkClassLimits } from "@tnajem/shared/class-input"; // phase-a lane L5 (A18.16): the ONE limits schema
+import { classUnlistedSchema, classUnlistedBodySchema } from "@tnajem/shared/class-input"; // december-sprint · E (D18)
 import { paymentsEnabled, tutorBalanceTnd } from "@tnajem/shared/payments";
 import { resolveMeetUrl } from "@tnajem/shared/live";
 import type { Role } from "@tnajem/shared"; // phase-a lane L2 (A17)
@@ -50,6 +51,7 @@ const createClassBody = z.object({
   whiteboardUrl: z.string().optional(),
   quizUrl: z.string().optional(),
   level: z.string().nullable().optional(), // phase-a lane L5 (A18.7): optional level code
+  unlisted: classUnlistedSchema, // december-sprint · E (D18): link / QR only — default false
 });
 
 const createPackBody = z.object({
@@ -179,6 +181,7 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
       whiteboardUrl: whiteboardUrl.value,
       quizUrl: quizUrl.value,
       level: level.value, // phase-a lane L5 (A18.7)
+      unlisted: input.unlisted === true, // december-sprint · E (D18)
     }).returning({ id: classes.id });
 
     // The storefront lists this tutor's classes — the web drops its 60s ISR entry.
@@ -329,6 +332,7 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
       tutor_slug: tut && tut.status === "verified" && !tut.suspendedAt && !tut.erasedAt ? tut.slug : null,
       tutor_subject: tut?.subject ?? null,
       tutor_is_test: Boolean(tut?.isTest), // december-sprint · A (D11): the class page adds robots noindex
+      unlisted: c.unlisted, // december-sprint · E (D18): bookable by link, robots noindex, listed nowhere
       // phase-a/integrate (A9 × A18.7): the chosen levels (codes) and the class's own
       // level; the page translates them. Never the legacy tutors.level ('Bac' default).
       tutor_levels: sortLevels(tut?.levels),
@@ -469,6 +473,41 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true, notified: live.length, revalidate: { tutors: [c.slug] } };
   });
 
+  /* ── POST /classes/:id/unlisted — the TUTOR lists or unlists a class ─────────
+
+     december-sprint · E (D18). The switch on « Mes classes ». Nobody who booked is
+     touched: an unlisted class stays bookable by its link, and every seat already
+     held stays. Owner only ("not-found" otherwise, as for cancel and reschedule).
+     A cancelled or finished class is offered nowhere any more, so it is frozen. */
+  app.post<{ Params: { id: string } }>("/classes/:id/unlisted", async (req, reply) => {
+    const parsed = classUnlistedBodySchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "bad-request" });
+
+    const session = await getSession(req);
+    if (!session) return { ok: false, error: "not-authenticated" };
+    if (!isUuid(req.params.id)) return { ok: false, error: "not-found" };
+
+    const [c] = await db
+      .select({
+        id: classes.id,
+        status: classes.status,
+        unlisted: classes.unlisted,
+        tutorProfileId: tutors.profileId,
+        slug: tutors.slug,
+      })
+      .from(classes)
+      .innerJoin(tutors, eq(classes.tutorId, tutors.id))
+      .where(eq(classes.id, req.params.id))
+      .limit(1);
+    if (!c || c.tutorProfileId !== session.profile.id) return { ok: false, error: "not-found" };
+    if (c.status === "cancelled" || c.status === "done") return { ok: false, error: "unavailable" };
+    if (c.unlisted === parsed.data.unlisted) return { ok: true, already: true, unlisted: c.unlisted };
+
+    await db.update(classes).set({ unlisted: parsed.data.unlisted }).where(eq(classes.id, c.id));
+    // The storefront list and /explore's aggregates both move: drop both caches.
+    return { ok: true, unlisted: parsed.data.unlisted, revalidate: { tutors: [c.slug], publicTutors: true } };
+  });
+
   /* ── GET /dashboard (the signed-in tutor's own view) ─────────────────────── */
   app.get("/dashboard", async (req): Promise<DashboardResult> => {
     const session = await getSession(req);
@@ -536,6 +575,7 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
         // phase-a lane L5 (A18.10): real end time + where the class stands (À venir · En direct · Terminée · Annulée).
         duration_min: c.durationMin ?? 90,
         phase: classPhase({ starts_at: d.toISOString(), duration_min: c.durationMin, status }),
+        unlisted: c.unlisted, // december-sprint · E (D18): the « Non listé » tag and switch on « Mes classes »
       };
     });
 

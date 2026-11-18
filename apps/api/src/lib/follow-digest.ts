@@ -7,7 +7,7 @@ import { isAdult, minorsAllowed, publicDisplayName, publicTutorName } from "@tna
 import { digestLine, type DigestItem } from "@tnajem/shared/notification-messages";
 import { sendMail, type MailExtras } from "@tnajem/shared/mail";
 import { listUnsubscribeHeaders, siteUrl, unsubscribeUrl } from "@tnajem/shared/unsubscribe";
-import { onSaleClassSql } from "./class-sale";
+import { listedOnSaleClassSql } from "./class-listed"; // december-sprint · E (D18)
 import type { db as appDb } from "../db";
 
 /* THE FOLLOWERS DIGEST — Espace prof v2 · Phase 4.
@@ -107,7 +107,7 @@ export async function runFollowDigest(db: Db, opts: DigestOptions = {}): Promise
       gt(classes.createdAt, tutorFollows.notifiedThrough),
       lte(classes.createdAt, runStartSql),
     ))
-    .where(and(publicTutor, onSaleClassSql))
+    .where(and(publicTutor, listedOnSaleClassSql)) // december-sprint · E (D18): an unlisted class is never announced to followers
     .limit(5000);
   const newPacks = await db
     .select({

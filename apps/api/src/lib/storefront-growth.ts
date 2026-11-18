@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, isNull, classes, tutorOffers } from "@tnajem/db";
 import { priceWithPromotion, type PublicOffer, type PublicPromotion } from "@tnajem/shared";
 import { db } from "../db";
-import { onSaleClassSql } from "./class-sale";
+import { listedOnSaleClassSql } from "./class-listed"; // december-sprint · E (D18)
 import { livePublicPromotions, toPublicPromotion } from "./promotions";
 
 /* What Phase 5 adds to the PUBLIC, ANONYMOUS reads (Espace prof v2 · growth).
@@ -27,8 +27,28 @@ export async function storefrontGrowthExtras(tutorId: string): Promise<{ offers:
       sessions_per_month: o.sessionsPerMonth,
       price_tnd: Number(o.priceTndPerMonth),
     })),
-    promotions: promos.map((p) => toPublicPromotion(p)),
+    promotions: (await withoutUnlistedTargets(promos)).map((p) => toPublicPromotion(p)), // december-sprint · E (D18)
   };
+}
+
+/** december-sprint · E (D18): drop the class-scoped promotions whose target class is
+    UNLISTED from a PUBLIC read — their targetId is that class's uuid, which is
+    exactly the link it is not listed under. `allowClassId` keeps the one class the
+    caller already holds the link to (GET /tutors/:slug/pricing?class=<id>, from that
+    class's own page and checkout). Booking does not read this: it prices through
+    quoteItem (lib/promotions.ts), so the discount still applies there. */
+export async function withoutUnlistedTargets<P extends { scope: string; targetId: string | null }>(
+  promos: P[],
+  allowClassId?: string | null,
+): Promise<P[]> {
+  const targets = [...new Set(promos.filter((p) => p.scope === "class" && p.targetId).map((p) => p.targetId as string))];
+  if (targets.length === 0) return promos;
+  const hidden = new Set(
+    (await db.select({ id: classes.id }).from(classes).where(and(inArray(classes.id, targets), eq(classes.unlisted, true))))
+      .map((r) => r.id)
+      .filter((id) => id !== allowClassId),
+  );
+  return hidden.size === 0 ? promos : promos.filter((p) => !(p.scope === "class" && p.targetId && hidden.has(p.targetId)));
 }
 
 /** /explore: per tutor, the cheapest bookable class AFTER the best public promotion —
@@ -42,7 +62,7 @@ export async function explorePromoPrices(tutorIds: string[]): Promise<Map<string
   const rows = await db
     .select({ id: classes.id, tutorId: classes.tutorId, price: classes.priceTnd })
     .from(classes)
-    .where(and(inArray(classes.tutorId, withPromo), onSaleClassSql)) // the same "on sale" the price_from uses
+    .where(and(inArray(classes.tutorId, withPromo), listedOnSaleClassSql)) // the same "on sale" (and listed, D18) the price_from uses
     .limit(2000);
   const now = new Date();
   const best = new Map<string, { base: number; final: number; percent: number; endsAt: string | null }>();

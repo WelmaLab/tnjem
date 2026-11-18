@@ -203,8 +203,8 @@ export function ClassDetail({ id }: { id: string }) {
   const slugForPricing = cls?.tutor_slug ?? null;
   useEffect(() => {
     if (!slugForPricing) return;
-    getTutorPricing(slugForPricing).then((r) => setPromos(r?.promotions ?? [])).catch(() => {});
-  }, [slugForPricing]);
+    getTutorPricing(slugForPricing, null, params.id).then((r) => setPromos(r?.promotions ?? [])).catch(() => {}); // december-sprint · E (D18): + the class id
+  }, [slugForPricing, params.id]);
 
   const styles = <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />;
 

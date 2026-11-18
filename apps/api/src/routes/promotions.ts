@@ -12,6 +12,7 @@ import { auditAdmin, auditAdminStrict } from "../lib/audit";
 import { checkRateLimit, ipBucket, rlSubject } from "../lib/rate-limit";
 import { isUniqueViolation } from "../lib/db-errors";
 import { livePublicPromotions, promotionByCode, toPublicPromotion } from "../lib/promotions";
+import { withoutUnlistedTargets } from "../lib/storefront-growth"; // december-sprint · E (D18)
 
 /* PROMOTIONS, 20 % MAXIMUM — Espace prof v2 · Phase 5 B.
 
@@ -155,13 +156,18 @@ export async function promotionRoutes(app: FastifyInstance): Promise<void> {
      Code lookups are rate-limited per address: a code is a small secret, and this
      must not be a way to try them all. The answer never says how many uses are
      left or what the cap is. */
-  app.get<{ Params: { slug: string }; Querystring: { code?: string } }>("/tutors/:slug/pricing", async (req): Promise<TutorPricing | null> => {
+  app.get<{ Params: { slug: string }; Querystring: { code?: string; class?: string } }>("/tutors/:slug/pricing", async (req): Promise<TutorPricing | null> => {
     const slug = vSlug(req.params.slug);
     if (!slug.ok) return null;
     const [t] = await db.select({ id: tutors.id }).from(tutors)
       .where(and(eq(tutors.slug, slug.value), eq(tutors.status, "verified"), isNull(tutors.suspendedAt))).limit(1);
     if (!t) return null;
-    const out: TutorPricing = { promotions: (await livePublicPromotions(db, [t.id])).map((p) => toPublicPromotion(p)) };
+    /* december-sprint · E (D18): a promotion on an UNLISTED class is left out (its targetId
+       is the unlisted class uuid), except for the one class the caller names with
+       ?class=<id> — its own page and checkout, which already hold the link. */
+    const allow = typeof req.query?.class === "string" && isUuid(req.query.class) ? req.query.class : null;
+    const live = await withoutUnlistedTargets(await livePublicPromotions(db, [t.id]), allow);
+    const out: TutorPricing = { promotions: live.map((p) => toPublicPromotion(p)) };
     const raw = req.query?.code;
     if (raw) {
       const budget = await checkRateLimit(`promo:code:${rlSubject(ipBucket(req.ip))}`, 30, 10 * 60_000);

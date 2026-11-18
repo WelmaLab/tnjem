@@ -298,7 +298,7 @@ export default function CheckoutInner() {
   useEffect(() => {
     if (!tutorSlug) return;
     const code = searchParams.get("promo") ?? storedPromoCode(tutorSlug);
-    getTutorPricing(tutorSlug, code).then((r) => {
+    getTutorPricing(tutorSlug, code, classId).then((r) => { // december-sprint · E (D18): + the class id
       const list = r?.promotions ?? [];
       if (code && r?.code?.state === "ok" && r.code.promotion) {
         setPromos([...list, r.code.promotion]);
@@ -306,7 +306,7 @@ export default function CheckoutInner() {
       } else setPromos(list);
     }).catch(() => {});
     getMySubscription(tutorSlug).then((r) => setSub(r.ok ? (r.subscription ?? null) : null)).catch(() => {});
-  }, [tutorSlug, searchParams]);
+  }, [tutorSlug, searchParams, classId]);
   const [err, setErr] = useState<"auth" | "full" | "unavailable" | "consent" | "adults" | "own" | "toomany" | "generic" | null>(null); // phase-a lane L2 (A24): "adults" · live-fixes-3 · A5: "own", "toomany"
 
   const handleConfirm = useCallback(async () => {

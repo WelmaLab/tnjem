@@ -1,0 +1,5 @@
+/* december-sprint · E (D18) — the « Non listé » toggle sits in the meta line as an
+   inline text button (.linklike-inline, 13px). Its TAP target is grown to at least
+   44px tall by an invisible box around it, so the row's layout does not move. */
+.mc-unlisted-toggle{position:relative}
+.mc-unlisted-toggle::after{content:"";position:absolute;inset-block:-14px;inset-inline:-6px}

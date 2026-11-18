@@ -301,6 +301,7 @@ export async function createClass(input: {
   durationMin: number; priceTnd: number; seats: number; isFreeFirst: boolean;
   meetUrl?: string; whiteboardUrl?: string; quizUrl?: string;
   level?: string | null; // phase-a lane L5 (A18.7)
+  unlisted?: boolean; // december-sprint · E (D18): link / QR only
 }): Promise<ActionResult & { limit?: number; planCode?: string }> {
   if (demoFallback) return { ok: true, demo: true };
   /* PORTED to apps/api (POST /classes). The validators, the verification gate and
@@ -686,6 +687,19 @@ export async function rescheduleClass(input: { classId: string; scheduledAt: str
   return call<ActionResult & { notified?: number }>(
     `/classes/${encodeURIComponent(input.classId)}/reschedule`,
     { scheduledAt: input.scheduledAt },
+  );
+}
+
+/* december-sprint · E (D18): list or unlist one of my classes (POST /classes/:id/unlisted).
+   Owner-only and frozen once cancelled or done — the API decides; call() replays the
+   revalidate envelope (the storefront and /explore). */
+export async function setClassUnlisted(input: { classId: string; unlisted: boolean }): Promise<
+  ActionResult & { unlisted?: boolean; already?: boolean }
+> {
+  if (demoFallback) return { ok: true, demo: true };
+  return call<ActionResult & { unlisted?: boolean; already?: boolean }>(
+    `/classes/${encodeURIComponent(input.classId)}/unlisted`,
+    { unlisted: input.unlisted },
   );
 }
 
