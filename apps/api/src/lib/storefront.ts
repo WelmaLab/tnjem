@@ -99,6 +99,7 @@ async function buildStorefront(t: typeof tutors.$inferSelect): Promise<Storefron
     /* APPROVED only. A pending photo is unreviewed — it could be anything — and
        this payload feeds an ISR-cached public page. */
     has_photo: t.avatarStatus === "approved" && Boolean(t.avatarPath),
+    is_test: t.isTest, // december-sprint · A (D11): the page adds robots noindex
   };
 
   const mapClass = (c: (typeof cls)[number]): ClassItem => {

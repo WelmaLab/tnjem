@@ -44,6 +44,7 @@ import { recomputeTutorStats } from "../lib/stats";
 const REASON_MIN = 5;
 const blockBody = z.object({ profileId: z.string(), reason: z.string(), cancelUpcoming: z.boolean().optional() });
 const unblockBody = z.object({ profileId: z.string() });
+const testBody = z.object({ profileId: z.string(), isTest: z.boolean() });
 
 /* coalesce: classes.status is nullable, and NULL NOT IN (…) is NULL — a legacy row
    with no status would silently not count as upcoming, and survive the block. */
@@ -106,7 +107,7 @@ export async function adminAccountRoutes(app: FastifyInstance): Promise<void> {
       blockedAt: p.blockedAt ? new Date(p.blockedAt).toISOString() : null,
       blockedReason: p.blockedReason,
       isAdmin: isAllowlistedAdmin(p, adminAuthIdentities(process.env, channel), channel),
-      tutor: t ? { id: t.id, slug: t.slug, status: t.status ?? "draft", suspended: Boolean(t.suspendedAt) } : null,
+      tutor: t ? { id: t.id, slug: t.slug, status: t.status ?? "draft", suspended: Boolean(t.suspendedAt), isTest: t.isTest } : null,
       upcomingClasses: classRows.length,
       upcomingBookings: bookingRows.length,
     };
@@ -189,6 +190,43 @@ export async function adminAccountRoutes(app: FastifyInstance): Promise<void> {
       cancelledBookings,
       ...(t ? { revalidate: { tutors: [t.slug], publicTutors: true } } : {}),
     };
+  });
+
+  /* ── POST /admin/accounts/test { profileId, isTest } — december-sprint · A (D11)
+
+     Marks (or unmarks) a tutor's account as a TEST account. tutors.is_test takes
+     the storefront out of every public list (publicTutorSql: Explore and its
+     search, the home card, the sitemap; the student suggestions) while its direct
+     links keep working, with robots noindex, so live tests stay possible. Nothing
+     else changes: no session ended, no booking touched, no verification decision.
+     Admin-only (requireAdmin), and every change writes an admin_actions row in the
+     same transaction — no audit row, no change. Setting the value it already has is
+     an answer (`already`), not a second audit row. */
+  app.post("/admin/accounts/test", async (req, reply) => {
+    const parsed = testBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "bad-request" });
+
+    const session = await requireAdmin(req);
+    if (!session) return { ok: false, error: "forbidden" };
+    const profileId = vUuid(parsed.data.profileId, { field: "profile" });
+    if (!profileId.ok) return { ok: false, error: "not-found" };
+    const isTest = parsed.data.isTest;
+
+    const result = await db.transaction(async (tx) => {
+      const [t] = await tx
+        .select({ id: tutors.id, slug: tutors.slug, isTest: tutors.isTest })
+        .from(tutors)
+        .where(eq(tutors.profileId, profileId.value))
+        .limit(1);
+      if (!t) return null;
+      if (t.isTest === isTest) return { slug: t.slug, already: true };
+      await tx.update(tutors).set({ isTest }).where(eq(tutors.id, t.id));
+      await auditAdmin(session.profile.id, isTest ? "account.test.mark" : "account.test.unmark", { kind: "tutor", id: t.id }, null, tx);
+      return { slug: t.slug, already: false };
+    });
+    if (!result) return { ok: false, error: "not-a-tutor" };
+    if (result.already) return { ok: true, already: true, isTest };
+    return { ok: true, isTest, revalidate: { tutors: [result.slug], publicTutors: true } };
   });
 
   /* ── POST /admin/accounts/unblock ────────────────────────────────────────── */

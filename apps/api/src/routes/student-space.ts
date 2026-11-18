@@ -63,6 +63,7 @@ async function suggestedTutors(uid: string, exclude: string[], newestIfNone: boo
       eq(tutors.status, "verified"),
       isNull(tutors.suspendedAt),
       isNull(tutors.erasedAt),
+      eq(tutors.isTest, false), // december-sprint · A (D11): a test account is never suggested
       raw`coalesce(${tutors.profileId}::text, '') <> ${uid}`,
       exclude.length ? notInArray(tutors.id, exclude) : undefined,
     ))

@@ -10,11 +10,14 @@ import { useToast } from "@/components/useToast";
 import { SiteShell } from "@/components/SiteShell";
 import { Shield } from "@/components/icons";
 import { UserText } from "@/components/UserText";
-import { findAccount, blockAccount, unblockAccount } from "@/app/actions";
+import { findAccount, blockAccount, unblockAccount, setTestAccount } from "@/app/actions";
+import { Switch } from "@/components/app/Switch"; // december-sprint · A (D11)
 import { formatInTunis, type AdminAccount } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
 
-/* /admin/accounts — find an account by email; block or unblock it.
+/* /admin/accounts — find an account by email; block or unblock it; mark a tutor's
+   account as a test account (december-sprint · A, D11: off every public list, its
+   links kept working with robots noindex — decided and audited by the API).
 
    Everything a block DOES is decided server-side (apps/api/src/routes/
    admin-accounts.ts). This page exists to make the consequences visible BEFORE the
@@ -57,6 +60,14 @@ const copy = bilingual({
     cannotSelf: "Tu ne peux pas bloquer ton propre compte.",
     cannotAdmin: "Un compte administrateur ne se bloque pas d'ici.",
     error: "Une erreur s'est produite. Réessaie.",
+    // december-sprint · A (D11)
+    testTitle: "Compte de test",
+    testBody:
+      "Un compte de test n'apparaît dans aucune liste publique : Explorer et sa recherche, l'accueil, le plan du site, les suggestions aux élèves. Sa page et ses cours restent ouverts par lien, sans être indexés par les moteurs de recherche.",
+    testStateOn: "Oui : masqué des listes publiques",
+    testStateOff: "Non : visible dans les listes publiques",
+    testOn: "Compte marqué comme compte de test.",
+    testOff: "Ce compte n'est plus un compte de test.",
   },
   ar: {
     eyebrow: "أدمين",
@@ -92,6 +103,14 @@ const copy = bilingual({
     cannotSelf: "ما تنجّمش تحظر حسابك إنت.",
     cannotAdmin: "حساب الأدمين ما يتحظرش من هوني.",
     error: "صار مشكل. عاود.",
+    // december-sprint · A (D11)
+    testTitle: "حساب تجريبي",
+    testBody:
+      "الحساب التجريبي ما يبانش في حتى ليستة عمومية : اكتشف والبحث متاعو، الصفحة الرئيسية، خريطة الموقع، والاقتراحات للتلامذة. صفحتو وحصصو يتحلّو باللينك، أما ما يبانوش في محركات البحث.",
+    testStateOn: "إيه : مخبّي من الليستات العمومية",
+    testStateOff: "لا : يبان في الليستات العمومية",
+    testOn: "الحساب ولّى حساب تجريبي.",
+    testOff: "الحساب هذا ما عادش حساب تجريبي.",
   },
 });
 
@@ -196,6 +215,26 @@ export default function AdminAccountsPage() {
     }
   }
 
+  /* december-sprint · A (D11): the API decides (requireAdmin) and writes the audit
+     row; the card is re-read so the switch shows the stored state, never a guess. */
+  async function onTestChange(next: boolean) {
+    if (!account || busy) return;
+    setBusy(true);
+    try {
+      const res = await setTestAccount({ profileId: account.id, isTest: next });
+      if (res.ok) {
+        showToast(next ? c.testOn : c.testOff);
+        await load(account.email ?? email);
+      } else {
+        showToast(c.error);
+      }
+    } catch {
+      showToast(c.error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const pendingCount = account ? account.upcomingClasses + account.upcomingBookings : 0;
 
   return (
@@ -274,6 +313,26 @@ export default function AdminAccountsPage() {
                     </div>
                     <div className="muted">{c.upcoming(account.upcomingClasses, account.upcomingBookings)}</div>
                   </dl>
+
+                  {account.tutor && (
+                    <div className="st-row" data-e2e="account-test" data-test={account.tutor.isTest ? "true" : "false"}>
+                      <div className="min-w-0 flex-1">
+                        <div className="st-row-t">{c.testTitle}</div>
+                        <p id="account-test-help" className="st-row-b">{c.testBody}</p>
+                        <p className="text-[13.5px] font-bold mt-1.5" role="status" data-e2e="account-test-state">
+                          {account.tutor.isTest ? c.testStateOn : c.testStateOff}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={account.tutor.isTest}
+                        onChange={(next) => void onTestChange(next)}
+                        label={c.testTitle}
+                        describedBy="account-test-help"
+                        disabled={busy}
+                        e2e="account-test-switch"
+                      />
+                    </div>
+                  )}
 
                   {account.tutor && <TutorPromotions key={account.tutor.id} tutorId={account.tutor.id} />}
                   {/* espace prof v2 · pro (P7): offers + subscriptions, read-only, audited like the promotions above. */}

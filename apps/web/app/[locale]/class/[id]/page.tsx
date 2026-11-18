@@ -64,6 +64,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return {
     title,
     description,
+    // december-sprint · A (D11): a test account's class — reachable by link, never indexed.
+    ...(cls.tutor_is_test ? { robots: { index: false, follow: false } } : {}),
     alternates: { canonical, languages: { "fr-TN": `/fr${subpath}`, "ar-TN": `/ar${subpath}`, "x-default": `/fr${subpath}` } },
     openGraph: {
       type: "website",

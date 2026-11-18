@@ -23,7 +23,7 @@ import { onSaleClassSql } from "./class-sale";
 
    ── WHO IS SHOWN ──────────────────────────────────────────────────────────────
    publicTutorSql — the very predicate GET /tutors/explore filters on (verified,
-   not suspended). One constant, so the two lists cannot drift apart. An erased
+   not suspended, not a test account). One constant, so the two lists cannot drift apart. An erased
    tutor is suspended by the erasure (0022), so it is out too.
 
    ── IN WHAT ORDER ─────────────────────────────────────────────────────────────
@@ -52,8 +52,13 @@ import { onSaleClassSql } from "./class-sale";
    HOME_RATING_MIN_REVIEWS on — below that neither the count nor the average leaves
    this function. */
 
-/** Verified and not suspended: who is PUBLIC. Shared with GET /tutors/explore. */
-export const publicTutorSql = and(eq(tutors.status, "verified"), isNull(tutors.suspendedAt));
+/** Verified, not suspended, not a test account: who is LISTED. Shared with GET
+    /tutors/explore (and its search), GET /tutors/public-refs (the sitemap) and this
+    card. december-sprint · A (D11): a test account (tutors.is_test, 0043, set from
+    /admin/accounts) is absent from every list, while its storefront and class
+    pages stay reachable by direct link — with robots noindex — so live tests on
+    production stay possible. */
+export const publicTutorSql = and(eq(tutors.status, "verified"), isNull(tutors.suspendedAt), eq(tutors.isTest, false));
 
 /** The approved photo, through the web's pass-through (app/api/avatar/[slug]/[size]).
     md is 160px: sharp at the card's 44px on any screen. */

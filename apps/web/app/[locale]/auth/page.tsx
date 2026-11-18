@@ -43,7 +43,10 @@ const meta = bilingual({
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const params = await props.params;
   const locale = isLocale(params.locale) ? params.locale : DEFAULT_LOCALE;
-  return pageMetadata({ locale, path: "/auth", ...meta[locale] });
+  /* december-sprint · A (D17, gate amendment 3): noindex, FOLLOW — kept crawlable
+     (robots.ts does not block it), so a crawler can read this tag and still follow
+     the links out to the pages we do want ranked. */
+  return { ...pageMetadata({ locale, path: "/auth", ...meta[locale] }), robots: { index: false, follow: true } };
 }
 
 export default async function AuthPage(props: { searchParams: Promise<{ next?: string | string[]; existing?: string | string[] }> }) {

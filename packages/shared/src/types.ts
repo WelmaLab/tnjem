@@ -32,6 +32,10 @@ export type Tutor = {
      tutor has published no class at all — which is exactly how a claim ended up
      on every storefront in the catalogue. */
   offers_free_first_session: boolean;
+  /** december-sprint · A (D11): a test account (tutors.is_test). Its storefront stays
+      reachable by link but carries robots noindex; it is absent from every list.
+      Optional: only the API's storefront read sets it. */
+  is_test?: boolean;
 };
 
 export type ClassItem = {
@@ -66,6 +70,9 @@ export type ClassItem = {
   // send a student to the wrong storefront. Optional: only GET /classes/:id sets them.
   tutor_slug?: string | null;
   tutor_subject?: string | null;
+  /** december-sprint · A (D11): the class belongs to a test account — the page is
+      reachable by link and carries robots noindex. Only GET /classes/:id sets it. */
+  tutor_is_test?: boolean;
   /** phase-a/integrate (A9 × A18.7): the levels the tutor CHOSE, as codes — never the
       legacy tutors.level column, which still holds the old 'Bac' default. */
   tutor_levels?: LevelCode[];
@@ -583,7 +590,8 @@ export type AdminAccount = {
   /** On the ADMIN_EMAILS allowlist — cannot be blocked from this page. */
   isAdmin: boolean;
   /** id: the tutors row — the admin read-only promotions view (growth, phase 5) asks by it. */
-  tutor: { id: string; slug: string; status: string; suspended: boolean } | null;
+  /** isTest (december-sprint · A, D11): tutors.is_test — off every public list, noindex by link. */
+  tutor: { id: string; slug: string; status: string; suspended: boolean; isTest: boolean } | null;
   /** Scheduled, not yet started. A block refuses while either is > 0 unless asked to cancel them. */
   upcomingClasses: number;
   upcomingBookings: number;

@@ -142,7 +142,7 @@ export default async function LocaleLayout({
               alternateName: "تنجّم",
               url: SITE_URL,
               logo: `${SITE_URL}/apple-touch-icon.png`,
-              description: DESCRIPTION,
+              description: locale === "ar" ? DESCRIPTION_AR : DESCRIPTION, // december-sprint · A (D17): Arabic pages, Arabic description
               areaServed: { "@type": "Country", name: "Tunisia" },
               knowsLanguage: ["fr", "ar"],
             },

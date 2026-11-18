@@ -152,6 +152,10 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return {
     title,
     description,
+    /* december-sprint · A (D11): a test account's page stays reachable by link (live
+       tests on production) but is kept out of the index. It is in no list either:
+       publicTutorSql in the API leaves it out of Explore, the home card and the sitemap. */
+    ...(tutor.is_test ? { robots: { index: false, follow: false } } : {}),
     keywords: [
       shownName,
       subject,

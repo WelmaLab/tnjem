@@ -887,3 +887,13 @@ export async function unblockAccount(input: { profileId: string }): Promise<{ ok
   if (demoFallback) return { ok: false, error: "forbidden" };
   return call("/admin/accounts/unblock", input);
 }
+
+/* december-sprint · A (D11): mark / unmark a tutor's account as a test account.
+   Admin-only and audited by the API (requireAdmin); call() replays the revalidate
+   envelope, so the storefront and the public lists drop it at once. */
+export async function setTestAccount(input: { profileId: string; isTest: boolean }): Promise<{
+  ok: boolean; error?: string; already?: boolean; isTest?: boolean;
+}> {
+  if (demoFallback) return { ok: false, error: "forbidden" };
+  return call("/admin/accounts/test", input);
+}

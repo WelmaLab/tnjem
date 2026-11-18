@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import { SiteShell } from "@/components/SiteShell";
 import { bilingual } from "@/lib/i18n";
 import { isLocale, DEFAULT_LOCALE } from "@/lib/locale";
@@ -9,6 +10,10 @@ import { minorsAllowed } from "@tnajem/shared";
    ship the Suspense fallback instead of the form.
    A "use client" page cannot export `dynamic`, so the segment config lives here. */
 export const dynamic = "force-dynamic";
+
+/* december-sprint · A (D17, gate amendment 3): noindex, FOLLOW. It used to inherit
+   index from [locale]/layout.tsx; robots.ts keeps it crawlable so the tag is read. */
+export const metadata: Metadata = { robots: { index: false, follow: true } };
 
 /* phase-a lane L5 (A18.1): the guardian-consent form is KEPT BEHIND ALLOW_MINORS.
    D6 — adult-only pilot. Minors come back only after Phase D (parent sign-up,

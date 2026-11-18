@@ -16,7 +16,7 @@
    rather than a restart. */
 import type { Metadata } from "next";
 import { SignupInner } from "@/components/auth/SignupInner";
-import { safeNext } from "@tnajem/shared";
+import { safeNext, COMMISSION_PCT } from "@tnajem/shared";
 import { otpChannel } from "@/lib/auth";
 import { bilingual } from "@/lib/i18n";
 import { isLocale, DEFAULT_LOCALE } from "@/lib/locale";
@@ -27,22 +27,28 @@ import { pageMetadata } from "@/lib/metadata";
    dynamic only by accident (app/[locale]/not-found.tsx called headers()). */
 export const dynamic = "force-dynamic";
 
+/* december-sprint · A (D17): the pricing clause is the approved short line of
+   DECEMBER_SPRINT.md (gate amendment 6: « 10 % sur chaque élève payant »). It
+   replaces the old « free during the pilot » clause, which described what a tutor pays. */
 const meta = bilingual({
   fr: {
     title: "Créer ma page de prof",
     description:
-      "Crée ta page de prof sur Tnajem : ton lien à partager, tes cours en direct, ton tarif. Gratuit pendant le pilote.",
+      `Crée ta page de prof sur Tnajem : ton lien à partager, tes cours en direct, ton tarif. 3 mois sans abonnement. ${COMMISSION_PCT} % sur chaque élève payant, dès que le paiement passe par Tnajem.`,
   },
   ar: {
     title: "اعمل صفحتك متاع أستاذ",
-    description: "اعمل صفحتك متاع أستاذ في Tnajem : لينك تشاركو، دروسك مباشرة، وتعريفتك. فابور في فترة التجربة.",
+    description: `اعمل صفحتك متاع أستاذ في Tnajem : لينك تشاركو، دروسك مباشرة، وتعريفتك. 3 شهور بلا اشتراك. ${COMMISSION_PCT} % على كل تلميذ خالص، كي الخلاص يعدّي من Tnajem.`,
   },
 });
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const params = await props.params;
   const locale = isLocale(params.locale) ? params.locale : DEFAULT_LOCALE;
-  return pageMetadata({ locale, path: "/signup/prof", ...meta[locale] });
+  /* december-sprint · A (D17, gate amendment 3): noindex, FOLLOW — kept crawlable
+     (robots.ts does not block it), so a crawler can read this tag and still follow
+     the links out to the pages we do want ranked. */
+  return { ...pageMetadata({ locale, path: "/signup/prof", ...meta[locale] }), robots: { index: false, follow: true } };
 }
 
 export default async function SignupTutorPage(props: { searchParams: Promise<{ next?: string | string[] }> }) {

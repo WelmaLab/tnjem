@@ -16,6 +16,7 @@ import { mintSession, sessionCookie } from "./support/session";
    ADDED, never edited into an existing spec. */
 
 const PUBLIC = ["", "/auth", "/signup/prof", "/signup/eleve", "/pour-les-profs", "/terms", "/privacy", "/explore", "/tarifs"];
+const NOINDEX_FOLLOW = new Set(["/auth", "/signup/prof", "/signup/eleve"]); // december-sprint · A (D17)
 
 function head(html: string) {
   const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? "";
@@ -50,7 +51,10 @@ for (const locale of ["fr", "ar"] as const) {
       const card = path === "/pour-les-profs" ? `/${locale}/pour-les-profs/opengraph-image` : "/og.png";
       expect(h.ogImage, `${url} og:image — a child openGraph must not drop the image`).toContain(card);
       expect(h.twitterTitle, `${url} twitter:title must describe this page, not the home page`).toBe(h.ogTitle);
-      expect(h.robots, `${url} is public`).not.toContain("noindex");
+      /* december-sprint · A (D17, gate amendment 3): auth and signup keep their share
+         card but are `noindex, follow` — crawlable, never ranked. */
+      if (NOINDEX_FOLLOW.has(path)) expect(h.robots, `${url} is noindex, follow`).toBe("noindex, follow");
+      else expect(h.robots, `${url} is public`).not.toContain("noindex");
     }
   });
 }

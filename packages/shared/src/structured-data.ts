@@ -24,6 +24,13 @@ import { classEndMs } from "./live";
 export type JsonLdObject = Record<string, unknown>;
 type Loc = "fr" | "ar";
 
+/* december-sprint · A (D17): the Service's serviceType speaks the page's language. FR
+   unchanged; AR in the darija the site already uses (« دروس خصوصية », « دايركت »). */
+const SERVICE_TYPE: Record<Loc, string> = {
+  fr: "Cours particuliers en direct",
+  ar: "دروس خصوصية دايركت",
+};
+
 const CRUMBS: Record<Loc, { home: string; explore: string }> = {
   fr: { home: "Accueil", explore: "Explorer" },
   ar: { home: "الرئيسية", explore: "اكتشف" },
@@ -105,7 +112,7 @@ export function profileJsonLd(input: ProfileJsonLdInput): JsonLdObject[] {
     {
       "@context": "https://schema.org",
       "@type": "Service",
-      serviceType: "Cours particuliers en direct",
+      serviceType: SERVICE_TYPE[input.locale],
       provider: { "@type": "Person", name: input.name, url },
       areaServed: { "@type": "Country", name: "Tunisia" },
       availableLanguage: ["fr", "ar"],

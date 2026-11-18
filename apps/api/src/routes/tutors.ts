@@ -276,7 +276,10 @@ export async function tutorRoutes(app: FastifyInstance): Promise<void> {
     const rows = await db
       .select({ slug: tutors.slug, createdAt: tutors.createdAt })
       .from(tutors)
-      .where(and(eq(tutors.status, "verified"), isNull(tutors.suspendedAt))); // A blocked account's storefront is suspended (0019): off every public read.
+      /* december-sprint · A (D11): publicTutorSql, the one predicate of every public
+         list — verified, not suspended (0019: a blocked account is off every public
+         read), not a test account. It used to repeat the first two inline. */
+      .where(publicTutorSql);
     return rows.map((r) => ({
       slug: r.slug,
       lastModified: r.createdAt ? new Date(r.createdAt) : new Date(),

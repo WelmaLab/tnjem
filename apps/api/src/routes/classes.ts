@@ -328,6 +328,7 @@ export async function classRoutes(app: FastifyInstance): Promise<void> {
       // unverified tutor's page would 404 for the booked student who can still see this.
       tutor_slug: tut && tut.status === "verified" && !tut.suspendedAt && !tut.erasedAt ? tut.slug : null,
       tutor_subject: tut?.subject ?? null,
+      tutor_is_test: Boolean(tut?.isTest), // december-sprint · A (D11): the class page adds robots noindex
       // phase-a/integrate (A9 × A18.7): the chosen levels (codes) and the class's own
       // level; the page translates them. Never the legacy tutors.level ('Bac' default).
       tutor_levels: sortLevels(tut?.levels),
