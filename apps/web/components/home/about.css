@@ -1,0 +1,21 @@
+/* ── december-sprint · D — « Qui sommes-nous ? » (prefix ha-) ───────────────────
+   The home page's last block before the footer. Same card language as « Tu es
+   prof ? » just above it (sections.css .hs-prof): a quiet paper card, one hairline.
+   Logical properties only, token colours only. */
+.ha-card{display:grid;grid-template-columns:1fr;gap:16px 32px;
+  padding-block:clamp(18px,2.6vw,28px);padding-inline:clamp(18px,3vw,32px);
+  border:1px solid var(--line);border-radius:var(--r-l);background:var(--paper)}
+@media (min-width:860px){.ha-card{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);align-items:start}}
+.ha-main,.ha-side{min-width:0}
+.ha-title{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--ink)}
+html[dir="rtl"] .ha-title{font-family:var(--fa)}
+.ha-body{margin-block-start:6px;max-width:62ch;font-size:14px;line-height:1.6;color:var(--ink2)}
+.ha-age{margin-block-start:8px;max-width:62ch;font-size:14px;line-height:1.6;font-weight:600;color:var(--ink)}
+.ha-contact{font-size:14px;line-height:1.6;color:var(--ink2)}
+/* min-height:44px: a tap target, as the footer's mailto. */
+.ha-mail{display:inline-flex;align-items:center;min-height:44px;font-weight:700;color:var(--blue700);
+  word-break:break-word}
+.ha-mail:hover{color:var(--blue)}
+.ha-id{list-style:none;margin:0;padding:0;margin-block-start:4px;display:flex;flex-direction:column;gap:2px;
+  font-size:13px;line-height:1.6;color:var(--muted)}
+.ha-id-k{font-weight:700;color:var(--ink2)}

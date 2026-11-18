@@ -6,6 +6,7 @@ import { SOCIAL_LINKS, type SocialNetwork } from "@/lib/social";
 import { CONTACT_EMAIL, SUPPORT_HOURS, SUPPORT_WHATSAPP_MESSAGE, supportWhatsAppHref } from "@tnajem/shared";
 import { useLocale } from "./LocaleProvider";
 import { useRoleHint } from "./role-hint";
+import { COMPANY_IDENTITY, companyIdentityLine } from "@/lib/company-identity";
 
 /* Site footer — brand, then the same two-audience split as the header
    (students/parents · tutors), then legal. A visitor who scrolled to the bottom
@@ -120,6 +121,9 @@ export function SiteFooter() {
   const f = F[locale];
   const role = useRoleHint();
   const whatsapp = supportWhatsAppHref(WHATSAPP_RAW, SUPPORT_WHATSAPP_MESSAGE[locale]);
+  /* december-sprint · D (D15): the company's identity from legal.ts, filled values
+     only (lib/company-identity.ts). Every value is empty today → null → no element. */
+  const identity = companyIdentityLine(COMPANY_IDENTITY, locale);
 
   return (
     <footer className="site-footer">
@@ -187,6 +191,9 @@ export function SiteFooter() {
             <a href={`mailto:${CONTACT_EMAIL}`} dir="ltr" className="qf-mail" data-e2e="footer-email">{CONTACT_EMAIL}</a>
             <span className="qf-hours" data-e2e="footer-hours">{SUPPORT_HOURS[locale]}</span>
           </div>
+          {identity && (
+            <p className="basis-full text-[13px] leading-[1.6] text-muted" data-e2e="footer-identity">{identity}</p>
+          )}
         </div>
       </div>
     </footer>

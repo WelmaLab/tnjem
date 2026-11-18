@@ -52,6 +52,7 @@ import { isValidEmail } from "@tnajem/shared";
 import { isAdult } from "@tnajem/shared"; // phase-a lane L2 (A24): the API's own rule
 import type { OtpChannel } from "@/lib/auth";
 import { PRICING } from "@/lib/pricing-copy"; // december sprint · C (D23)
+import { PILOT_AGE } from "@/lib/pilot-age-copy"; // december-sprint · D (D16)
 
 export type SignupRole = "tutor" | "student";
 
@@ -155,7 +156,8 @@ const COPY = {
     bdYearPh: "Année",
     bdMonths: ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
     // LEGAL-REVIEW: why the date is asked (adult-only pilot, D6).
-    bdAdultsNote: "Le pilote est réservé aux 18 ans et plus.",
+    // december-sprint · D (D16): the home page's own sentence (lib/pilot-age-copy.ts).
+    bdAdultsNote: PILOT_AGE.fr.open,
     errNeedBirthDate: "Choisis le mois et l'année de naissance.",
     errAdultsOnly: "Le pilote est réservé aux 18 ans et plus. Merci de ton intérêt pour Tnajem !",
     // A14 — a tutor must be 18+, whatever ALLOW_MINORS says
@@ -262,7 +264,7 @@ const COPY = {
     bdYearPh: "العام",
     bdMonths: ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"],
     // LEGAL-REVIEW: why the date is asked (adult-only pilot, D6).
-    bdAdultsNote: "فترة التجربة كان للي عندهم 18 سنة ولا أكثر.",
+    bdAdultsNote: PILOT_AGE.ar.open, // december-sprint · D (D16)
     errNeedBirthDate: "اختار الشهر والعام متاع الولادة.",
     errAdultsOnly: "فترة التجربة كان للي عندهم 18 سنة ولا أكثر. يعيشك على اهتمامك بـ Tnajem !",
     // A14 — a tutor must be 18+, whatever ALLOW_MINORS says
@@ -316,6 +318,18 @@ export function SignupInner({
   const [identifier, setIdentifier] = useState("");
   const [birthYear, setBirthYear] = useState("");
   const [birthMonth, setBirthMonth] = useState(""); // phase-a lane L2 (A24)
+  /* december-sprint · D (D16) — A STUDENT UNDER 18, while the pilot is adults-only.
+     As soon as the chosen month + year make them a minor (the same isAdult() the API
+     runs — the rule is unchanged), the form shows « Pour l'instant, Tnajem est
+     réservé aux 18 ans et plus. » with a link home, and SENDS NOTHING: Continuer
+     and « J'ai déjà un code » are disabled and every path that talks to the server
+     (send, verifyWith) returns first. `minorRefused` is the same state when the
+     API answers « adults-only » (it checks after proving the code). Changing the
+     birth date clears it. */
+  const [minorRefused, setMinorRefused] = useState(false);
+  const minorPicked =
+    isStudent && adultsOnly && !!birthYear && !!birthMonth && !isAdult(Number(birthYear), Number(birthMonth));
+  const minorBlocked = minorPicked || minorRefused;
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -379,7 +393,8 @@ export function SignupInner({
     if (!asksBirthDate) return true;
     if (!birthYear || !birthMonth) { invalid("birth", c.errNeedBirthDate); return false; }
     if (adultsOnly && !isAdult(Number(birthYear), Number(birthMonth))) {
-      invalid("birth", isStudent ? c.errAdultsOnly : c.errTutorMinor);
+      // A student: the minor message is already on screen (minorBlocked), nothing more to say.
+      if (!isStudent) invalid("birth", c.errTutorMinor);
       return false;
     }
     return true;
@@ -433,7 +448,7 @@ export function SignupInner({
      what happens after a page reload, when the client has no timer but the server
      still has the cooldown). */
   async function send(resend: boolean) {
-    if (loading) return;
+    if (loading || minorBlocked) return; // december-sprint · D (D16): nothing leaves a minor's form
     const id = identifierOk();
     if (!id) return;
     if (!birthDateOk()) return; // phase-a lane L2 (A24)
@@ -542,6 +557,7 @@ export function SignupInner({
      instead of the boxes to type it into. The date is not skipped: verifyWith
      checks it before the code is spent (A24) and brings them back to the field. */
   function handleHaveCode() {
+    if (minorBlocked) return; // december-sprint · D (D16)
     setError(null); setFieldError(null); setNotice(null);
     const id = identifierOk();
     if (!id) return;
@@ -561,7 +577,7 @@ export function SignupInner({
   const handleVerify = () => verifyWith(code);
 
   async function verifyWith(submitted: string) {
-    if (loading) return;
+    if (loading || minorBlocked) return; // december-sprint · D (D16)
     if (!submitted.trim()) { invalid("code", c.codeHelp); return; }
     if (!birthDateOk()) return; // phase-a lane L2 (A24): the "J'ai déjà un code" path too
     setLoading(true);
@@ -600,7 +616,13 @@ export function SignupInner({
          own. The API checks the date AFTER proving the code, and proving it deleted
          it — so this code is spent: back to the birth field WITHOUT it, and the
          next Continuer mints a fresh one (a consumed code holds no cooldown). */
-      if (res.error === "adults-only") { forgetCode(); invalid("birth", c.errAdultsOnly, false); return; }
+      if (res.error === "adults-only") {
+        forgetCode();
+        // december-sprint · D (D16): a student sees the minor message; back to step 1, nothing more is sent.
+        if (isStudent) { setMinorRefused(true); setError(null); setFieldError(null); setNotice(null); focusOnStep1.current = "birth"; setCodeSent(false); return; }
+        invalid("birth", c.errAdultsOnly, false);
+        return;
+      }
       if (res.error === "birth-date-required") { forgetCode(); invalid("birth", c.errNeedBirthDate, false); return; }
       if (res.error === "minor-cannot-teach") { forgetCode(); invalid("birth", c.errTutorMinor, false); return; } // A14
       setError(t.extra.error);
@@ -675,7 +697,10 @@ export function SignupInner({
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 81 }, (_, i) => currentYear - 5 - i)
     // phase-a lane L2 (A24): an adults-only form does not offer years that cannot be 18.
-    .filter((y) => !adultsOnly || y <= currentYear - 18);
+    /* december-sprint · D (D16): except to a STUDENT — a 16-year-old must be able to
+       give their real year and read why the pilot is not open to them yet, instead
+       of hunting for a year that is not in the list. Nothing is sent either way. */
+    .filter((y) => !adultsOnly || isStudent || y <= currentYear - 18);
 
   /* The brand panel — the same on every screen of this page, including roleMismatch. */
   const panel = isStudent
@@ -849,6 +874,7 @@ export function SignupInner({
                       value={birthMonth}
                       onChange={(v) => {
                         setBirthMonth(v);
+                        setMinorRefused(false); // december-sprint · D (D16)
                         if (fieldError?.field === "birth") setFieldError(null);
                       }}
                       options={c.bdMonths.map((m, i) => ({ value: String(i + 1), label: m }))}
@@ -865,6 +891,7 @@ export function SignupInner({
                       value={birthYear}
                       onChange={(v) => {
                         setBirthYear(v);
+                        setMinorRefused(false); // december-sprint · D (D16)
                         if (fieldError?.field === "birth") setFieldError(null);
                       }}
                       options={years.map((y) => ({ value: String(y), label: String(y) }))}
@@ -879,10 +906,25 @@ export function SignupInner({
               </SelectField>
             )}
 
+            {/* december-sprint · D (D16): a student under 18. role="status": information,
+                announced, not a red error — they did nothing wrong. The live region is
+                ALWAYS mounted (empty until needed): a region inserted together with its
+                text is not reliably announced by screen readers. */}
+            <div role="status" data-e2e="signup-minor-live">
+              {minorBlocked && (
+                <div className="rounded-xl border border-line bg-paper px-4 py-3 mb-3 text-start" data-e2e="signup-minor">
+                  <p className="text-[14px] font-semibold leading-[1.5] text-ink">{PILOT_AGE[locale].minor}</p>
+                  <Link href="/" className="auth-link auth-tap text-[14px]" data-e2e="signup-minor-home">
+                    {PILOT_AGE[locale].home}
+                  </Link>
+                </div>
+              )}
+            </div>
+
             {errorLine}
             {noticeLine}
 
-            <Button type="submit" variant="primary" disabled={loading}>
+            <Button type="submit" variant="primary" disabled={loading || minorBlocked}>
               {loading ? t.common.loading : c.cta}
             </Button>
 
@@ -901,7 +943,7 @@ export function SignupInner({
             </p>
 
             <div className="text-center mt-1">
-              <button type="button" data-e2e="have-code" onClick={handleHaveCode} className="auth-link auth-tap text-[14px]">
+              <button type="button" data-e2e="have-code" onClick={handleHaveCode} disabled={minorBlocked} className="auth-link auth-tap text-[14px]">
                 {c.haveCode}
               </button>
             </div>
