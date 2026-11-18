@@ -5,8 +5,8 @@
    MESSAGES are the machine error codes the API returns.
 
    `website` is the honeypot: a hidden field a person never fills. The API accepts
-   it in the shape (so a bot gets the same 200 as a person, up to 10 000 characters) and drops the lead
-   when it is non-empty. */
+   it in the shape, whatever its type (so a bot gets the same 200 as a person), and drops
+   the lead when it is non-empty. */
 import { z } from "zod";
 import { CENTRE_LEAD_LIMITS as L } from "./centres";
 import { LEVEL_CODES } from "./levels";
@@ -26,6 +26,9 @@ export const centreLeadInputSchema = z.object({
   phone: z
     .string()
     .trim()
+    /* december-sprint · B (QA): a total-length cap BEFORE the regex, so a long run of
+       spaces cannot pass the digit count. */
+    .max(L.phoneMax + 8, "invalid-phone")
     .regex(/^\+?[0-9 ]+$/, "invalid-phone")
     .refine((v) => {
       const d = v.replace(/\D/g, "").length;
@@ -43,8 +46,9 @@ export const centreLeadInputSchema = z.object({
   utmMedium: optText(L.utm),
   utmCampaign: optText(L.utm),
   referrer: optText(L.referrer),
-  /** Honeypot. */
-  website: z.string().max(10_000).optional(),
+  /** Honeypot. ANY value is accepted by the shape (a non-string is not a field error);
+      the route treats any non-empty value as a bot: the same 200, nothing stored. */
+  website: z.unknown().optional(),
 });
 
 export type CentreLeadInput = z.infer<typeof centreLeadInputSchema>;

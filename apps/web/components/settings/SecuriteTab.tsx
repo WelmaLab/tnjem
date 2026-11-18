@@ -4,6 +4,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { DeleteAccount } from "@/components/account/DeleteAccount";
 import { SecurityPanel } from "@/components/settings/SecurityPanel";
 import { bilingual } from "@/lib/i18n";
+import { CONTACT_EMAIL } from "@tnajem/shared"; // december-sprint · B (D14): the one contact address
 
 /* Réglages › Sécurité — password and sessions (auth's SecurityPanel, contract C8:
    it carries « Se déconnecter » and « Déconnecter partout », so no other logout
@@ -11,7 +12,6 @@ import { bilingual } from "@/lib/i18n";
    links folded behind « Ce qui est effacé ▸ » (image 4). The legal links lived in
    the marketing footer, which the prof space does not have (rule 2). */
 
-const CONTACT_EMAIL = "contact@tnajem.com";
 
 const copy = bilingual({
   fr: { legal: "Textes légaux" },

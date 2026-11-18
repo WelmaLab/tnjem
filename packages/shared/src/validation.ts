@@ -126,6 +126,8 @@ export const RESERVED_SLUGS: readonly string[] = [
   "email",
   /* espace prof v2 · pro (P7): the help page, /aide. */
   "aide",
+  /* december-sprint · B (D12): the centre landing page, /pour-les-centres. */
+  "pour-les-centres",
   /* Brand names, not routes. "tnajem" would let a tutor impersonate the
      platform at tnajem.com/tnajem; "9arini" is the name we renamed away from and
      is reserved so nobody squats it. */

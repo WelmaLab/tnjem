@@ -3,6 +3,7 @@ import "./SiteFooter.css";
 import { Link } from "@/components/Link";
 import { Logo } from "@/components/Logo";
 import { SOCIAL_LINKS, type SocialNetwork } from "@/lib/social";
+import { CONTACT_EMAIL, SUPPORT_HOURS, SUPPORT_WHATSAPP_MESSAGE, supportWhatsAppHref } from "@tnajem/shared";
 import { useLocale } from "./LocaleProvider";
 import { useRoleHint } from "./role-hint";
 
@@ -28,8 +29,13 @@ import { useRoleHint } from "./role-hint";
    honesty rule 5: one per account whose URL is configured (lib/social.ts), none —
    and no empty list — when nothing is. */
 
-/* The address the site already publishes (Terms, Privacy, Réglages › Sécurité). */
-const CONTACT_EMAIL = "contact@tnajem.com";
+/* december-sprint · B (D14, gate amendment 2): the contact address is CONTACT_EMAIL and
+   the WhatsApp number is NEXT_PUBLIC_SUPPORT_WHATSAPP, both through
+   @tnajem/shared/support-contact — the one source the footer, /aide, /account and
+   /pour-les-centres share. NEXT_PUBLIC_ is inlined at build time, read by its full
+   literal name. While it is empty or invalid, supportWhatsAppHref() answers null and
+   no WhatsApp element renders at all; the support hours stay, beside the e-mail. */
+const WHATSAPP_RAW = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
 
 /* HARDCODED, on purpose. A copyright notice carries the year of first publication,
    and Tnajem's is 2026 — that stays true. A computed year would not be more honest:
@@ -51,6 +57,8 @@ const F = {
     guardianArea: "Espace parent",
     signIn: "Se connecter",
     forTutors: "Pour les profs",
+    forCentres: "Pour les centres",
+    whatsapp: "WhatsApp",
     pricing: "Tarifs",
     createPage: "Créer ma page de prof",
     dashboard: "Tableau de bord",
@@ -68,6 +76,8 @@ const F = {
     guardianArea: "فضاء الولي",
     signIn: "دخول",
     forTutors: "للأساتذة",
+    forCentres: "للمراكز",
+    whatsapp: "WhatsApp",
     pricing: "الأسعار",
     createPage: "اعمل صفحتك متاع أستاذ",
     dashboard: "لوحتي",
@@ -109,6 +119,7 @@ export function SiteFooter() {
   const { t, locale } = useLocale();
   const f = F[locale];
   const role = useRoleHint();
+  const whatsapp = supportWhatsAppHref(WHATSAPP_RAW, SUPPORT_WHATSAPP_MESSAGE[locale]);
 
   return (
     <footer className="site-footer">
@@ -138,6 +149,7 @@ export function SiteFooter() {
           <h2>{f.tutors}</h2>
           <ul>
             <li><Link href="/pour-les-profs">{f.forTutors}</Link></li>
+            <li><Link href="/pour-les-centres" data-e2e="footer-centres">{f.forCentres}</Link></li>
             <li><Link href="/tarifs">{f.pricing}</Link></li>
             {role !== "tutor" && <li><Link href="/signup/prof">{f.createPage}</Link></li>}
             {(role === null || role === "tutor") && <li><Link href="/dashboard" data-e2e="footer-dashboard">{f.dashboard}</Link></li>}
@@ -169,7 +181,11 @@ export function SiteFooter() {
                 ))}
               </ul>
             )}
+            {whatsapp && (
+              <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="qf-mail" data-e2e="footer-whatsapp">{f.whatsapp}</a>
+            )}
             <a href={`mailto:${CONTACT_EMAIL}`} dir="ltr" className="qf-mail" data-e2e="footer-email">{CONTACT_EMAIL}</a>
+            <span className="qf-hours" data-e2e="footer-hours">{SUPPORT_HOURS[locale]}</span>
           </div>
         </div>
       </div>

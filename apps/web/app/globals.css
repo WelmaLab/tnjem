@@ -2101,3 +2101,10 @@ html[dir="rtl"]{--lh-hero:1.32;--fh:var(--fa)}
   --violet-ink:#6A3DB8;
 }
 /* ── end ── */
+
+/* ── december sprint ── */
+/* december-sprint · B (D13): /admin/leads uses the admin tab pill as a status toggle;
+   the chosen status reads like the current tab. No new token. */
+.adm-tab[aria-pressed="true"]{background:var(--blue50);color:var(--blue);border-color:var(--blue)}
+.adm-tab:disabled{cursor:progress;opacity:.7}
+/* ── end ── */

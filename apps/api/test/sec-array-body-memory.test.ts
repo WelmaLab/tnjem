@@ -13,6 +13,7 @@ const ROUTES: { url: string; field: string; base: Record<string, unknown> }[] = 
   { url: "/notifications/read", field: "ids", base: {} },
   { url: "/profile/student", field: "subjects", base: { fullName: "x" } },
   { url: "/tutors", field: "levels", base: {} },
+  { url: "/centre-leads", field: "levels", base: {} }, // december-sprint · B (D13)
 ];
 
 let app: App;
