@@ -1,25 +1,27 @@
 import { bilingual } from "@/lib/i18n";
 import type { AppLocale } from "@/lib/locale";
+import { FREE_MONTHS, PRICING } from "@/lib/pricing-copy";
 import { PilotBanner } from "./PilotBanner";
 import "./profs-sections.css";
 
 /* profs-v2 · C — the closing banner, in place of the old final-CTA panel.
 
-   HONESTY (PROFS_V2 rule 1): the mockup says « Aucune commission · Aucun abonnement » with
-   no end date. All three checks hang off the title's « Pendant le pilote », and what comes
-   later stays on the page: the hero's « plus tard » line, the calculator and the FAQ. */
+   december sprint · C (D23): the free-pilot framing (« Pendant le pilote, tu gardes
+   100 % », « 0 % de commission », « Pas d'abonnement ») is gone. The banner says the
+   approved short line — the title is its first half, the second check its second —
+   plus what the long version adds: nothing on a session the tutor offers. */
 
 const copy = bilingual({
   fr: {
-    titleLead: "Pendant le pilote, tu gardes",
-    titleFigure: "100 %",
-    checks: ["Création gratuite", "0 % de commission", "Pas d'abonnement"],
+    titleFigure: `${FREE_MONTHS} mois`,
+    titleRest: "sans abonnement",
+    checks: ["Création gratuite", PRICING.fr.commissionWhen, PRICING.fr.offered],
     cta: "Créer ma page maintenant",
   },
   ar: {
-    titleLead: "في فترة التجربة، تحتفظ بـ",
-    titleFigure: "\u2066100 %\u2069",
-    checks: ["صفحتك فابور", "\u20660 %\u2069 عمولة", "بلا اشتراك"],
+    titleFigure: `${FREE_MONTHS} شهور`,
+    titleRest: "بلا اشتراك",
+    checks: ["صفحتك فابور", PRICING.ar.commissionWhen, PRICING.ar.offered],
     cta: "اعمل صفحتك توّا",
   },
 });
@@ -32,7 +34,7 @@ export function PilotSection({ locale }: { locale: AppLocale }) {
         <PilotBanner
           title={
             <>
-              {c.titleLead} <b>{c.titleFigure}</b>
+              <b>{c.titleFigure}</b> {c.titleRest}
             </>
           }
           checks={c.checks}

@@ -44,7 +44,7 @@ test.describe("C1 · figures in the brand face, tabular", () => {
       };
 
       await page.goto(`/${loc}/dashboard/plan`, { waitUntil: "networkidle" });
-      await check(page.locator(".ofr-price").first(), "Mon offre « 0 TND »");
+      await check(page.locator(".ofr-price").first(), "Mon offre « Offert »"); // december sprint · C: the free months, no « 0 TND »
       await check(page.locator(".ofr-price-sm").first(), "the plan prices");
 
       await page.goto(`/${loc}/dashboard/new-class`, { waitUntil: "networkidle" });

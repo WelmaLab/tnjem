@@ -2,6 +2,7 @@ import { Reveal } from "@/components/Reveal";
 import { Link } from "@/components/Link";
 import { Users } from "@/components/icons";
 import { bilingual } from "@/lib/i18n";
+import { PRICING } from "@/lib/pricing-copy";
 import type { AppLocale } from "@/lib/locale";
 import { HS_RV } from "./reveal";
 import "./sections.css";
@@ -9,21 +10,20 @@ import "./sections.css";
 /* home v2 · C — « Tu es prof ? », the cross-link for the other audience. Bottom of
    the page, not the top: the top belongs to the student/parent.
 
-   Both claims are the ones /pour-les-profs already makes (its hero sub and
-   layout description): the page is free to create, in about 2 minutes, and the
-   tutor keeps 100 % during the pilot (0 % commission; Tnajem processes no money).
-   « pendant le pilote » stays — it is what stops « 100 % » reading as permanent. */
+   december sprint · C (D23): the founder's pricing rule. The page is free to create,
+   in about 2 minutes; then the approved short line — 3 months without a
+   subscription, 10 % per paying student once payment goes through Tnajem. */
 
 const copy = bilingual({
   fr: {
     title: "Tu es prof ?",
-    body: "Crée ta page gratuitement en 2 minutes, fixe ton tarif, et garde 100 % pendant le pilote.",
+    body: `Crée ta page gratuitement en 2 minutes et fixe ton tarif. ${PRICING.fr.short}`,
     cta: "Commence à enseigner",
     arrow: "→",
   },
   ar: {
     title: "إنتي أستاذ؟",
-    body: "اعمل صفحتك فابور في دقيقتين، حدّد ثمنك، و⁦100 %⁩ متاعك في فترة التجربة.",
+    body: `اعمل صفحتك فابور في دقيقتين وحدّد ثمنك. ${PRICING.ar.short}`,
     cta: "ابدا تقرّي",
     arrow: "←",
   },

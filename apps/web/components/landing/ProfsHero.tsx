@@ -1,7 +1,7 @@
 import Image from "next/image";
-import { COMMISSION_PCT, requirePlan, tnd } from "@tnajem/shared";
 import type { AppLocale } from "@/lib/locale";
 import { bilingual } from "@/lib/i18n";
+import { FREE_MONTHS, PRICING } from "@/lib/pricing-copy";
 import { PROF_DEMO_URL } from "@/lib/prof-demo";
 import { Link } from "@/components/Link";
 import { IconBoard as Board, IconPlay as Play } from "./landing-icons";
@@ -12,51 +12,50 @@ import "./profs-hero.css";
 
 /* profs-v2 · B — THE HERO of /pour-les-profs. Server component.
 
-   Left: the pill + the pilot tag, the H1 on four lines (« 100 % » in ochre), the lead,
-   the primary action, the secondary (honesty rule 3), and the « plus tard » line
-   (honesty rule 1): the 100 % only holds with what comes after the pilot in sight.
+   Left: the pill + the badge, the H1 on four lines (« 3 mois » in ochre), the lead,
+   the primary action, the secondary (honesty rule 3), and the pricing line under them.
+   december sprint · C (D23): « Tu gardes 100 % pendant le pilote » is gone with the
+   free-pilot framing. The badge is the approved « 3 mois sans abonnement », the H1's
+   last line says the same in display type, and the small print names both costs, with
+   the commission's « dès que le paiement passe par Tnajem » (the FAQ carries the full
+   long version).
    Right: the photo in its organic shape, MockDashboardCard over its edge, doodles.
 
    LCP is the H1 TEXT: no entrance animation, and everything above it is static (the
-   tag here is the fixed « Pilote — 0 % » chip, not the async <PilotTag>).
+   tag here is the fixed badge chip, not the async <PilotTag>).
 
    The photo shows a FICTIONAL teacher (honesty rule 5): decorative, alt="", no caption,
    nothing that suggests she teaches on Tnajem. */
 
-const FREE_PLAN = requirePlan("gratuit");
-/** Western digits in both locales, as the rest of this page. */
-const nf = (v: number) => v.toLocaleString("fr-FR");
-const ESSENTIEL_TND = nf(tnd(requirePlan("essentiel").monthlyMillimes));
-
 const copy = bilingual({
   fr: {
     pill: "Pour les profs",
-    pilotChip: "Pilote — 0 % aujourd'hui",
+    pilotChip: PRICING.fr.badge,
     h1a: "Ta page de prof.",
     h1b: "Tes cours en direct.",
-    h1c: "Tu gardes ",
-    h1Hi: "100 %",
-    h1d: "pendant le pilote.",
+    h1c: "",
+    h1Hi: `${FREE_MONTHS} mois`,
+    h1d: "sans abonnement.",
     lead: "Crée ta page, publie tes cours, fixe ton tarif et gère tes réservations, simplement.",
     cta: "Créer ma page de prof",
     demo: "Voir la démo (2 min)",
     seeTutors: "Voir les profs sur Tnajem",
-    micro: `Gratuit pendant le pilote. Plus tard : ${COMMISSION_PCT} % sur chaque élève payant, uniquement sur les paiements traités par Tnajem, plus un abonnement — gratuit avec ${FREE_PLAN.maxClasses} séance publiée à la fois, à partir de ${ESSENTIEL_TND} TND/mois au-delà.`,
+    micro: PRICING.fr.costs,
     tarifsCta: "Voir les tarifs",
   },
   ar: {
     pill: "للأساتذة",
-    pilotChip: "تجربة — ⁦0 %⁩ اليوم",
+    pilotChip: PRICING.ar.badge,
     h1a: "صفحتك متاع أستاذ.",
     h1b: "دروسك مباشرة.",
-    h1c: "وتحتفظ بـ ",
-    h1Hi: "⁦100 %⁩",
-    h1d: "في فترة التجربة.",
+    h1c: "و", // « و3 شهور »: the line reads as part of the sentence
+    h1Hi: `${FREE_MONTHS} شهور`,
+    h1d: "بلا اشتراك.",
     lead: "اعمل صفحتك، انشر دروسك، حدّد تعريفتك وتصرّف في حجوزاتك، بالساهل.",
     cta: "اعمل صفحتك متاع أستاذ",
     demo: "شوف الديمو (دقيقتين)",
     seeTutors: "شوف الأساتذة في Tnajem",
-    micro: `فابور في فترة التجربة. من بعد : ⁦${COMMISSION_PCT} %⁩ على كل تلميذ خلّص، كان على الخلاص اللي يعدّي من Tnajem، زائد اشتراك — فابور بـ ${FREE_PLAN.maxClasses} حصة منشورة في نفس الوقت، ومن ${ESSENTIEL_TND} دينار في الشهر لفوق.`,
+    micro: PRICING.ar.costs,
     tarifsCta: "شوف الأسعار",
   },
 });

@@ -88,7 +88,7 @@ export const STEP_COPY = {
     stPhotoShort: "Ta photo",
 
     st3t: "Publie ta 1ʳᵉ classe",
-    st3b: "Un titre, une date, ton prix. Tu fixes le tarif, et pendant le pilote tu gardes 100 %.",
+    st3b: "Un titre, une date, ton prix. Tu fixes le tarif — 3 mois sans abonnement.", // december sprint · C (D23)
     st3cta: "Créer ma classe",
     st3tDone: "Ta 1ʳᵉ classe est publiée",
     st3bDone: "Tu peux en ajouter d'autres quand tu veux.",
@@ -140,7 +140,7 @@ export const STEP_COPY = {
     stPhotoShort: "تصويرتك",
 
     st3t: "انشر أول حصة متاعك",
-    st3b: "عنوان، وقت، وثمنك. إنتي تحدّد التعريفة، وفي فترة التجربة تحتفظ بـ 100 %.",
+    st3b: "عنوان، وقت، وثمنك. إنتي تحدّد التعريفة — 3 شهور بلا اشتراك.",
     st3cta: "اعمل حصتي",
     st3tDone: "أول حصة متاعك تنشرت",
     st3bDone: "تنجم تزيد أخرين وقتلي تحب.",

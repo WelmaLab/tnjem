@@ -255,6 +255,8 @@ test.describe("the marketing pages state the catalogue's numbers", () => {
     const nf = (v: number) => v.toLocaleString("fr-FR");
     expect(body, "the gross figure must be the arithmetic, not a typed-in number").toContain(nf(gross));
     expect(body, "the net figure must follow from the catalogue").toContain(nf(net));
+    // december sprint · C (D23): the first 3 months carry no subscription — the commission only.
+    expect(body, "the free-months figure is the gross less the commission").toContain(nf(gross - commission));
     expect(body, "the commission rate must come from COMMISSION_PCT").toContain(`${COMMISSION_PCT} %`);
   });
 
@@ -314,6 +316,8 @@ test.describe("the marketing pages state the catalogue's numbers", () => {
       ["commission", fee],
       ["subscription", sub],
       ["net", processed - fee - sub],
+      // december sprint · C (D23): the same month in the first 3 months, no subscription.
+      ["net, first 3 months", processed - fee],
     ] as const) {
       expect(body, `the ${label} figure must be derived, not typed in`).toContain(nf(value));
     }

@@ -8,7 +8,8 @@ import { COMMISSION_PCT, commissionOn, PLANS, tnd } from "@tnajem/shared";
    3. The centres card says « Bientôt » and opens the waitlist (a mailto, no backend).
    4. The demo button is absent without NEXT_PUBLIC_PROF_DEMO_URL (the suite pins it
       blank, playwright.config.ts); the honest « Voir les profs » link stands in.
-   5. The calculator's numbers are the ones the page always showed.
+   5. The calculator's numbers: the page's example, the first 3 months and after
+      (december sprint · C, the founder's pricing rule).
    6. The FAQ JSON-LD is valid and is the FAQ the page shows, word for word.
    7. With JavaScript off, the whole page is readable. */
 
@@ -25,6 +26,24 @@ const DASH_ROWS = {
 } as const;
 /** The founder's no-show answer (FAQ 3): it must be what the page and the JSON-LD say. */
 const FAQ3_START = { fr: "Pendant le pilote, aucun paiement ne passe par Tnajem", ar: "في فترة التجربة، حتى خلاص ما يعدّي من Tnajem" } as const;
+
+/* december sprint · C (D23) — the founder's approved pricing words, as rendered. */
+const PRICE_WORDS = {
+  fr: {
+    badge: "3 mois sans abonnement",
+    h1: "Ta page de prof. Tes cours en direct. 3 mois sans abonnement.",
+    commissionWhen: "10 % sur chaque élève payant, dès que le paiement passe par Tnajem",
+    calcNote: "Calcul valable dès que le paiement en ligne est ouvert. D'ici là, Tnajem ne prélève rien.",
+    gone: ["Tu gardes 100 %", "0 % aujourd'hui", "0 % de commission", "Pas d'abonnement", "tu gardes tout", "Pendant le pilote, tu gardes"],
+  },
+  ar: {
+    badge: "3 شهور بلا اشتراك",
+    h1: "صفحتك متاع أستاذ. دروسك مباشرة. و3 شهور بلا اشتراك.",
+    commissionWhen: "\u206610 %\u2069 على كل تلميذ خلّص، كي الخلاص يعدّي من Tnajem",
+    calcNote: "الحساب هذا صالح من وقت اللي يتحلّ الخلاص أونلاين. لين يتحلّ، Tnajem ما تاخذ حتى شي.",
+    gone: ["تحتفظ بـ", "\u20660 %\u2069 عمولة", "في فترة التجربة، تحتفظ", "تحتفظ بالكل"],
+  },
+} as const;
 
 /** Thin and normal no-break spaces (fr-FR grouping) as plain spaces. */
 const flat = (s: string) => s.replace(/[  ]/g, " ").replace(/\s+/g, " ").trim();
@@ -87,10 +106,25 @@ for (const locale of LOCALES) {
     await page.goto(`/${locale}/pour-les-profs`);
     await expect(page.locator("[data-e2e=profs-demo]")).toHaveCount(0);
     await expect(page.locator("[data-e2e=profs-see-tutors]")).toHaveAttribute("href", `/${locale}/explore`);
-    // Honesty rule 1: the « plus tard » pricing line stays, with its /tarifs link.
+    // The pricing line under the hero stays, with its /tarifs link (december sprint · C:
+    // both costs, and the commission only once payment goes through Tnajem).
     const later = page.locator("[data-e2e=profs-later]");
     await expect(later).toContainText(`${COMMISSION_PCT} %`);
+    await expect(later).toContainText(PRICE_WORDS[locale].commissionWhen);
     await expect(later.locator(`a[href="/${locale}/tarifs"]`)).toHaveCount(1);
+  });
+
+  test(`/${locale}/pour-les-profs: the hero says the approved badge, and no free-pilot framing`, async ({ page }) => {
+    await page.goto(`/${locale}/pour-les-profs`);
+    const w = PRICE_WORDS[locale];
+    const hero = page.locator("[data-e2e=profs-hero]");
+    await expect(hero.locator(".tag").first()).toHaveText(w.badge);
+    expect(flat(await page.locator("h1").innerText())).toBe(w.h1);
+    const banner = page.locator("[data-e2e=profs-banner]");
+    expect(flat(await banner.locator("h2").innerText())).toBe(w.badge);
+    await expect(banner).toContainText(w.commissionWhen);
+    const body = flat(await page.locator("body").innerText());
+    for (const gone of w.gone) expect(body, gone).not.toContain(gone);
   });
 }
 
@@ -98,7 +132,7 @@ for (const locale of LOCALES) {
    The worked example is 8 students × 2 courses × 20 TND × 4 weeks, the plan picked
    by OPEN classes (e2e/plans.spec.ts proves the catalogue side). Pinned here as the
    figures the page showed before v2, so a restyle can never change them. */
-test("the calculator shows the same figures as before v2, in both locales", async ({ page }) => {
+test("the calculator: 1 280 collected, 1 152 the first 3 months, 1 123 after, in both locales", async ({ page }) => {
   const gross = 8 * 2 * 20 * 4;
   const commission = commissionOn(gross);
   const plan = [...PLANS]
@@ -111,12 +145,23 @@ test("the calculator shows the same figures as before v2, in both locales", asyn
   for (const [locale, cur] of [["fr", "TND"], ["ar", "دينار"]] as const) {
     await page.goto(`/${locale}/pour-les-profs`);
     const calc = page.locator("[data-e2e=profs-income]");
-    expect(flat(await calc.locator(".lpp-amount").innerText())).toBe(`1 280 ${cur}`);
+    // december sprint · C (D23): the first 3 months carry no subscription.
+    expect(flat(await calc.locator(".lpp-amount").innerText())).toBe(`1 152 ${cur}`);
     expect(flat(await calc.locator("[data-e2e=lpp-later-net]").innerText())).toBe(`1 123 ${cur}`);
     const text = flat(await calc.innerText());
     expect(text).toContain("8");
     expect(text).toContain("20");
+    expect(text).toContain(`1 280 ${cur}`);
     expect(text).toContain(`− 128`);
+    // The split bar is the tutor's share against the commission: 90 / 10.
+    expect(text).toContain(`${100 - COMMISSION_PCT} %`);
+    expect(await calc.locator(".ps-split-you").evaluate((el) => el.style.inlineSize)).toBe(`${100 - COMMISSION_PCT}%`);
+    // The amended calculator note, and no « you keep everything ».
+    expect(text).toContain(PRICE_WORDS[locale].calcNote);
+    // It qualifies BOTH figures: it sits after the « Ensuite » block, not inside it.
+    await expect(calc.locator(".ps-later [data-e2e=lpp-calc-note]")).toHaveCount(0);
+    expect(flat(await calc.locator("[data-e2e=lpp-calc-note]").innerText())).toBe(PRICE_WORDS[locale].calcNote);
+    expect(text).not.toMatch(/tu gardes tout|تحتفظ بالكل|100 %/);
     await expect(calc.locator("[data-payment-story]")).toHaveCount(1);
   }
 });

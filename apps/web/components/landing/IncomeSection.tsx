@@ -5,11 +5,15 @@ import { HS_RV } from "@/components/home/reveal";
 import { bilingual } from "@/lib/i18n";
 import type { AppLocale } from "@/lib/locale";
 import { classLimitRule, COMMISSION_PCT, commissionOn, PLANS, tnd } from "@tnajem/shared";
+import { FREE_MONTHS, PRICING } from "@/lib/pricing-copy";
 import "@/components/home/home.css"; // .lp-rv / .lp-armed, the classes HS_RV names
 import "./profs-sections.css";
 
 /* profs-v2 · C — « Combien tu peux gagner ». The calculator of the page before v2:
-   same constants, same formulae, same copy, same <PaymentStory>. Only the look is new,
+   same constants, same formulae, same <PaymentStory>. december sprint · C (D23): the
+   copy follows the pricing rule — no « tu gardes tout »; the first months, then the
+   month with the plan, and the note that the calculation holds once online payment
+   opens. Only the look is new,
    and <Reveal> replaces useReveal, so this has no client code of its own.
    Pinned by e2e/plans.spec.ts (gross and net), e2e/payment-story.spec.ts and
    e2e/lf3-f-price-font.spec.ts (.lpp-amount, data-e2e="lpp-later-net"; the old class
@@ -48,6 +52,10 @@ const EX_COMMISSION = commissionOn(EX_GROSS);
 const EX_PLAN = planForOpenClasses(EX.courses);
 const EX_SUB = EX_PLAN ? tnd(EX_PLAN.monthlyMillimes) : 0;
 const EX_NET = EX_GROSS - EX_COMMISSION - EX_SUB;
+/* december sprint · C (D23): the first FREE_MONTHS months carry no subscription, so
+   the tutor receives the gross less the commission; afterwards, less the plan too. */
+const EX_NET_FREE = EX_GROSS - EX_COMMISSION;
+const TUTOR_PCT = 100 - COMMISSION_PCT;
 /** Western digits with a thin thousands separator, in both locales — the Arabic
     copy has always used Western numerals and changing that is not this change. */
 const nf = (v: number) => v.toLocaleString("fr-FR");
@@ -55,46 +63,43 @@ const nf = (v: number) => v.toLocaleString("fr-FR");
 const copy = bilingual({
   fr: {
     incomeEyebrow: "Combien tu peux gagner",
-    incomeTitle: "Fixe ton tarif. Aujourd'hui, tu gardes tout.",
+    incomeTitle: "Fixe ton tarif. Vois ce que tu reçois.",
     /* The unit, stated ONCE and up front — the same sentence /tarifs shows. */
     incomeLead: `${classLimitRule("fr")} Un exemple d'arithmétique — pas une promesse, et pas un plafond :`,
     inStudents: "8 élèves",
     inSessions: "2 cours : Maths + Physique",
     inPrice: "20 TND / séance",
-    inGross: `Exemple : ${EX.students} élèves × ${EX.courses} cours × ${EX.priceTnd} TND × ${EX.weeks} semaines (1 séance par cours, par semaine)`,
-    inKeepLbl: "Tu gardes, aujourd'hui",
-    inKeep: `${nf(EX_GROSS)} TND`,
-    inYou: "Toi · 100 %",
-    inFee: "Tnajem · 0 %",
-    inLaterLbl: "Plus tard, quand l'élève paiera via Tnajem", // phase-a lane L3 (A22)
+    inGross: `Exemple : ${EX.students} élèves × ${EX.courses} cours × ${EX.priceTnd} TND × ${EX.weeks} semaines (1 séance par cours, par semaine) = ${nf(EX_GROSS)} TND encaissés`,
+    inKeepLbl: `Tu reçois, tes ${FREE_MONTHS} premiers mois`,
+    inKeep: `${nf(EX_NET_FREE)} TND`,
+    inYou: `Toi · ${TUTOR_PCT} %`,
+    inFee: `Tnajem · ${COMMISSION_PCT} %`,
+    inLaterLbl: `Ensuite, avec l'abonnement à ${nf(EX_SUB)} TND`,
     inLater: `${nf(EX_NET)} TND`,
     inLaterFee: `− ${nf(EX_COMMISSION)} (${COMMISSION_PCT} %) − ${nf(EX_SUB)} (abonnement, ${EX.courses} cours)`,
+    inLaterNote: PRICING.fr.calcNote,
     // phase-a lane L3 (A22): the HOW is <PaymentStory audience="tutor"> beside inWithdraw.
-    inLaterNote: "Aujourd'hui : 0 %, rien n'est prélevé.",
-    inWithdraw:
-      "Pendant le pilote, Tnajem ne prend aucune commission et ne touche pas à ton argent.",
+    inWithdraw: PRICING.fr.notice,
   },
   ar: {
     incomeEyebrow: "قداش تنجم تربح",
-    incomeTitle: "حدّد تعريفتك. اليوم، تحتفظ بالكل.",
+    incomeTitle: "حدّد تعريفتك. وشوف قدّاش يوصلك.",
     incomeLead: `${classLimitRule("ar")} هاذا مثال حساب — موش وعد، وموش سقف :`,
     inStudents: "8 تلامذة",
     inSessions: "2 دروس : رياضيات + فيزياء",
     inPrice: "20 دينار / حصة",
-    inGross: `مثال : ${EX.students} تلامذة × ${EX.courses} دروس × ${EX.priceTnd} دينار × ${EX.weeks} جماعي (حصة وحدة لكل درس، في الجمعة)`,
-    inKeepLbl: "تحتفظ بيه، اليوم",
-    inKeep: `${nf(EX_GROSS)} دينار`,
-    inYou: "إنتي · \u2066100 %\u2069",
-    /* The same words as before v2. The isolate is new: bare, the « % » drifted to the far
-       side of the line in RTL and it read « % Tnajem · 0 ». */
-    inFee: "Tnajem · \u20660 %\u2069",
-    inLaterLbl: "من بعد، كي يخلّص التلميذ على Tnajem", // phase-a lane L3 (A22)
+    inGross: `مثال : ${EX.students} تلامذة × ${EX.courses} دروس × ${EX.priceTnd} دينار × ${EX.weeks} جماعي (حصة وحدة لكل درس، في الجمعة) = ${nf(EX_GROSS)} دينار`,
+    inKeepLbl: `يوصلك، في أول ${FREE_MONTHS} شهور متاعك`,
+    inKeep: `${nf(EX_NET_FREE)} دينار`,
+    inYou: `إنتي · ⁦${TUTOR_PCT} %⁩`,
+    /* The isolate: bare, the « % » drifted to the far side of the line in RTL. */
+    inFee: `Tnajem · ⁦${COMMISSION_PCT} %⁩`,
+    inLaterLbl: `من بعد، بالاشتراك متاع ${nf(EX_SUB)} دينار`,
     inLater: `${nf(EX_NET)} دينار`,
-    inLaterFee: `− ${nf(EX_COMMISSION)} (\u2066${COMMISSION_PCT} %\u2069) − ${nf(EX_SUB)} (اشتراك، ${EX.courses} دروس)`,
+    inLaterFee: `− ${nf(EX_COMMISSION)} (⁦${COMMISSION_PCT} %⁩) − ${nf(EX_SUB)} (اشتراك، ${EX.courses} دروس)`,
+    inLaterNote: PRICING.ar.calcNote,
     // phase-a lane L3 (A22)
-    inLaterNote: "اليوم : \u20660 %\u2069، ما يتخصم حتى شي.",
-    inWithdraw:
-      "في فترة التجربة، Tnajem ما تاخذ حتى عمولة وما تلمسش فلوسك.",
+    inWithdraw: PRICING.ar.notice,
   },
 });
 
@@ -123,8 +128,9 @@ export function IncomeSection({ locale }: { locale: AppLocale }) {
             </ul>
           </div>
 
-          {/* Arithmetic, labelled as an example, plus the 100/0 split that is true today
-              (0 % commission, tutor paid directly). */}
+          {/* Arithmetic, labelled as an example: what reaches the tutor in the first
+              months (gross less the commission), the 90 / 10 split, then the same month
+              with the subscription. The note under it says when the calculation holds. */}
           <div className="ps-calc">
             <p className="ps-calc-note ps-calc-gross">{c.inGross}</p>
             <p className="ps-calc-keep">
@@ -133,11 +139,11 @@ export function IncomeSection({ locale }: { locale: AppLocale }) {
             </p>
             <div className="lpp-amount">{c.inKeep}</div>
 
-            {/* 100 / 0 split bar — no commission during the pilot */}
+            {/* The split bar: the tutor's share against the commission. */}
             <div className="ps-split" aria-hidden="true">
-              <span className="ps-split-you" />
+              <span className="ps-split-you" style={{ inlineSize: `${TUTOR_PCT}%` }} />
             </div>
-            {/* live-fixes-3 · F: « 100 % » / « 0 % » are figures — --fn, tabular (C1) */}
+            {/* live-fixes-3 · F: the percentages are figures — --fn, tabular (C1) */}
             <div className="ps-split-labels">
               <span>
                 <span className="ps-split-dot" aria-hidden="true" />
@@ -146,11 +152,14 @@ export function IncomeSection({ locale }: { locale: AppLocale }) {
               <span>{c.inFee}</span>
             </div>
 
-            {/* What Tnajem will cost later, kept visually secondary so today's real
-                number stays the headline. Both costs are named — the 10 % AND the
+            {/* december sprint · C (gate 1): the amended calculator note, right under
+                the headline amount and before « Ensuite », so it qualifies the
+                first-months figure and everything after it. */}
+            <p className="ps-calc-note ps-calc-when" style={{ marginBlockStart: 10 }} data-e2e="lpp-calc-note">{c.inLaterNote}</p>
+
+            {/* After the free months: both costs are named — the 10 % AND the
                 subscription — because showing one without the other is how a tutor
-                ends up feeling misled by the second one. Stating any of it here is
-                also what stops "tu gardes 100 %" reading as a permanent promise. */}
+                ends up feeling misled by the second one. */}
             <div className="ps-later">
               <p className="ps-calc-note ps-later-lbl">{c.inLaterLbl}</p>
               <div className="ps-later-row">
@@ -158,7 +167,6 @@ export function IncomeSection({ locale }: { locale: AppLocale }) {
                 <span className="ps-later-net" data-e2e="lpp-later-net">{c.inLater}</span>
                 <span className="ps-later-fee">{c.inLaterFee}</span>
               </div>
-              <p className="ps-calc-note">{c.inLaterNote}</p>
             </div>
 
             <div className="trust trust-dark ps-calc-trust">

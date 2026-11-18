@@ -6,6 +6,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { Card, CardFooter, Tag } from "@/components/ui";
 import { Check, Info, Wallet, Star } from "@/components/icons";
 import { bilingual } from "@/lib/i18n";
+import { FREE_MONTHS, PRICING } from "@/lib/pricing-copy";
 import { Reveal } from "@/components/Reveal";
 import { PaymentStory } from "@/components/PaymentStory"; // phase-a lane L3 (A22)
 import {
@@ -25,6 +26,8 @@ const EX_PLAN = requirePlan("pro");
 const EX_FEE = commissionOn(EX_PROCESSED_TND);
 const EX_SUB = tnd(EX_PLAN.monthlyMillimes);
 const EX_NET = EX_PROCESSED_TND - EX_FEE - EX_SUB;
+/* december sprint · C (D23): the first FREE_MONTHS months carry no subscription. */
+const EX_NET_FREE = EX_PROCESSED_TND - EX_FEE;
 const nf = (v: number) => v.toLocaleString("fr-FR");
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -32,14 +35,16 @@ const nf = (v: number) => v.toLocaleString("fr-FR");
 
    HONESTY RULES (load-bearing — do not break):
    • Tnajem processes NO money today (lib/payments.ts, PAYMENTS_ENABLED unset).
-     Every plan below is FREE right now. The banner and the per-card "pas encore
-     facturé" chip are driven by the real `paymentsEnabled` flag handed down by
-     the server shell — not by a hardcoded assumption — so this page cannot drift
-     out of sync with the switch.
+     The pricing words are the founder's rule (lib/pricing-copy.ts, december
+     sprint · C): 3 months without a subscription, then a plan; 10 % on every
+     paying student, taken only on payments that go through Tnajem — and online
+     payment is not open, so nothing is taken yet. The banner and the « Bientôt »
+     chip are driven by the real `paymentsEnabled` flag handed down by the server
+     shell — not by a hardcoded assumption — so this page cannot drift out of sync
+     with the switch.
    • The prices are real and final, but they are FUTURE. Nothing here may read as
      a charge that is happening now.
-   • Equally, nothing here promises 0 % forever. The 0 % is a property of the
-     pilot and is labelled as such.
+   • Equally, nothing here promises 0 % forever.
    • THE NUMBERS ARE NOT WRITTEN HERE. Since Step 16 the price, the annual price
      and the class-limit bullet are derived from PLANS in @tnajem/shared — the
      same catalogue the API enforces. They used to be strings in the copy object
@@ -61,33 +66,33 @@ const copy = bilingual({
   fr: {
     eyebrow: "Tarifs",
     h1: "Nos tarifs, en clair.",
-    lead: "Tnajem est gratuit pendant le pilote. Voici ce que ça coûtera quand les paiements en ligne s'ouvriront — pour que tu puisses décider en connaissance de cause, dès aujourd'hui.",
+    lead: PRICING.fr.long1,
     ctaPrimary: "Crée ta page de prof",
-    heroMicro: "Rien n'est facturé aujourd'hui.",
+    heroMicro: PRICING.fr.badge,
 
     // Banner — which one shows depends on the real PAYMENTS_ENABLED flag.
-    pilotBanner:
-      "Gratuit pendant le pilote — aucune de ces offres n'est encore facturée. Les paiements en ligne sont désactivés : Tnajem n'encaisse rien, ne prélève aucune commission et ne te facture aucun abonnement. On te préviendra avant que ça change.",
-    liveBanner:
-      "Les paiements en ligne sont actifs. Les formules ci-dessous sont facturées, et la commission de 10 % s'applique aux paiements traités par Tnajem.",
+    // december sprint · C (D23): the long version's part 2, and the one notice promise.
+    pilotBanner: `${PRICING.fr.long2} ${PRICING.fr.notice}`,
+    liveBanner: `Le paiement en ligne est ouvert. Les formules ci-dessous sont facturées après tes ${FREE_MONTHS} premiers mois, et les ${PRICING.fr.commission} sont prélevés sur les paiements qui passent par Tnajem.`,
 
     plansTitle: "Les formules",
-    plansLead: "Tnajem coûte deux choses au prof, et jamais l'une sans l'autre : un abonnement mensuel, plus 10 % sur chaque élève payant — uniquement sur les paiements que Tnajem traite.", // phase-a lane L3 (A22): the student DOES pay via Tnajem (D4)
+    plansLead: `Une formule au choix après tes ${FREE_MONTHS} premiers mois, plus ${PRICING.fr.commission} — uniquement sur les paiements qui passent par Tnajem.`, // phase-a lane L3 (A22): the student DOES pay via Tnajem (D4)
     /* WHICH NUMBER IS THE RULE. The "convient à N élèves" line is a sizing hint
        and nothing counts your students; what the server actually enforces is the
        number of cours you keep open at once. Saying so here is what stops a tutor
        being refused a second cours while believing they are inside "1 à 14". */
     // The same sentence /pour-les-profs shows — one source, so the two cannot drift.
     plansRule: classLimitRule("fr"),
-    plusComm: "+ 10 % sur chaque élève payant",
-    plusCommNote: "Uniquement sur les paiements traités par Tnajem.", // phase-a lane L3 (A22)
+    plusComm: PRICING.fr.plusCommission,
+    plusCommNote: "Uniquement sur les paiements qui passent par Tnajem.", // phase-a lane L3 (A22)
     recommended: "Recommandé",
     perMonth: "/ mois",
     planCta: "Commencer gratuitement",
     // espace prof v2 · phase 6: one CTA per plan, saying the plan's state.
-    planCtaPilot: "Inclus pendant le pilote",
+    // december sprint · C (D23): the approved plan button.
+    planCtaPilot: PRICING.fr.planButton,
     planCtaPaid: (name: string) => `Choisir ${name}`,
-    planCtaAria: (name: string) => `${name} — inclus pendant le pilote : crée ta page`,
+    planCtaAria: (name: string) => `${name} — offert tes ${FREE_MONTHS} premiers mois : crée ta page`,
     /* Derived-number formatting. The VALUES come from the shared catalogue; only
        the words are copy. */
     priceUnit: (n: number) => `${nf(n)} TND`,
@@ -150,14 +155,16 @@ const copy = bilingual({
     exRowProcessed: "Encaissé via Tnajem",
     exRowFee: `Commission Tnajem (${COMMISSION_PCT} %)`,
     exRowSub: (name: string) => `Abonnement ${name}`,
-    exRowNet: "Tu reçois",
+    exRowNet: `Tu reçois, après tes ${FREE_MONTHS} premiers mois`,
+    exRowNetFree: `Tu reçois, tes ${FREE_MONTHS} premiers mois (sans abonnement)`,
     // phase-a lane L3 (A22): the cash-in-hand case is gone — one payment story (D4).
-    exToday: "Aujourd'hui, rien de tout ça n'est prélevé : les paiements en ligne sont désactivés, donc la commission est de 0 TND et aucun abonnement n'est facturé.",
+    exToday: PRICING.fr.calcNote,
 
     commTitle: "La commission",
-    commLine: "10 %, sur une seule chose : les paiements que Tnajem traite lui-même.",
+    commLine: `${PRICING.fr.commission}, et uniquement sur les paiements qui passent par Tnajem.`,
     commPoints: [
       "Le même taux sur toutes les formules — 10 %, quel que soit ton volume.",
+      `${PRICING.fr.offered}.`,
       // phase-a lane L3 (A22): the cash-in-hand point is gone — one payment story (D4).
       // phase-a lane L3 (A5): it is the tutor's opt-in (off by default), once per student per tutor (D2).
       "Si ton prof l'offre, ta 1ʳᵉ séance avec lui est gratuite.",
@@ -167,7 +174,7 @@ const copy = bilingual({
     cmpLead: "Taux publiés par les plateformes elles-mêmes, relevés en août 2026. Les modèles diffèrent — à toi de juger.",
     cmpUs: "Tnajem",
     cmpUsRate: `${COMMISSION_PCT} %`,
-    cmpUsBody: "10 %, uniquement sur les paiements traités par Tnajem.", // phase-a lane L3 (A22)
+    cmpUsBody: `${PRICING.fr.commission}, uniquement sur les paiements qui passent par Tnajem.`, // phase-a lane L3 (A22)
     /* THE RATE LEADS. This is the strongest argument the business has — 10 %
        against 18-33 % and 25 %+9 % — and it was set in 13.5px body copy in
        section five. Splitting the rate out lets it be typeset at display size
@@ -182,34 +189,32 @@ const copy = bilingual({
     cmpNote: "Sources : centres d'aide publics de Preply et Wyzant. On ne cite aucun chiffre qu'une plateforme n'a pas publié elle-même.",
 
     finalTitle: "Prêt à créer ta page ?",
-    finalSub: "C'est gratuit, et ça prend 2 minutes.",
-    finalMicro: "Gratuit pendant le pilote · sans engagement · supprimable à tout moment.",
+    finalSub: "Créer ta page est gratuit, et ça prend 2 minutes.",
+    finalMicro: `${PRICING.fr.badge} · sans engagement · supprimable à tout moment.`,
     backToProfs: "Tout savoir sur Tnajem pour les profs",
   },
 
   ar: {
     eyebrow: "الأسعار",
     h1: "أسعارنا، واضحة.",
-    lead: "Tnajem فابور في فترة التجربة. هاذي هي الأثمنة اللي باش تولّي كي يتحل الخلاص أونلاين — باش تعرف من توّا على شنوّة داخل.",
+    lead: PRICING.ar.long1,
     ctaPrimary: "اعمل صفحتك متاع أستاذ",
-    heroMicro: "اليوم ما فما حتى فاتورة.",
+    heroMicro: PRICING.ar.badge,
 
-    pilotBanner:
-      "فابور في فترة التجربة — ما زال ما نفوترو حتى خطة. الخلاص أونلاين مطفي : Tnajem ما تحصّل والو، ما تاخذ حتى عمولة، وما تفوترك حتى اشتراك. باش نعلموك قبل ما يتبدّل الحال.",
-    liveBanner:
-      "الخلاص أونلاين خدّام. الخطط اللي تحت ولّاو يتفوترو، والعمولة متاع \u206610 %\u2069 تنطبق على الخلاص اللي يعدّي من Tnajem.",
+    pilotBanner: `${PRICING.ar.long2} ${PRICING.ar.notice}`,
+    liveBanner: `الخلاص أونلاين تحلّ. الخطط اللي تحت يتفوترو بعد أول ${FREE_MONTHS} شهور متاعك، والعمولة متاع ${PRICING.ar.commission} تتخصم من الخلاص اللي يعدّي من Tnajem.`,
 
     plansTitle: "الخطط",
-    plansLead: "Tnajem تكلّف الأستاذ زوز حاجات، وعمرها وحدة بلا لأخرى : اشتراك شهري، زائد \u206610 %\u2069 على كل تلميذ خلّص — كان على الخلاص اللي تعدّيه Tnajem.", // phase-a lane L3 (A22)
+    plansLead: `خطة تختارها بعد أول ${FREE_MONTHS} شهور متاعك، زائد ${PRICING.ar.commission} — كان على الخلاص اللي يعدّي من Tnajem.`, // phase-a lane L3 (A22)
     plansRule: classLimitRule("ar"),
-    plusComm: "\u2066+ 10 %\u2069 على كل تلميذ خلّص",
+    plusComm: PRICING.ar.plusCommission,
     plusCommNote: "كان على الخلاص اللي يعدّي من Tnajem.", // phase-a lane L3 (A22)
     recommended: "ننصحو بيها",
     perMonth: "/ في الشهر",
     planCta: "ابدا فابور",
-    planCtaPilot: "موجود في فترة التجربة",
+    planCtaPilot: PRICING.ar.planButton,
     planCtaPaid: (name: string) => `اختار ${name}`,
-    planCtaAria: (name: string) => `${name} — موجود في فترة التجربة : اعمل صفحتك`,
+    planCtaAria: (name: string) => `${name} — فابور في أول ${FREE_MONTHS} شهور متاعك : اعمل صفحتك`,
     priceUnit: (n: number) => `${nf(n)} دينار`,
     yearLine: (n: number) => `${n} دينار / في العام`,
     /* Arabic has a dual. "شهرين" is two months; anything else takes a number. */
@@ -268,14 +273,16 @@ const copy = bilingual({
     exRowProcessed: "تحصّل عبر Tnajem",
     exRowFee: `عمولة Tnajem (\u2066${COMMISSION_PCT} %\u2069)`,
     exRowSub: (name: string) => `اشتراك ${name}`,
-    exRowNet: "يوصلك",
+    exRowNet: `يوصلك، بعد أول ${FREE_MONTHS} شهور متاعك`,
+    exRowNetFree: `يوصلك، في أول ${FREE_MONTHS} شهور متاعك (بلا اشتراك)`,
     // phase-a lane L3 (A22)
-    exToday: "اليوم ما يتخلّص حتى شي من هذا : الخلاص أونلاين مطفي، معناها العمولة 0 دينار وحتى اشتراك ما يتفوتر.",
+    exToday: PRICING.ar.calcNote,
 
     commTitle: "العمولة",
-    commLine: "\u206610 %\u2069، على حاجة وحيدة : الخلاص اللي Tnajem تعدّيه هي بروحها.",
+    commLine: `${PRICING.ar.commission}، وكان على الخلاص اللي يعدّي من Tnajem.`,
     commPoints: [
       "نفس النسبة في الخطط الكل — \u206610 %\u2069، مهما كان حجمك.",
+      `${PRICING.ar.offered}.`,
       // phase-a lane L3 (A22)
       "كان أستاذك يعطيها، أول حصة معاه تكون فابور.", // phase-a lane L3 (A5)
     ],
@@ -284,7 +291,7 @@ const copy = bilingual({
     cmpLead: "نسب نشروها المنصّات بأنفسهم، مأخوذة في أوت 2026. النماذج تختلف — وإنتي احكم.",
     cmpUs: "Tnajem",
     cmpUsRate: `${COMMISSION_PCT} %`,
-    cmpUsBody: "\u206610 %\u2069، كان على الخلاص اللي يعدّي من Tnajem.", // phase-a lane L3 (A22)
+    cmpUsBody: `${PRICING.ar.commission}، كان على الخلاص اللي يعدّي من Tnajem.`, // phase-a lane L3 (A22)
     cmpRows: [
       { name: "Preply", rate: "\u206618–33 %\u2069", body: "حسب عدد الساعات اللي قرّيتها — و \u2066100 %\u2069 من كل حصة تجريبية مع تلميذ جديد." },
       { name: "Wyzant", rate: "\u206625 % + 9 %\u2069", body: "\u206625 %\u2069 عمولة — الأستاذ يحتفظ بـ \u206675 %\u2069 — وزيد \u20669 %\u2069 فريسي خدمة على كل حصة." },
@@ -293,8 +300,8 @@ const copy = bilingual({
     cmpNote: "المصادر : مراكز المساعدة العمومية متاع Preply و Wyzant. ما نذكرو حتى رقم ما نشرتوش المنصّة بروحها.",
 
     finalTitle: "حاضر باش تعمل صفحتك ؟",
-    finalSub: "فابور، وتاخذ دقيقتين.",
-    finalMicro: "فابور في فترة التجربة · بلا التزام · تنجم تمسحها وقتلي تحب.",
+    finalSub: "صفحتك فابور، وتاخذ دقيقتين.",
+    finalMicro: `${PRICING.ar.badge} · بلا التزام · تنجم تمسحها وقتلي تحب.`,
     backToProfs: "اعرف الكل على Tnajem للأساتذة",
   },
 });
@@ -526,10 +533,13 @@ function PlanCard({
         <Link
           href="/signup/prof"
           className={`btn ${highlighted ? "btn-primary" : "btn-ghost"} w-full`}
-          aria-label={paymentsEnabled ? undefined : c.planCtaAria(plan.name)}
+          aria-label={paymentsEnabled || isFree ? undefined : c.planCtaAria(plan.name)}
           data-e2e="plan-cta"
         >
-          {!paymentsEnabled ? c.planCtaPilot : isFree ? c.planCta : c.planCtaPaid(plan.name)}
+          {/* december sprint · C: the Gratuit plan never costs anything, so it keeps its
+              own « Commencer gratuitement »; « Offert tes 3 premiers mois » is for the
+              paid plans only (on Gratuit it would imply a later cost). */}
+          {isFree ? c.planCta : !paymentsEnabled ? c.planCtaPilot : c.planCtaPaid(plan.name)}
         </Link>
       </CardFooter>
     </Card>
@@ -662,6 +672,12 @@ export function TarifsInner({ paymentsEnabled }: { paymentsEnabled: boolean }) {
                 <div className="tf-ex-row">
                   <span>{c.exRowSub(c.plans.find((pl) => pl.id === EX_PLAN.code)?.name ?? EX_PLAN.code)}</span>
                   <b><bdi>&minus; {c.priceUnit(EX_SUB)}</bdi></b>
+                </div>
+                {/* december sprint · C (D23): the same month during the free period —
+                    the commission only, no subscription — then the month after it. */}
+                <div className="tf-ex-row tf-ex-net" data-e2e="tarifs-ex-free">
+                  <span>{c.exRowNetFree}</span>
+                  <b><bdi>{c.priceUnit(EX_NET_FREE)}</bdi></b>
                 </div>
                 <div className="tf-ex-row tf-ex-net">
                   <span>{c.exRowNet}</span>

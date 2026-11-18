@@ -7,8 +7,10 @@ import { Shield, Wallet, Share, Bolt, Calendar, Forward, Chat } from "@/componen
 import { bilingual } from "@/lib/i18n";
 import { isLocale, DEFAULT_LOCALE, type AppLocale } from "@/lib/locale";
 import { pageMetadata } from "@/lib/metadata";
+import { PRICING } from "@/lib/pricing-copy";
 import {
   CANCEL_FREE_WINDOW_HOURS, ID_DOCUMENT_RETENTION_DAYS, LATE_CANCEL_RETAINED_PCT, supportWhatsAppHref,
+  CONTACT_EMAIL, SUPPORT_HOURS, SUPPORT_WHATSAPP_MESSAGE, // december sprint · C
   CANCEL_GRACE_MINUTES, CANCEL_GRACE_MIN_LEAD_MINUTES, // live-fixes-3 · C
   OFFER_MAX_PER_TUTOR, OFFER_SESSIONS_MAX, OFFER_SESSIONS_MIN,
   PRICE_FLOOR_TND, PRICE_STEP_TND, PROMO_PERCENT_MAX, PROMO_PERCENT_MIN,
@@ -25,8 +27,9 @@ import { PROMO_MAX_DAYS } from "@tnajem/shared/growth-input";
                       the rest optional, the décret 2015-1619 declaration), the
                       booking gate in apps/api/src/routes/bookings.ts (no booking
                       before "verified"), the retention window in @tnajem/shared/legal.
-     • getting paid   payments are OFF (paymentsEnabled()): Tnajem takes nothing and
-                      the student pays the tutor outside Tnajem; the online payment
+     • getting paid   the pricing rule's long version (lib/pricing-copy.ts, december
+                      sprint · C). Payments are OFF (paymentsEnabled()): Tnajem takes
+                      nothing and the student pays the tutor outside Tnajem; the online payment
                       is the one payment story, shown with « Bientôt » (PaymentStory).
                       The late-cancel figure is the ledger rule (@tnajem/shared/cancellation).
      • sharing        the share sheet, deep links, the owner preview / "arrive
@@ -48,7 +51,11 @@ const SITE_HOST = (() => {
     return "tnajem.com";
   }
 })();
-const WA_LINK = supportWhatsAppHref(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP);
+/* december sprint · C (gate 2): the one source, NEXT_PUBLIC_SUPPORT_WHATSAPP, through
+   the helper; the chat opens with the page's language's greeting. Unset → null →
+   no WhatsApp button and no hours, as before. */
+const waLink = (locale: AppLocale) =>
+  supportWhatsAppHref(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP, SUPPORT_WHATSAPP_MESSAGE[locale]);
 const PCT = Math.round(LATE_CANCEL_RETAINED_PCT * 100);
 const H = CANCEL_FREE_WINDOW_HOURS;
 const G = CANCEL_GRACE_MINUTES; // live-fixes-3 · C: the grace after booking
@@ -64,12 +71,12 @@ const meta = bilingual({
   fr: {
     title: "Aide pour les profs",
     description:
-      "Vérification, paiement pendant le pilote, partage de ta page, promotions et abonnements mensuels : les réponses courtes, pour les profs sur Tnajem.",
+      "Vérification, paiement, partage de ta page, promotions et abonnements mensuels : les réponses courtes, pour les profs sur Tnajem.",
   },
   ar: {
     title: "مساعدة للأساتذة",
     description:
-      "التثبّت من الحساب، الخلاص في فترة التجربة، مشاركة صفحتك، التخفيضات والاشتراكات الشهرية : الأجوبة القصيرة للأساتذة على Tnajem.",
+      "التثبّت من الحساب، الخلاص، مشاركة صفحتك، التخفيضات والاشتراكات الشهرية : الأجوبة القصيرة للأساتذة على Tnajem.",
   },
 });
 
@@ -96,15 +103,17 @@ const copy = bilingual({
       {
         id: "paiement",
         toc: "Être payé",
-        q: "Comment je suis payé pendant le pilote ?",
+        q: "Comment je suis payé ?",
         a: [
-          "Tu fixes ton prix, classe par classe. Pendant le pilote, Tnajem ne touche pas à l'argent et ne prend aucune commission.",
+          // december sprint · C (D23): the long version of the pricing rule, both parts.
+          `Tu fixes ton prix, classe par classe. ${PRICING.fr.long1}`,
+          PRICING.fr.long2,
           "Paiement en ligne bientôt : pour l'instant, ton élève te paie hors Tnajem — c'est entre vous.",
           // live-fixes-3 · C: except within 15 min of the booking (@tnajem/shared/cancellation).
           `Une annulation à moins de ${H} h est notée dans le registre des annulations (${PCT} % du prix de la place), mais rien n'est prélevé pendant le pilote. Une annulation dans les ${G} min qui suivent la réservation reste gratuite, sauf si la séance commence dans moins de ${GL} min.`,
         ],
         story: true,
-        after: "Les tarifs d'après le pilote sont sur la page Tarifs. On te préviendra avant tout changement.",
+        after: `Les formules sont sur la page Tarifs. ${PRICING.fr.notice}`,
         cta: { label: "Voir les tarifs", href: "/tarifs" },
       },
       {
@@ -151,8 +160,9 @@ const copy = bilingual({
     moreTitle: "Une autre question ?",
     moreWa: "Écris-nous sur WhatsApp, on te répond.",
     moreWaCta: "Écrire au support",
-    moreNoWa: "Tout ce que Tnajem propose aux profs, sur une page.",
-    moreNoWaCta: "Tnajem pour les profs",
+    // december sprint · C (gate 2): without a WhatsApp number, the mailbox.
+    moreNoWa: "Écris-nous par e-mail, on te répond.",
+    moreNoWaCta: "Écrire au support",
   },
   ar: {
     eyebrow: "مساعدة",
@@ -176,14 +186,15 @@ const copy = bilingual({
       {
         id: "paiement",
         toc: "الخلاص",
-        q: "كيفاش نتخلّص في فترة التجربة ؟",
+        q: "كيفاش نتخلّص ؟",
         a: [
-          "إنت اللي تحدّد ثمنك، حصة بحصة. في فترة التجربة، Tnajem ما يمسّش الفلوس وما ياخذ حتى عمولة.",
+          `إنت اللي تحدّد ثمنك، حصة بحصة. ${PRICING.ar.long1}`,
+          PRICING.ar.long2,
           "الخلاص أونلاين قريب : للوقت هذا، التلميذ يخلّصك برّا Tnajem — هاذي بيناتكم.",
           `الإلغاء قبل أقل من ${H} ساعة يتسجّل في سجلّ الإلغاءات (\u2066${PCT} %\u2069 من ثمن البلاصة)، أما ما يتخصم حتى مليم في فترة التجربة. الإلغاء في الـ${G} دقيقة اللي بعد الحجز يبقى بلاش، إلّا كان الحصة تبدا في أقل من ${GL} دقيقة.`,
         ],
         story: true,
-        after: "أسعار ما بعد التجربة موجودة في صفحة الأسعار. نعلموك قبل أي تبديل.",
+        after: `الخطط موجودة في صفحة الأسعار. ${PRICING.ar.notice}`,
         cta: { label: "شوف الأسعار", href: "/tarifs" },
       },
       {
@@ -230,8 +241,8 @@ const copy = bilingual({
     moreTitle: "عندك سؤال آخر ؟",
     moreWa: "ابعثلنا على WhatsApp، نجاوبوك.",
     moreWaCta: "كلّم الدعم",
-    moreNoWa: "كل شي يقدّمو Tnajem للأساتذة، في صفحة وحدة.",
-    moreNoWaCta: "Tnajem للأساتذة",
+    moreNoWa: "ابعثلنا إيميل، نجاوبوك.",
+    moreNoWaCta: "كلّم الدعم",
   },
 });
 
@@ -272,6 +283,7 @@ html[dir="rtl"] .aide-cta svg{transform:scaleX(-1)}
 .aide-more{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px}
 .aide-more h2{font-family:var(--fd);font-size:clamp(18px,2.2vw,22px);margin-bottom:4px}
 .aide-more p{font-size:15px;color:var(--ink2);line-height:1.6}
+.aide-more p.aide-hours{font-size:14px;color:var(--muted)}
 html[dir="rtl"] .aide-q h2,html[dir="rtl"] .aide-more h2{font-family:var(--fa)}
 `;
 
@@ -285,6 +297,7 @@ export default async function AidePage(props: { params: Promise<{ locale: string
   const params = await props.params;
   const locale: AppLocale = isLocale(params.locale) ? params.locale : DEFAULT_LOCALE;
   const c = copy[locale];
+  const WA_LINK = waLink(locale);
 
   return (
     <SiteShell>
@@ -341,15 +354,19 @@ export default async function AidePage(props: { params: Promise<{ locale: string
           <div className="min-w-0">
             <h2>{c.moreTitle}</h2>
             <p>{WA_LINK ? c.moreWa : c.moreNoWa}</p>
+            {/* december sprint · C (gate 2): the hours hold for both channels. */}
+            <p className="aide-hours" data-e2e="aide-hours">
+              {SUPPORT_HOURS[locale]}
+            </p>
           </div>
           {WA_LINK ? (
             <a href={WA_LINK} className="btn btn-primary" style={{ width: "auto" }} target="_blank" rel="noopener noreferrer">
               <Chat /> {c.moreWaCta}
             </a>
           ) : (
-            <Link href="/pour-les-profs" className="btn btn-primary" style={{ width: "auto" }}>
+            <a href={`mailto:${CONTACT_EMAIL}`} className="btn btn-primary" style={{ width: "auto" }} data-e2e="aide-mail">
               {c.moreNoWaCta}
-            </Link>
+            </a>
           )}
         </div>
       </section>

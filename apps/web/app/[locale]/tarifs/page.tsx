@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { TarifsInner } from "@/components/tarifs/TarifsInner";
 import { paymentsEnabled } from "@tnajem/shared/payments";
-import { COMMISSION_PCT, requirePlan, tnd } from "@tnajem/shared";
+import { requirePlan, tnd } from "@tnajem/shared";
+import { PRICING } from "@/lib/pricing-copy";
 import { isLocale, DEFAULT_LOCALE, type AppLocale } from "@/lib/locale";
 import { pageMetadata } from "@/lib/metadata";
 
@@ -41,8 +42,8 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
      session). Payment is not described here at all; /tarifs itself carries the one
      payment sentence, labelled "Bientôt" while payments are off. */
   const description = ar
-    ? `أسعار Tnajem للأساتذة : فابور في فترة التجربة. من بعد، اشتراك فابور بحصة وحدة منشورة ومن ${from} دينار في الشهر لفوق، و ${COMMISSION_PCT} % كان على الخلاص اللي يعدّي من Tnajem.`
-    : `Les tarifs Tnajem pour les profs : gratuit pendant le pilote. Plus tard, un abonnement gratuit pour une séance publiée à la fois puis à partir de ${from} TND/mois, et ${COMMISSION_PCT} % uniquement sur les paiements traités par Tnajem.`;
+    ? `أسعار Tnajem للأساتذة : ${PRICING.ar.short} من بعد، اشتراك فابور بحصة وحدة منشورة ومن ${from} دينار في الشهر لفوق.`
+    : `Les tarifs Tnajem pour les profs : ${PRICING.fr.short} Ensuite, un abonnement gratuit pour une séance publiée à la fois, puis à partir de ${from} TND/mois.`;
   // Through pageMetadata: a bare openGraph object here replaced the layout's and
   // dropped the og:image, siteName and twitter card from every shared /tarifs link.
   return pageMetadata({ locale, path: "/tarifs", title, description });

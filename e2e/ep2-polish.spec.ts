@@ -204,21 +204,24 @@ test.describe("Réglages (/dashboard/settings, image 4)", () => {
 });
 
 test.describe("Mon offre and /tarifs (image 4)", () => {
-  test("Mon offre: the current plan (Pilote, 0 TND) and a compact summary of the four plans", async ({ browser }) => {
+  // december sprint · C (D23): the pilot tutor is in the free months — « Offert », never « 0 TND ».
+  test("Mon offre: the current plan (Pilote, offered for 3 months) and a compact summary of the four plans", async ({ browser }) => {
     const { profile } = await newTutor("verified");
     const ctx = await tutorCtx(browser, profile.id);
     const page = await ctx.newPage();
     await page.goto("/fr/dashboard/plan");
     const now = page.locator("[data-e2e=plan-card]");
     await expect(now).toContainText("Pilote");
-    await expect(now).toContainText("Offre complète, gratuite");
-    await expect(now).toContainText("0 TND");
+    await expect(now).toContainText("Offre complète");
+    await expect(now.locator("[data-e2e=plan-now-price]")).toHaveText(/Offert\s*tes 3 premiers mois/);
+    await expect(now).not.toContainText("0 TND");
+    await expect(now).toContainText("On te préviendra avant l'ouverture du paiement en ligne.");
     const summary = page.locator("[data-e2e=plan-summary] > li");
     await expect(summary).toHaveCount(4);
     await expect(page.locator("[data-e2e=plan-essentiel]")).toContainText("29");
     await expect(page.locator("[data-e2e=plan-pro]")).toContainText("59");
     await expect(page.locator("[data-e2e=plan-prestige]")).toContainText("99");
-    await expect(page.locator("main")).toContainText("+10 % par élève payant");
+    await expect(page.locator("main")).toContainText("+ 10 % sur chaque élève payant, dès que le paiement passe par Tnajem");
     await expect(page.locator("main a[href='/fr/tarifs']")).toBeVisible();
     await ctx.close();
   });
@@ -227,7 +230,14 @@ test.describe("Mon offre and /tarifs (image 4)", () => {
     await page.goto("/fr/tarifs");
     const ctas = page.locator("[data-e2e=plan-cta]");
     expect(await ctas.count()).toBeGreaterThanOrEqual(4);
-    for (const t of await ctas.allInnerTexts()) expect(t.trim()).toBe("Inclus pendant le pilote");
+    // december sprint · C: every PAID plan says « Offert tes 3 premiers mois »; Gratuit,
+    // which never costs anything, keeps « Commencer gratuitement ».
+    const cards = page.locator("[data-e2e=plan-cta]");
+    const texts = (await cards.allInnerTexts()).map((t) => t.trim());
+    expect(texts[0]).toBe("Commencer gratuitement");
+    for (const t of texts.slice(1)) expect(t).toBe("Offert tes 3 premiers mois");
+    await expect(ctas.first()).not.toHaveAttribute("aria-label", /.+/);
+    await expect(ctas.nth(1)).toHaveAttribute("aria-label", /— offert tes 3 premiers mois : crée ta page$/);
     const once = page.locator("[data-e2e=tarifs-once]");
     await expect(once).toHaveCount(1);
     await expect(once).toContainText("+ 10 % sur chaque élève payant");

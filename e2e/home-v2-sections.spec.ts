@@ -24,14 +24,15 @@ const HONEST = {
   fr: {
     step4: "Réserve la suivante ou passe au mois si ton prof le propose.",
     checks: ["Sans engagement", "Annulation libre jusqu'à 48h avant", "Des profs vérifiés"],
-    prof: "Crée ta page gratuitement en 2 minutes, fixe ton tarif, et garde 100 % pendant le pilote.",
+    // december sprint · C (D23): the founder's pricing rule, the approved short line.
+    prof: "Crée ta page gratuitement en 2 minutes et fixe ton tarif. 3 mois sans abonnement. 10 % sur chaque élève payant, dès que le paiement passe par Tnajem.",
     soon: "Bientôt",
     stepsTitle: "En 4 étapes, c'est simple.",
   },
   ar: {
     step4: "احجز الحصة الجاية، ولا اعمل اشتراك شهري كان أستاذك يقترحو.",
     checks: ["بلا التزام", "تنجّم تلغي حتى 48 ساعة قبل", "أساتذة متثبّت منهم"],
-    prof: "اعمل صفحتك فابور في دقيقتين، حدّد ثمنك، و⁦100 %⁩ متاعك في فترة التجربة.",
+    prof: "اعمل صفحتك فابور في دقيقتين وحدّد ثمنك. 3 شهور بلا اشتراك. \u206610 %\u2069 على كل تلميذ خلّص، كي الخلاص يعدّي من Tnajem.",
     soon: "قريب",
     stepsTitle: "في 4 مراحل، الحكاية ساهلة.",
   },
