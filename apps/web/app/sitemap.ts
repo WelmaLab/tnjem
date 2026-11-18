@@ -57,6 +57,7 @@ function localizedEntries(
 const ROUTES: { subpath: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
   { subpath: "", priority: 1, changeFrequency: "weekly" },
   { subpath: "/pour-les-profs", priority: 0.9, changeFrequency: "weekly" },
+  { subpath: "/pour-les-centres", priority: 0.8, changeFrequency: "weekly" }, // december-sprint · B (D12)
   { subpath: "/explore", priority: 0.9, changeFrequency: "daily" },
   { subpath: "/tarifs", priority: 0.8, changeFrequency: "monthly" },
   { subpath: "/aide", priority: 0.5, changeFrequency: "monthly" }, // espace prof v2 · pro (P7)

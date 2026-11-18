@@ -67,16 +67,20 @@ for (const locale of LOCALES) {
     await expect(page).toHaveURL(new RegExp(`/${locale}/signup/prof$`));
   });
 
-  test(`/${locale}/pour-les-profs: the centres card is « ${SOON[locale]} » and opens the waitlist`, async ({ page }) => {
+  /* december-sprint · B (D12): the centre offer exists now, so the card opens
+     /pour-les-centres and says « Bientôt » nowhere (it used to, twice). */
+  test(`/${locale}/pour-les-profs: the centres card opens /${locale}/pour-les-centres, with no « ${SOON[locale]} »`, async ({ page }) => {
     await page.goto(`/${locale}/pour-les-profs`);
     const card = page.locator("[data-e2e=profs-role-centre]");
-    await expect(card).toContainText(SOON[locale]);
+    await expect(card).not.toContainText(SOON[locale]);
     await expect(card).not.toContainText(/Nouveau|جديد/);
-    await expect(card.locator(".tag-soon")).toHaveCount(1);
-    // The same subject in both locales, so the inbox can file it.
-    await expect(card).toHaveAttribute("href", "mailto:contact@tnajem.com?subject=Tnajem%20pour%20les%20centres");
+    await expect(card.locator(".tag-soon, .tag")).toHaveCount(0);
+    await expect(card).toHaveAttribute("href", `/${locale}/pour-les-centres`);
     // One link, nothing nested inside it.
     await expect(card.locator("a, button")).toHaveCount(0);
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`/${locale}/pour-les-centres$`));
+    await expect(page.locator("h1")).toBeVisible();
   });
 
   test(`/${locale}/pour-les-profs: no demo button without NEXT_PUBLIC_PROF_DEMO_URL`, async ({ page }) => {

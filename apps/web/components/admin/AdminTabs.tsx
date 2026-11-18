@@ -8,12 +8,12 @@ import { bilingual } from "@/lib/i18n";
    current one marked in cobalt on blue50 (.adm-tab[aria-current] in globals.css).
    Each page used to show a different subset of links, in a different place, under
    different names. The labels are the short ones the pages already used. */
-const TABS = ["verifications", "accounts", "moderation", "plans"] as const;
+const TABS = ["verifications", "accounts", "moderation", "plans", "leads"] as const; // december-sprint · B: + leads
 export type AdminTab = (typeof TABS)[number];
 
 const copy = bilingual({
-  fr: { verifications: "Vérifications", accounts: "Comptes", moderation: "Modération", plans: "Offres" },
-  ar: { verifications: "التثبّت", accounts: "الحسابات", moderation: "المراقبة", plans: "العروض" },
+  fr: { verifications: "Vérifications", accounts: "Comptes", moderation: "Modération", plans: "Offres", leads: "Centres" },
+  ar: { verifications: "التثبّت", accounts: "الحسابات", moderation: "المراقبة", plans: "العروض", leads: "المراكز" },
 });
 
 export function AdminTabs({ current }: { current: AdminTab }) {

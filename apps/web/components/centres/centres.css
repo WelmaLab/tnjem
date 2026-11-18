@@ -1,0 +1,108 @@
+/* ── december-sprint · B — /pour-les-centres (prefix ce-) ────────────────────────
+   Mobile first. Built on the landing kit (kit.css: .lk-tile, .lk-tone-*, the mask
+   icons) and the system's .btn / .inp / .field classes. Logical properties only
+   (guardrail 1), token colours only (guardrail 4: no literal, the label on a dark fill is --paper). Unlayered, like components/landing/*.css.
+   Arabic: --fd has no Arabic glyphs and negative tracking severs the joins, so every
+   display title goes back to --fa under html[dir=rtl]; 13px lines go up to 14px. */
+
+/* ── rhythm ─────────────────────────────────────────────────────────────────── */
+.ce-sec{padding-block:clamp(32px,5vw,64px)}
+.ce-band{background:var(--band-blue)}
+.ce-h2{font-size:clamp(23px,2.7vw,32px);text-wrap:balance}
+
+/* ── hero ───────────────────────────────────────────────────────────────────── */
+.ce-hero{position:relative;isolation:isolate;overflow:hidden;
+  padding-block:clamp(28px,5vw,64px) clamp(32px,5vw,56px);
+  background:linear-gradient(180deg,var(--blue50) 0%,var(--band-blue) 70%,var(--bg) 100%)}
+.ce-hero-in{display:flex;flex-direction:column;gap:18px;max-width:780px}
+.ce-pill{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;padding-block:6px;
+  padding-inline:11px 14px;border-radius:999px;background:var(--paper);color:var(--blue700);
+  font-weight:700;font-size:13px;box-shadow:var(--sh-s)}
+.ce-pill .ic{width:15px;height:15px}
+/* web-h1 is the system's H1 class (tools/ui-audit/routes.mjs looks for it). The
+   size follows the viewport on a phone so the longest word never overflows. */
+.ce-h1{font-size:clamp(28px,min(5vw,calc((100vw - 32px) / 11)),52px);line-height:1.12;text-wrap:balance}
+html[dir=rtl] .ce-h1{font-family:var(--fa);letter-spacing:normal;line-height:1.35}
+.ce-lead{max-width:640px;text-wrap:pretty}
+.ce-actions{display:flex;flex-direction:column;gap:12px;margin-block-start:4px}
+.ce-actions .btn{padding-block:14px;padding-inline:22px}
+@media (min-width:640px){
+  .ce-actions{flex-direction:row;flex-wrap:wrap;align-items:center}
+  .ce-actions .btn{width:auto}
+}
+.ce-hours{font-size:13px;color:var(--muted)}
+html[dir=rtl] .ce-hours,html[dir=rtl] .ce-pill{font-size:14px}
+
+/* ── key points ─────────────────────────────────────────────────────────────── */
+.ce-points{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;
+  margin-block-start:clamp(18px,3vw,28px)}
+@media (min-width:768px){.ce-points{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}
+.ce-point{display:flex;align-items:flex-start;gap:14px;min-width:0;padding:clamp(16px,2vw,20px);
+  border:1px solid var(--lineCool);border-radius:var(--r-l);background:var(--paper);box-shadow:var(--sh-s)}
+.ce-point-tile{width:44px;height:44px;border-radius:13px}
+.ce-point-tile .ic{width:22px;height:22px}
+.ce-point p{font-size:15px;line-height:1.55;color:var(--ink);padding-block-start:2px}
+
+/* ── À savoir ───────────────────────────────────────────────────────────────── */
+.ce-know{display:flex;align-items:flex-start;gap:12px;margin-block-start:clamp(16px,2.4vw,24px);
+  padding:clamp(14px,2vw,18px);border-radius:var(--r-l);background:var(--ochre-tint);color:var(--ink)}
+.ce-know-ic{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:10px;
+  background:var(--paper);color:var(--ochre600)}
+.ce-know-ic .ic{width:18px;height:18px}
+.ce-know-title{font-weight:800;font-size:14.5px;color:var(--ochre-ink)}
+.ce-know p{font-size:14.5px;line-height:1.55;margin-block-start:2px}
+
+/* ── packs ──────────────────────────────────────────────────────────────────── */
+.ce-packs{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;
+  margin-block-start:clamp(18px,3vw,28px)}
+@media (min-width:768px){.ce-packs{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}}
+.ce-pack{display:flex;flex-direction:column;gap:6px;min-width:0;padding:clamp(18px,2.4vw,24px);
+  border:1px solid var(--lineCool);border-radius:var(--r-l);background:var(--paper);box-shadow:var(--sh-s)}
+.ce-pack-name{font-family:var(--fd);font-size:18px;font-weight:700;line-height:1.3;color:var(--ink)}
+html[dir=rtl] .ce-pack-name{font-family:var(--fa)}
+.ce-pack-cap{align-self:flex-start}
+/* A price is a figure: the figure face, tabular — never a monospace face. */
+.ce-pack-price{font-family:var(--fn);font-variant-numeric:tabular-nums;font-size:22px;font-weight:800;color:var(--blue700)}
+.ce-onrequest{margin-block-start:14px;font-weight:700;color:var(--ink2)}
+
+/* ── the form and the contact aside ─────────────────────────────────────────── */
+.ce-lead-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(18px,3vw,32px);align-items:start}
+@media (min-width:1024px){.ce-lead-grid{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}}
+/* The anchor target: a sticky header must not hide the form's title. */
+.ce-form-sec{scroll-margin-block-start:84px}
+.ce-form{display:flex;flex-direction:column;gap:14px;min-width:0;padding:clamp(18px,3vw,32px);
+  border:1px solid var(--lineCool);border-radius:var(--r-xl);background:var(--paper);box-shadow:var(--sh-card)}
+.ce-form-row{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@media (min-width:640px){.ce-form-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ce-form .field{display:flex;flex-direction:column;min-width:0}
+.ce-levels{display:flex;flex-direction:column;border:0;padding:0;margin:0;min-width:0}
+.ce-levels legend{padding:0}
+.ce-level-list{display:flex;flex-wrap:wrap;gap:8px}
+.ce-level{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding-inline:12px 14px;
+  border:1.5px solid var(--line);border-radius:999px;background:var(--paper);color:var(--ink2);
+  font-size:14px;font-weight:600;cursor:pointer;transition:border-color .16s,background-color .16s}
+.ce-level:hover{border-color:var(--blue)}
+.ce-level:has(input:checked){border-color:var(--blue);background:var(--blue50);color:var(--blue700)}
+.ce-level:has(input:focus-visible){outline:3px solid var(--blue);outline-offset:2px}
+.ce-level input{width:18px;height:18px;flex:none;margin:0;accent-color:var(--blue)}
+/* The honeypot: out of sight and out of the tab order, but not display:none (some
+   bots skip hidden fields). aria-hidden keeps it from screen readers. */
+.ce-hp{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ce-consent{font-size:13px;line-height:1.55;color:var(--muted)}
+html[dir=rtl] .ce-consent{font-size:14px}
+.ce-submit{align-self:stretch}
+@media (min-width:640px){.ce-submit{align-self:flex-start;width:auto;padding-inline:28px}}
+.ce-form-error{font-weight:600;color:var(--rose)}
+.ce-success{display:flex;align-items:center;gap:12px;padding:clamp(18px,3vw,28px);border-radius:var(--r-xl);
+  background:var(--green50);color:var(--green-ink);font-size:17px;font-weight:700;line-height:1.45}
+.ce-success-ic{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--green);color:var(--paper)}
+.ce-success-ic .ic{width:18px;height:18px}
+
+.ce-aside{display:flex;flex-direction:column;gap:12px;min-width:0;padding:clamp(18px,3vw,28px);
+  border-radius:var(--r-xl);background:var(--paper);border:1px solid var(--lineCool)}
+.ce-aside-title{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--ink)}
+html[dir=rtl] .ce-aside-title{font-family:var(--fa)}
+.ce-aside .btn{width:100%}
+.ce-aside-mail{font-weight:700;color:var(--blue);overflow-wrap:anywhere}
+
+@media (prefers-reduced-motion:reduce){.ce-level{transition:none}}

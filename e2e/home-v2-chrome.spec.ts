@@ -3,6 +3,7 @@ import { seedProfile } from "./support/seed";
 import { loginAs } from "./support/session";
 import { BASE_URL } from "./support/env";
 import { socialHref } from "../apps/web/lib/social";
+import { SUPPORT_HOURS } from "@tnajem/shared";
 
 /* ════════════════════════════════════════════════════════════════════════════
    home v2 · D — THE PUBLIC CHROME (UI_options/home-v2-reference.png, top and bottom).
@@ -41,7 +42,7 @@ async function ctxAs(browser: Browser, role: Role | null, viewport = DESKTOP): P
 
 const L = {
   fr: {
-    find: "Trouver un prof", forTutors: "Pour les profs", signIn: "Se connecter", create: "Créer ma page",
+    find: "Trouver un prof", forTutors: "Pour les profs", forCentres: "Pour les centres", signIn: "Se connecter", create: "Créer ma page",
     space: "Mon espace", dashboard: "Tableau de bord", guardian: "Espace parent",
     cols: ["Élèves & parents", "Profs", "Légal"],
     tagline: "Le lien entre les élèves tunisiens et leurs profs.",
@@ -49,7 +50,7 @@ const L = {
     menu: "Menu",
   },
   ar: {
-    find: "لقّي أستاذ", forTutors: "للأساتذة", signIn: "دخول", create: "اعمل صفحتك",
+    find: "لقّي أستاذ", forTutors: "للأساتذة", forCentres: "للمراكز", signIn: "دخول", create: "اعمل صفحتك",
     space: "فضائي", dashboard: "لوحتي", guardian: "فضاء الولي",
     cols: ["تلامذة وأولياء", "أساتذة", "قانوني"],
     tagline: "الرابط بين التلامذة التوانسة وأساتذتهم.",
@@ -105,6 +106,8 @@ for (const locale of ["fr", "ar"] as const) {
       const nav = header.locator("nav.qh-nav");
       await expect(nav.getByRole("link", { name: c.find })).toHaveAttribute("href", `/${locale}/explore`);
       await expect(nav.getByRole("link", { name: c.forTutors })).toHaveAttribute("href", `/${locale}/pour-les-profs`);
+      // december-sprint · B (D12)
+      await expect(nav.getByRole("link", { name: c.forCentres })).toHaveAttribute("href", `/${locale}/pour-les-centres`);
       const langs = header.locator(".qlt button");
       await expect(langs).toHaveCount(2);
       await expect(header.locator(`.qlt button[lang=${locale}]`)).toHaveAttribute("aria-pressed", "true");
@@ -125,7 +128,7 @@ for (const locale of ["fr", "ar"] as const) {
       const hrefs = await footer.locator(".qf-col a").evaluateAll((els) => els.map((e) => e.getAttribute("href")));
       expect(hrefs).toEqual([
         `/${locale}/explore`, `/${locale}/student`, `/${locale}/auth`,
-        `/${locale}/pour-les-profs`, `/${locale}/tarifs`, `/${locale}/signup/prof`, `/${locale}/dashboard`,
+        `/${locale}/pour-les-profs`, `/${locale}/pour-les-centres`, `/${locale}/tarifs`, `/${locale}/signup/prof`, `/${locale}/dashboard`,
         `/${locale}/terms`, `/${locale}/privacy`, "mailto:contact@tnajem.com",
       ]);
       await expect(page.locator("[data-e2e=footer-signin]")).toHaveText(c.signIn);
@@ -136,6 +139,9 @@ for (const locale of ["fr", "ar"] as const) {
       await expect(page.locator("[data-e2e=footer-email]")).toHaveAttribute("href", "mailto:contact@tnajem.com");
       await expect(page.locator("[data-e2e=footer-email]")).toHaveText("contact@tnajem.com");
       await expectNoSocial(page);
+      // december-sprint · B (D14): no WhatsApp while NEXT_PUBLIC_SUPPORT_WHATSAPP is blank (the suite pins it).
+      await expect(page.locator('.site-footer a[href*="wa.me"], [data-e2e=footer-whatsapp]')).toHaveCount(0);
+      await expect(page.locator("[data-e2e=footer-hours]")).toHaveText(SUPPORT_HOURS[locale]);
 
       // The server HTML too: the icons are decided at build time, not after hydration.
       const html = await (await ctx.request.get(`/${locale}`)).text();

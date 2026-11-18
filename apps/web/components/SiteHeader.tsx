@@ -25,6 +25,7 @@ const NAV = {
   fr: {
     findTutor: "Trouver un prof",
     forTutors: "Pour les profs",
+    forCentres: "Pour les centres", // december-sprint · B (D12)
     signIn: "Se connecter",
     createPage: "Créer ma page",
     mySpace: "Mon espace",
@@ -42,6 +43,7 @@ const NAV = {
   ar: {
     findTutor: "لقّي أستاذ",
     forTutors: "للأساتذة",
+    forCentres: "للمراكز", // december-sprint · B (D12)
     signIn: "دخول",
     createPage: "اعمل صفحتك",
     mySpace: "فضائي",
@@ -127,6 +129,7 @@ export function SiteHeader() {
         <nav className="qh-nav" aria-label={c.nav}>
           <Link href="/explore" aria-current={cur("/explore")}>{c.findTutor}</Link>
           <Link href="/pour-les-profs" aria-current={cur("/pour-les-profs")}>{c.forTutors}</Link>
+          <Link href="/pour-les-centres" aria-current={cur("/pour-les-centres")}>{c.forCentres}</Link>
         </nav>
 
         <div className="qh-right">
@@ -177,6 +180,7 @@ export function SiteHeader() {
 
           <div className="qh-group">{c.gTutors}</div>
           <Link href="/pour-les-profs" aria-current={cur("/pour-les-profs")}>{c.forTutors}</Link>
+          <Link href="/pour-les-centres" aria-current={cur("/pour-les-centres")}>{c.forCentres}</Link>
           {isTutor && <Link href="/dashboard" aria-current={cur("/dashboard")}>{c.dashboard}</Link>}
 
           {/* A signed-in student is offered the DELIBERATE upgrade screen, never

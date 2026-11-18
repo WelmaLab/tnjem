@@ -196,6 +196,8 @@ export const ROUTES = [
   // ── public: indexed, shared on WhatsApp, must survive a failed bundle ──
   { path: "/", name: "home", nojs: true, h1: "h1.web-h1", sub: "p.web-lead", cta: "main a.btn-primary" },
   { path: "/pour-les-profs", name: "pour-les-profs", nojs: true, h1: "h1.web-h1", sub: "p.web-lead", cta: "main a.btn-primary" },
+  // december-sprint · B (D12): the centre landing page; its CTA is the #demo anchor, so it works without JS.
+  { path: "/pour-les-centres", name: "pour-les-centres", nojs: true, h1: "h1.web-h1", sub: "p.web-lead", cta: "main a.btn-primary" },
   { path: "/tarifs", name: "tarifs", nojs: true, h1: "main h1", sub: "main p.web-lead", cta: "main a.btn-primary" },
   { path: "/explore", name: "explore", nojs: true, h1: "main h1", sub: "main h1 + p", cta: "main a.u-card-int, main a[href*=\"/\"]" },
   /* The CTA is "Réserver" while the tutor has an upcoming class, and the empty
@@ -247,6 +249,7 @@ export const ROUTES = [
   { path: "/admin/plans", name: "admin-plans", auth: "admin" },
   /* Production readiness Stage 2: account blocks. Audited from day one. */
   { path: "/admin/accounts", name: "admin-accounts", auth: "admin" },
+  { path: "/admin/leads", name: "admin-leads", auth: "admin" }, // december-sprint · B (D13)
 
   /* ── Stage C screens that shipped with no audit coverage at all ─────────────
      Found by the final verification pass: four real, reachable screens had never

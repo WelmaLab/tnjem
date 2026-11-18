@@ -89,7 +89,7 @@ function apiRequestId(res: Response): string | undefined {
 }
 
 type CallOptions = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PATCH"; // december-sprint · B: PATCH /admin/centre-leads/:id
   body?: unknown;
   anonymous?: boolean;
   /** Seconds Next may cache this fetch. Anonymous reads only — see request(). */
@@ -149,7 +149,7 @@ async function request(path: string, opts: CallOptions): Promise<unknown> {
 }
 
 /** Authenticated call: forwards the session cookie and the client address. */
-export async function call<T>(path: string, body?: unknown, method: "GET" | "POST" = "POST"): Promise<T> {
+export async function call<T>(path: string, body?: unknown, method: "GET" | "POST" | "PATCH" = "POST"): Promise<T> {
   const out = (await request(path, { method, body })) as T & Partial<ActionResult>;
 
   // Rule 4: replay the invalidations the API reported.
