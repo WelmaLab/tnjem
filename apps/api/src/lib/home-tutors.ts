@@ -14,7 +14,7 @@ import {
   type HomeTutor,
 } from "@tnajem/shared";
 import { db } from "../db";
-import { onSaleClassSql } from "./class-sale";
+import { listedOnSaleClassSql } from "./class-listed"; // december-sprint · E (D18)
 
 /* home v2 · B — THE HOME PAGE'S « real tutors » CARD (GET /tutors/home).
 
@@ -102,7 +102,7 @@ export async function getHomeTutors(opts: { restrictTo?: string[] } = {}): Promi
     db
       .select({ tutorId: classes.tutorId, min: raw<string | null>`min(${classes.priceTnd})` })
       .from(classes)
-      .where(and(inArray(classes.tutorId, ids), onSaleClassSql, raw`${classes.priceTnd} > 0`))
+      .where(and(inArray(classes.tutorId, ids), listedOnSaleClassSql, raw`${classes.priceTnd} > 0`)) // december-sprint · E (D18): listed classes only
       .groupBy(classes.tutorId),
     db
       .select({ tutorId: tutorOffers.tutorId, min: raw<string | null>`min(${tutorOffers.priceTndPerMonth})` })

@@ -65,7 +65,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     title,
     description,
     // december-sprint · A (D11): a test account's class — reachable by link, never indexed.
-    ...(cls.tutor_is_test ? { robots: { index: false, follow: false } } : {}),
+    // december-sprint · E (D18): so is an unlisted class (link / QR only).
+    ...(cls.tutor_is_test || cls.unlisted ? { robots: { index: false, follow: false } } : {}),
     alternates: { canonical, languages: { "fr-TN": `/fr${subpath}`, "ar-TN": `/ar${subpath}`, "x-default": `/fr${subpath}` } },
     openGraph: {
       type: "website",
@@ -91,7 +92,7 @@ async function courseMarkup(locale: AppLocale, id: string) {
   const cls = await callAnonymous<ClassItem | null>(`/classes/${encodeURIComponent(id)}`, 60).catch(() => null);
   if (!cls) return null;
   const pricing = cls.tutor_slug
-    ? await callAnonymous<TutorPricing | null>(`/tutors/${encodeURIComponent(cls.tutor_slug)}/pricing`, 60).catch(() => null)
+    ? await callAnonymous<TutorPricing | null>(`/tutors/${encodeURIComponent(cls.tutor_slug)}/pricing?class=${encodeURIComponent(cls.id)}`, 60) // december-sprint · E (D18): + the class id.catch(() => null)
     : null;
   const quoted = priceWithPromotion({ kind: "class", id: cls.id, priceTnd: cls.price_tnd }, pricing?.promotions ?? []).finalTnd;
   return courseJsonLd({

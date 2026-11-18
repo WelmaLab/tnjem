@@ -73,6 +73,10 @@ export type ClassItem = {
   /** december-sprint · A (D11): the class belongs to a test account — the page is
       reachable by link and carries robots noindex. Only GET /classes/:id sets it. */
   tutor_is_test?: boolean;
+  /** december-sprint · E (D18): an unlisted class (classes.unlisted, 0045) — bookable
+      by its link and QR code, carries robots noindex, absent from every public list.
+      Only GET /classes/:id sets it. */
+  unlisted?: boolean;
   /** phase-a/integrate (A9 × A18.7): the levels the tutor CHOSE, as codes — never the
       legacy tutors.level column, which still holds the old 'Bac' default. */
   tutor_levels?: LevelCode[];
@@ -148,6 +152,8 @@ export type DashboardClass = {
   // phase-a lane L5 (A18.10): real duration, and where the class stands when the API answered.
   duration_min?: number;
   phase?: ClassPhase;
+  /** december-sprint · E (D18): reachable by link / QR only — the « Non listé » tag. */
+  unlisted?: boolean;
 };
 
 // A pack (downloadable revision material) as shown on the dashboard.

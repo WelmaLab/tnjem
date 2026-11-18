@@ -17,7 +17,7 @@ import { checkRateLimit } from "../lib/rate-limit";
 import { isUniqueViolation } from "../lib/db-errors";
 import { assertNoContactInfo, CONTACT_ERROR } from "../lib/contact-guard";
 import { exploreBoostSql, subscriptionIsLiveSql } from "../lib/entitlements";
-import { onSaleClassSql } from "../lib/class-sale";
+import { listedOnSaleClassSql } from "../lib/class-listed"; // december-sprint · E (D18)
 import { visibleReviewText } from "../lib/moderation-hide"; // phase-a lane L4 (A28)
 import { publicTutorSql } from "../lib/home-tutors"; // home v2 · B
 import { parseBody } from "../lib/parse-body";
@@ -311,6 +311,7 @@ export async function tutorRoutes(app: FastifyInstance): Promise<void> {
         createdAt: reviews.createdAt,
         studentName: profiles.fullName,
         classTitle: classes.title,
+        classUnlisted: classes.unlisted, // december-sprint · E (D18)
       })
       .from(reviews)
       /* LEFT join, not inner. Step 15 made reviews.student_id nullable so that a
@@ -335,7 +336,8 @@ export async function tutorRoutes(app: FastifyInstance): Promise<void> {
       // a subject and a city narrows a person a long way, and buys the reader
       // nothing. No phone, no email, no full identity.
       studentName: publicDisplayName(r.studentName),
-      classTitle: r.classTitle ?? null,
+      // december-sprint · E (D18): the review stays, an unlisted class keeps its title to itself.
+      classTitle: r.classUnlisted ? null : (r.classTitle ?? null),
       createdAt: new Date(r.createdAt).toISOString(),
     }));
 
@@ -470,7 +472,7 @@ export async function tutorRoutes(app: FastifyInstance): Promise<void> {
       const priceAgg = await db
         .select({ tutorId: classes.tutorId, min: raw<string | null>`min(${classes.priceTnd})` })
         .from(classes)
-        .where(and(inArray(classes.tutorId, ids), onSaleClassSql))
+        .where(and(inArray(classes.tutorId, ids), listedOnSaleClassSql)) // december-sprint · E (D18): an unlisted class sets no public price
         .groupBy(classes.tutorId);
       const priceByTutor = new Map(priceAgg.map((r) => [r.tutorId, r.min]));
 

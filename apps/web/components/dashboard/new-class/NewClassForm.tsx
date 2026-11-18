@@ -24,6 +24,7 @@ import {
 import { CLASS_LIMITS, checkClassLimits } from "@tnajem/shared/class-input";
 import { ClassPreview } from "./ClassPreview";
 import { DuplicateDialog } from "./DuplicateDialog";
+import { UnlistedRow, unlistedCopy } from "./UnlistedRow"; // december-sprint · E (D18)
 
 /* ══════════════════════════════════════════════════════════════════════════════
    espace prof v2 · phase 6 — NOUVELLE CLASSE (image 2).
@@ -193,6 +194,7 @@ const DURATIONS = [60, 90, 120] as const;
 type Draft = {
   title: string; desc: string; datetime: string; duration: string; price: string; seats: string;
   level: string; videoUrl: string; whiteboardUrl: string; quizUrl: string; freeFirst: boolean;
+  unlisted?: boolean; // december-sprint · E (D18): optional, so a draft saved before it still reads
 };
 const EMPTY: Draft = {
   title: "", desc: "", datetime: "", duration: "90", price: "", seats: "20",
@@ -270,6 +272,7 @@ export function NewClassForm() {
       price: String(k.price_tnd),
       seats: String(k.seats || 20),
       level: k.level && isLevelCode(k.level) ? k.level : "",
+      unlisted: Boolean(k.unlisted), // december-sprint · E (D18): a centre class duplicates as one
       datetime: "",
     }));
     setDuplicatedFrom(k.title);
@@ -337,7 +340,7 @@ export function NewClassForm() {
   const [planLimit, setPlanLimit] = useState<{ limit: number; plan: string } | null>(null);
   /* The class just published (espace prof v2 · growth P3 behaviour, kept): its id,
      title and wall time, for « Partager » — the share sheet opens on its own. */
-  const [published, setPublished] = useState<{ id: string | null; title: string; wall: string } | null>(null);
+  const [published, setPublished] = useState<{ id: string | null; title: string; wall: string; unlisted?: boolean } | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const shellSlug = useShell()?.shell?.slug ?? null;
   /* The tutor's promotions (phase 5): a PUBLIC one covering every class ("all")
@@ -433,6 +436,7 @@ export function NewClassForm() {
       durationMin: Number(f.duration), priceTnd: Number(f.price), seats: Number(f.seats),
       isFreeFirst: f.freeFirst && !ffDisabled, meetUrl: f.videoUrl, whiteboardUrl: f.whiteboardUrl, quizUrl: f.quizUrl,
       level: f.level || null,
+      unlisted: Boolean(f.unlisted), // december-sprint · E (D18)
     })) as Awaited<ReturnType<typeof createClass>> & { id?: string };
     setSubmitted(false);
     if (res.ok) {
@@ -441,7 +445,7 @@ export function NewClassForm() {
       window.clearTimeout(pendingSave.current);
       if (draftKey) clearDraft(draftKey);
       setDraftState("none");
-      setPublished({ id: res.id ?? null, title: f.title, wall: f.datetime });
+      setPublished({ id: res.id ?? null, title: f.title, wall: f.datetime, unlisted: Boolean(f.unlisted) });
       setSheetOpen(true);
       showToast(res.demo ? `${t.extra.classPublished} · ${t.common.demoMode}` : t.extra.classPublished);
       window.scrollTo({ top: 0 });
@@ -495,7 +499,7 @@ export function NewClassForm() {
         <section className="u-card u-card-pad nc-done" aria-labelledby="nc-done-t" data-e2e="class-published">
           <span className="nc-done-ic" aria-hidden="true"><Check /></span>
           <h2 id="nc-done-t" className="aps-empty-t">{c.publishedT}</h2>
-          <p className="hp-muted">{c.publishedB}</p>
+          <p className="hp-muted">{published.unlisted ? unlistedCopy[locale].published : c.publishedB}</p>
           {published.id && (
             <div className="hp-linkbox mt-3" data-e2e="published-share">
               <span className="hp-linkbox-url" dir="ltr">{classUrl(published.id).replace(/^https?:\/\//, "")}</span>
@@ -725,6 +729,8 @@ export function NewClassForm() {
                   <Link href="/dashboard/settings?tab=vitrine#free-first" className="linklike nc-ff-off-a">{c.ffOffCta}</Link>
                 </p>
               ) : null}
+              {/* december-sprint · E (D18): link / QR only. */}
+              <UnlistedRow checked={Boolean(f.unlisted)} onChange={(v) => set("unlisted", v)} />
             </FormSection>
 
             {/* Folded: most tutors use the room Tnajem opens for them. */}

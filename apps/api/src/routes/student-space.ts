@@ -10,6 +10,7 @@ import { getSession, type Session } from "../lib/session";
 import { checkRateLimit } from "../lib/rate-limit";
 import { materialAccessContext } from "../lib/material-access";
 import { livePublicPromotions } from "../lib/promotions";
+import { listedClassSql } from "../lib/class-listed"; // december-sprint · E (D18)
 import {
   bookableNextClass, followedTutorIds, lastSeenFiches, nextClassOf, splitBookings, studentBookings, studentFiches,
   studentSubscriptionRows, studentTutorIds, tutorRef, tutorRefs,
@@ -116,6 +117,7 @@ export async function studentSpaceRoutes(app: FastifyInstance): Promise<void> {
           eq(tutors.status, "verified"),
           isNull(tutors.suspendedAt),
           ne(classes.status, "cancelled"),
+          listedClassSql, // december-sprint · E (D18): a followed prof's unlisted class is not advertised (a booked one is in `ahead`)
           gt(classes.scheduledAt, new Date(now)),
           raw`${classes.scheduledAt} < ${new Date(horizon).toISOString()}::timestamptz`,
         ))
@@ -151,7 +153,7 @@ export async function studentSpaceRoutes(app: FastifyInstance): Promise<void> {
     const missing = profIds.filter((id) => !refs.has(id));
     for (const [id, ref] of await tutorRefs(missing)) refs.set(id, ref);
     const shownIds = profIds.filter((id) => refs.has(id));
-    const nextOf = await nextClassOf(shownIds.slice(0, 3));
+    const nextOf = await nextClassOf(shownIds.slice(0, 3), uid); // december-sprint · E (D18): + uid
     const followedSet = new Set(followed);
     const profs: StudentHomeProf[] = shownIds.slice(0, 3).map((id) => ({
       tutor: refs.get(id)!,
@@ -190,7 +192,7 @@ export async function studentSpaceRoutes(app: FastifyInstance): Promise<void> {
     const shown = profIds.filter((id) => refs.has(id));
     const [fiches, nextOf, subscriptions] = await Promise.all([
       studentFiches(uid, shown, { lastSeen, access }),
-      nextClassOf(shown),
+      nextClassOf(shown, uid), // december-sprint · E (D18): + uid
       studentSubscriptionRows(uid),
     ]);
     const followedSet = new Set(followed);

@@ -8,9 +8,10 @@ import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 import { DateTimeField } from "@/components/app/DatePicker";
 import { ShareButton } from "@/components/share/ShareButton"; // espace prof v2 · growth (P3, C3)
 import { StartSessionLink } from "./StartSessionLink"; // live-fixes-3 · A1
-import { cancelClass, rescheduleClass } from "@/app/actions";
+import { cancelClass, rescheduleClass, setClassUnlisted } from "@/app/actions"; // december-sprint · E (D18): + setClassUnlisted
 import { monthLabel, toWallInput, type DashboardClass } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
+import "./ClassRow.css"; // december-sprint · E (D18): the toggle's 44px tap target
 
 /* espace prof v2 · shell — one row of « Mes classes », with its actions:
 
@@ -21,6 +22,8 @@ import { bilingual } from "@/lib/i18n";
      Annuler          → POST /classes/:id/cancel, behind a confirmation dialog:
                         every seat is released and nothing is retained
      Partager         → the share sheet for the class page (growth, contract C3)
+     Non listé        → december-sprint · E (D18): the tag, and the switch between
+                        « link / QR only » and « on my page » (POST /classes/:id/unlisted)
 
    The two confirmations say different things because the consequences differ —
    cancelling ends the class for everyone and cannot be undone, moving keeps every
@@ -55,6 +58,12 @@ const copy = bilingual({
     phaseDone: "Terminée",
     phaseCancelled: "Annulée",
     actions: (t: string) => `Actions pour « ${t} »`,
+    // december-sprint · E (D18)
+    unlistedTag: "Non listé",
+    unlist: "Rendre non listé",
+    relist: "Afficher sur ma page",
+    okUnlisted: "Classe non listée : seuls ceux qui ont le lien ou le QR code la voient.",
+    okRelisted: "Classe affichée sur ta page et dans Explorer.",
   },
   ar: {
     duplicate: "انسخ",
@@ -83,6 +92,11 @@ const copy = bilingual({
     phaseDone: "وفات",
     phaseCancelled: "تلغات",
     actions: (t: string) => `أعمال « ${t} »`,
+    unlistedTag: "بالرابط برك",
+    unlist: "خلّيها بالرابط برك",
+    relist: "ورّيها في صفحتي",
+    okUnlisted: "الحصة ولات بالرابط برك : كان اللي عندو الرابط ولا الـ ⁦QR code⁩ يشوفها.",
+    okRelisted: "الحصة ولات تبان في صفحتك وفي « اكتشف ».",
   },
 });
 
@@ -142,6 +156,21 @@ export function ClassRow({ k, onChanged, notify, autoEdit = false }: {
     onChanged();
   }
 
+  // december-sprint · E (D18): flip « link / QR only ». Nobody who booked is touched.
+  async function doUnlisted() {
+    if (busy) return;
+    setBusy(true);
+    const next = !k.unlisted;
+    const res = await setClassUnlisted({ classId: k.id, unlisted: next }).catch(() => null);
+    setBusy(false);
+    if (!res?.ok) {
+      notify(c.errGeneric);
+      return;
+    }
+    notify(next ? c.okUnlisted : c.okRelisted);
+    onChanged();
+  }
+
   async function doMove() {
     if (busy) return;
     if (!when) {
@@ -180,6 +209,13 @@ export function ClassRow({ k, onChanged, notify, autoEdit = false }: {
           <span className="hp-num">{c.seats(taken, k.seats)}</span>
           <span className="hp-num">{k.price_tnd} TND</span>
           <PhaseTag k={k} c={c} />
+          {k.unlisted && <span className="chip chip-sand whitespace-nowrap" data-e2e="class-unlisted">{c.unlistedTag}</span>}
+          {/* december-sprint · E (D18): a text button in the meta line, not a seventh action button. */}
+          {shareable && (
+            <button type="button" className="linklike linklike-inline text-[13px] mc-unlisted-toggle" onClick={() => void doUnlisted()} disabled={busy} data-e2e="class-unlisted-toggle">
+              {k.unlisted ? c.relist : c.unlist}
+            </button>
+          )}
         </div>
       </div>
       <div className="mc-actions" role="group" aria-label={c.actions(k.title)}>

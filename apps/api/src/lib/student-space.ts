@@ -11,6 +11,7 @@ import { classEndMs } from "@tnajem/shared/live";
 import { db } from "../db";
 import { canReadWith, materialAccessContext, type MaterialAccessContext } from "./material-access";
 import { sessionsUsedInWindow } from "./subscription-seat";
+import { listedClassSql } from "./class-listed"; // december-sprint · E (D18)
 
 /* THE STUDENT SPACE'S READS (student-space-v1 · pages). routes/student-space.ts
    answers with these; each one is the student's OWN data, read by profile id from
@@ -264,6 +265,7 @@ export async function bookableNextClass(uid: string, tutorId: string): Promise<{
     .from(classes)
     .where(and(
       eq(classes.tutorId, tutorId),
+      listedClassSql, // december-sprint · E (D18): « Réserver la prochaine » never suggests an unlisted class
       raw`coalesce(${classes.status}, 'scheduled') <> 'cancelled'`,
       gt(classes.scheduledAt, raw`now()`),
       raw`coalesce(${classes.seatsTaken}, 0) < coalesce(${classes.seats}, 0)`,
@@ -314,8 +316,9 @@ export async function studentSubscriptionRows(uid: string): Promise<StudentSubsc
   return out;
 }
 
-/** Each prof's next class (not cancelled, not started), booked or not. */
-export async function nextClassOf(tutorIds: readonly string[]): Promise<Map<string, { classId: string; title: string; startsAt: string }>> {
+/** Each prof's next class (not cancelled, not started), booked or not.
+    december-sprint · E (D18): an unlisted class only when `uid` holds a live seat in it. */
+export async function nextClassOf(tutorIds: readonly string[], uid?: string): Promise<Map<string, { classId: string; title: string; startsAt: string }>> {
   const out = new Map<string, { classId: string; title: string; startsAt: string }>();
   if (tutorIds.length === 0) return out;
   const rows = await db
@@ -325,6 +328,10 @@ export async function nextClassOf(tutorIds: readonly string[]): Promise<Map<stri
       inArray(classes.tutorId, [...tutorIds]),
       raw`coalesce(${classes.status}, 'scheduled') <> 'cancelled'`,
       gt(classes.scheduledAt, raw`now()`),
+      uid
+        ? raw`(${classes.unlisted} = false or exists (select 1 from ${bookings} b where b.class_id = ${classes.id} and b.student_id = ${uid}
+                and coalesce(b.status, 'reserved') <> 'cancelled'))`
+        : listedClassSql,
     ))
     .orderBy(classes.scheduledAt)
     .limit(500);

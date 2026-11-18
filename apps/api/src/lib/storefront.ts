@@ -14,7 +14,7 @@ import {
 } from "@tnajem/shared";
 import { effectiveClassStatus } from "@tnajem/shared"; // student-space-v1 · fixes (H2, C7)
 import { db } from "../db";
-import { onSaleClassSql } from "./class-sale";
+import { listedOnSaleClassSql } from "./class-listed"; // december-sprint · E (D18): on sale AND listed
 import { storefrontGrowthExtras } from "./storefront-growth"; // espace prof v2 · growth (P5)
 
 /* The public storefront read, ported from apps/web/lib/data.ts::getStorefront.
@@ -74,7 +74,7 @@ async function buildStorefront(t: typeof tutors.$inferSelect): Promise<Storefron
   const cls = await db
     .select()
     .from(classesT)
-    .where(and(eq(classesT.tutorId, t.id), onSaleClassSql))
+    .where(and(eq(classesT.tutorId, t.id), listedOnSaleClassSql)) // december-sprint · E (D18): an unlisted class is not on the list, nor in its JSON-LD
     .orderBy(asc(classesT.scheduledAt));
   const pks = await db.select().from(packsT).where(eq(packsT.tutorId, t.id));
 

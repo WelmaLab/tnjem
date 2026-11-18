@@ -61,3 +61,14 @@ export function checkClassLimits(
   if (r.success) return { ok: true, value: r.data };
   return { ok: false, error: r.error.issues[0]?.message ?? "bad-request" };
 }
+
+/* december-sprint · E (D18) — UNLISTED. A class reachable only by its link or QR
+   code: off the storefront list, Explore, the sitemap and every follower feed, yet
+   bookable exactly like any other class. Optional on the wire (default false), so
+   every existing caller keeps creating listed classes; anything but a boolean is a
+   bad request. POST /classes reads it from here, and so does
+   POST /classes/:id/unlisted (the switch on « Mes classes »). */
+export const classUnlistedSchema = z.boolean().optional();
+
+/** The body of POST /classes/:id/unlisted: the new value, nothing else. */
+export const classUnlistedBodySchema = z.object({ unlisted: z.boolean() }).strict();

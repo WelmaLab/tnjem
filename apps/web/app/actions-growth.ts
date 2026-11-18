@@ -125,9 +125,14 @@ export async function saveNotificationPrefs(
 
 /** The live public promotions of a tutor and, when given, the visitor's own code.
     Called from the BROWSER (the code is the visitor's), never during an ISR render. */
-export async function getTutorPricing(slug: string, code?: string | null): Promise<TutorPricing | null> {
+/* december-sprint · E (D18): `classId` — the class this page is about. The API then
+   also returns a promotion on that class when it is unlisted (left out otherwise). */
+export async function getTutorPricing(slug: string, code?: string | null, classId?: string | null): Promise<TutorPricing | null> {
   if (demoFallback) return { promotions: [] };
-  const qs = code ? `?code=${encodeURIComponent(code)}` : "";
+  const params = new URLSearchParams();
+  if (code) params.set("code", code);
+  if (classId) params.set("class", classId);
+  const qs = params.toString() ? `?${params.toString()}` : "";
   return call<TutorPricing | null>(`/tutors/${encodeURIComponent(slug)}/pricing${qs}`, undefined, "GET");
 }
 
