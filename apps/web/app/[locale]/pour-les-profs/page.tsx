@@ -10,6 +10,7 @@ import { ProfsStepsSection } from "@/components/landing/ProfsStepsSection";
 import { RoleChoiceSection } from "@/components/landing/RoleChoiceSection";
 import { StudentLine } from "@/components/landing/StudentLine";
 import { bilingual } from "@/lib/i18n";
+import { PRICING } from "@/lib/pricing-copy";
 import { DEFAULT_LOCALE, isLocale, type AppLocale } from "@/lib/locale";
 import { pageMetadata } from "@/lib/metadata";
 
@@ -23,9 +24,10 @@ import { pageMetadata } from "@/lib/metadata";
    Reads no cookies() / headers() / searchParams: any of those would silently make
    it dynamic, and e2e/static-render.spec.ts asserts it is served from the cache.
 
-   HONESTY. Tnajem processes no money during the pilot: 0 % is a property of the
-   pilot, never promised as permanent, and the commission and subscription are
-   always time-qualified. No counts, testimonials, ratings or earnings claimed as
+   HONESTY. Tnajem processes no money while online payment is closed. The pricing
+   words are the founder's rule (lib/pricing-copy.ts, december sprint · C): 3 months
+   without a subscription, 10 % per paying student once payment goes through Tnajem —
+   never 0 % forever, never a charge that is happening now. No counts, testimonials, ratings or earnings claimed as
    real: the only money figure is the calculator's arithmetic example. */
 
 /* TUTOR-FACING, on purpose. Tutors forward this page to recruit other tutors, and
@@ -35,12 +37,12 @@ const copy = bilingual({
   fr: {
     title: "Donne tes cours en ligne",
     description:
-      "Profs : crée ta page, fixe ton tarif et donne tes cours en direct. Pendant le pilote : création gratuite, 0 % de commission, pas d'abonnement.",
+      `Profs : crée ta page, fixe ton tarif et donne tes cours en direct. ${PRICING.fr.short}`,
   },
   ar: {
     title: "اعطي دروسك أونلاين",
     description:
-      "أساتذة : اعمل صفحتك، حدّد تعريفتك واعطي دروسك مباشرة. في فترة التجربة : صفحة فابور، \u20660 %\u2069 عمولة، بلا اشتراك.",
+      `أساتذة : اعمل صفحتك، حدّد تعريفتك واعطي دروسك مباشرة. ${PRICING.ar.short}`,
   },
 });
 

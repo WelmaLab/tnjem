@@ -16,6 +16,7 @@ import { ShareSheet } from "@/components/share/ShareSheet";
 import { markLinkShared } from "@/app/actions-shell";
 import { getMyPromotions } from "@/app/actions-growth";
 import { bilingual } from "@/lib/i18n";
+import { PRICING } from "@/lib/pricing-copy";
 import {
   LEVEL_CODES, LEVEL_LABELS, isLevelCode, sortLevels, subjectLabel, formatNumericDate, parseScheduleInput, priceWithPromotion,
   type LevelCode, type TutorVerifStatus, type TutorPromotionRow,
@@ -71,7 +72,8 @@ const PLAN_LIMIT_CTA = { fr: "Voir les offres", ar: "شوف العروض" } as c
 const copy = bilingual({
   fr: {
     title: "Nouvelle classe en direct",
-    priceHelp: "Tu gardes 100 % pendant le pilote : Tnajem ne prend rien.",
+    // december sprint · C (D23): the pricing rule's commission, and when it applies.
+    priceHelp: `Tu fixes ton prix. ${PRICING.fr.commissionWhen}.`,
     descPh: "ex. Méthodes + annales. On fait 3 exercices types ensemble.",
     errTitle: "Le titre doit faire au moins 3 caractères.",
     errDescription: "La description ne peut pas dépasser 1000 caractères.",
@@ -125,7 +127,7 @@ const copy = bilingual({
   },
   ar: {
     title: "حصة دايركت جديدة",
-    priceHelp: "تحتفظ بـ \u2066100 %\u2069 في فترة التجربة : Tnajem ما تاخذ والو.",
+    priceHelp: `إنتي تحدّد ثمنك. ${PRICING.ar.commissionWhen}.`,
     descPh: "مثال: مناهج + امتحانات. نعملو 3 تمارين نموذجية مع بعضنا.",
     errTitle: "العنوان لازم يكون فيه 3 حروف على الأقل.",
     errDescription: "الوصف ما ينجّمش يفوت 1000 حرف.",

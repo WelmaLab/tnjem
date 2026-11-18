@@ -5,8 +5,9 @@ import { useLocale } from "@/components/LocaleProvider";
 import { getDashboard } from "@/app/actions";
 import { AppPage, ErrorState, PageSkeleton } from "@/components/app/AppShell";
 import { WrongRoleNotice } from "@/components/WrongRoleNotice";
-import { COMMISSION_PCT, PLANS, formatLongDate, planByCode, tnd, type DashboardResult, type Plan } from "@tnajem/shared";
+import { PLANS, formatLongDate, planByCode, tnd, type DashboardResult, type Plan } from "@tnajem/shared";
 import { bilingual } from "@/lib/i18n";
+import { FREE_MONTHS, PRICING } from "@/lib/pricing-copy";
 
 /* espace prof v2 · « Mon offre » (/dashboard/plan), image 4: the tutor's CURRENT
    offer (the pilot, today, for everyone) and a compact summary of the plans that
@@ -16,6 +17,11 @@ import { bilingual } from "@/lib/i18n";
    the class limit the API enforces, the Explore boost. The student bands are the
    same hints /tarifs gives ("convient à …"), not a rule anything counts.
 
+   december sprint · C (D23): the pricing rule. A tutor on the default (pilot) plan
+   is in their free months, so the card says « Offert tes 3 premiers mois » — never a
+   « 0 TND / mois » price that would read as permanent — and the plans below are
+   what comes after those months.
+
    READ-ONLY, and that is the honest shape: there is no checkout, so a button here
    would lead nowhere or imply a purchase that cannot happen. */
 
@@ -23,14 +29,17 @@ const copy = bilingual({
   fr: {
     title: "Mon offre",
     pilot: "Pilote",
-    pilotTitle: "Offre complète, gratuite",
-    pilotLine: "Séances illimitées · aucune commission · on te prévient avant tout changement",
+    pilotTitle: "Offre complète",
+    pilotLine: "Séances illimitées.",
+    pilotNotice: PRICING.fr.notice,
+    pilotPrice: "Offert",
+    pilotPer: `tes ${FREE_MONTHS} premiers mois`,
     grantedTitle: (name: string) => `Offre ${name}`,
     grantedLine: "Activée par l'équipe Tnajem. Rien ne t'est facturé.",
     until: (d: string) => `Jusqu'au ${d}.`,
     perMonth: "/mois",
     usage: (used: number, max: number) => `Séances publiées : ${used} sur ${max} (les séances à venir comptent).`,
-    after: "Après le pilote",
+    after: `Après tes ${FREE_MONTHS} premiers mois`,
     names: { gratuit: "Gratuit", essentiel: "Essentiel", pro: "Pro", prestige: "Prestige", pilot: "Pilote" } as Record<string, string>,
     bands: { gratuit: "1–14 élèves", essentiel: "15–20 élèves", pro: "21–35 élèves", prestige: "36 élèves et plus" } as Record<string, string>,
     oneAtATime: "1 séance à la fois",
@@ -38,21 +47,24 @@ const copy = bilingual({
     unlimited: "Séances illimitées",
     boost1: "mise en avant",
     boost2: "placement prioritaire",
-    commission: `+${COMMISSION_PCT} % par élève payant, quand les paiements en ligne ouvriront`,
+    commission: PRICING.fr.plusCommissionWhen,
     details: "Détails des offres",
     current: "Ton offre",
   },
   ar: {
     title: "العرض متاعي",
     pilot: "تجربة",
-    pilotTitle: "عرض كامل، بلاش",
-    pilotLine: "حصص بلا حدّ · حتى عمولة · نعلموك قبل أي تبديل",
+    pilotTitle: "عرض كامل",
+    pilotLine: "حصص بلا حدّ.",
+    pilotNotice: PRICING.ar.notice,
+    pilotPrice: "فابور",
+    pilotPer: `في أول ${FREE_MONTHS} شهور متاعك`,
     grantedTitle: (name: string) => `عرض ${name}`,
     grantedLine: "فعّلو فريق Tnajem. ما تتفوترش حتى مليم.",
     until: (d: string) => `حتى لـ ${d}.`,
     perMonth: "/في الشهر",
     usage: (used: number, max: number) => `الحصص المنشورة : ${used} من ${max} (نحسبو الحصص الجاية).`,
-    after: "بعد التجربة",
+    after: `بعد أول ${FREE_MONTHS} شهور متاعك`,
     names: { gratuit: "فابور", essentiel: "الأساسي", pro: "برو", prestige: "بريستيج", pilot: "تجربة" } as Record<string, string>,
     bands: { gratuit: "1–14 تلميذ", essentiel: "15–20 تلميذ", pro: "21–35 تلميذ", prestige: "36 تلميذ وأكثر" } as Record<string, string>,
     oneAtATime: "حصة وحدة في نفس الوقت",
@@ -60,7 +72,7 @@ const copy = bilingual({
     unlimited: "حصص بلا حدّ",
     boost1: "تبان في المقدّمة",
     boost2: "مركز أول",
-    commission: `\u2066+${COMMISSION_PCT} %\u2069 على كل تلميذ خلّص، كي يتحلّ الخلاص أونلاين`,
+    commission: PRICING.ar.plusCommissionWhen,
     details: "تفاصيل العروض",
     current: "العرض متاعك",
   },
@@ -108,13 +120,25 @@ export function PlanView() {
             <span className="tag tag-neutral">{p.isPilot ? c.pilot : c.names[p.code] ?? p.code}</span>
             <h2 id="ofr-now-t" className="ofr-now-t">{p.isPilot ? c.pilotTitle : c.grantedTitle(c.names[p.code] ?? p.code)}</h2>
             <p className="ofr-now-b">{p.isPilot ? c.pilotLine : c.grantedLine}</p>
+            {p.isPilot && <p className="ofr-now-b">{c.pilotNotice}</p>}
             {until && <p className="ofr-now-b">{c.until(until)}</p>}
             {p.maxClasses !== null && <p className="ofr-now-b">{c.usage(p.openClasses, p.maxClasses)}</p>}
           </div>
-          {/* Nothing is billed during the pilot, nor on a granted plan: 0 is the true amount. */}
-          <div className="ofr-now-price">
-            <span className="ofr-price hp-num">0 TND</span>
-            <span className="ofr-per">{c.perMonth}</span>
+          {/* december sprint · C (D23): on the default plan the tutor is in the free
+              months — « Offert », not a « 0 TND » that reads as the price for good. A
+              plan granted by the team is billed nothing: 0 is its true amount. */}
+          <div className="ofr-now-price" data-e2e="plan-now-price">
+            {p.isPilot ? (
+              <>
+                <span className="ofr-price">{c.pilotPrice}</span>
+                <span className="ofr-per">{c.pilotPer}</span>
+              </>
+            ) : (
+              <>
+                <span className="ofr-price hp-num">0 TND</span>
+                <span className="ofr-per">{c.perMonth}</span>
+              </>
+            )}
           </div>
         </section>
 

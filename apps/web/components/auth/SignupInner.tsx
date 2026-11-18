@@ -51,6 +51,7 @@ import { useCountdown, formatCountdown } from "@/components/useCountdown";
 import { isValidEmail } from "@tnajem/shared";
 import { isAdult } from "@tnajem/shared"; // phase-a lane L2 (A24): the API's own rule
 import type { OtpChannel } from "@/lib/auth";
+import { PRICING } from "@/lib/pricing-copy"; // december sprint · C (D23)
 
 export type SignupRole = "tutor" | "student";
 
@@ -68,7 +69,7 @@ const COPY = {
     tutorPanelTitle: "Ta page de prof en 2 minutes.",
     tutorSummary: "Prix libre · vérification à la main",
     tutorPoints: [
-      "Tu fixes ton prix — 100 % pour toi pendant le pilote",
+      `Tu fixes ton prix — ${PRICING.fr.badge}`, // december sprint · C (D23)
       "Vérification à la main par notre équipe",
       "Tes classes et tes élèves au même endroit",
     ],
@@ -179,7 +180,7 @@ const COPY = {
     tutorPanelTitle: "صفحتك متاع أستاذ في دقيقتين.",
     tutorSummary: "الثمن على كيفك · التثبّت بيدينا",
     tutorPoints: [
-      "إنتي تحدّد ثمنك — \u2066100 %\u2069 متاعك في فترة التجربة",
+      `إنتي تحدّد ثمنك — ${PRICING.ar.badge}`,
       "التثبّت يتعمل بيدينا",
       "كلاساتك وتلامذتك في بلاصة وحدة",
     ],

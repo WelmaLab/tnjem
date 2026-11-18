@@ -37,18 +37,15 @@ import { vSlug, mentionsFreeFirstSession } from "@tnajem/shared";
 import type { OnboardingState } from "@tnajem/shared";
 import { LEVEL_CODES, LEVEL_LABELS, sortLevels, type LevelCode } from "@tnajem/shared"; // phase-a lane L5 (A18.7)
 import { bilingual } from "@/lib/i18n";
-import { COMMISSION_PCT, requirePlan, tnd } from "@tnajem/shared";
+import { PRICING } from "@/lib/pricing-copy"; // december sprint · C (D23)
 import { editableSubject, subjectToSave, publicTutorName } from "@tnajem/shared"; // live-fixes-1 · C2 (+ K)
-
-/* The subscription floor, from the catalogue. This string used to say "a partir
-   de 29 TND/mois" while /tarifs renders a 0 TND tier as its first card. */
-const SUB_FROM = tnd(requirePlan("essentiel").monthlyMillimes);
 
 /* Page-local copy (FR + Tunisian Derija). lib/i18n.ts is shared/read-only, and
    several of its strings cannot be used here:
      • t.onboarding.fine is truthful but generic; this step says the same thing
-       in wording tuned to the onboarding flow. During the pilot Tnajem takes
-       0 % and touches no money — any rewording must keep that true.
+       in wording tuned to the onboarding flow: the pricing rule's short line
+       (lib/pricing-copy.ts). Tnajem touches no money while online payment is
+       closed — any rewording must keep that true.
      • t.onboarding.done says "Ta page est en ligne 🎉". It is NOT online: the tutor
        is `draft` until a human approves their ID, and the panel rendered directly
        under that toast said so. The screen contradicted itself at the exact moment
@@ -57,10 +54,11 @@ const copy = bilingual({
   fr: {
     yourName: "Ton nom…",
     // phase-a lane L3 (A22): one payment story (D4) — no cash-in-hand path.
-    fine: `Gratuit pendant le pilote : Tnajem ne prend rien. Plus tard, ${COMMISSION_PCT} % sur chaque élève payant via Tnajem, plus un abonnement — gratuit avec une seule séance publiée à la fois, à partir de ${SUB_FROM} TND/mois au-delà.`,
+    // december sprint · C (D23): the approved short line.
+    fine: PRICING.fr.short,
     perks: [
       "Ta page prête en 2 minutes",
-      "Tu fixes ton prix — 100 % pour toi pendant le pilote",
+      `Tu fixes ton prix — ${PRICING.fr.badge}`,
       "Vérification à la main par notre équipe",
     ],
     previewNote: "Voilà ce que tes élèves verront.",
@@ -102,10 +100,10 @@ const copy = bilingual({
   ar: {
     yourName: "اسمك…",
     // phase-a lane L3 (A22)
-    fine: `فابور في فترة التجربة : Tnajem ما تاخذ والو. من بعد، \u2066${COMMISSION_PCT} %\u2069 على كل تلميذ يخلّص من Tnajem، زائد اشتراك فابور بحصة وحدة منشورة ومن ${SUB_FROM} دينار في الشهر لفوق.`,
+    fine: PRICING.ar.short,
     perks: [
       "صفحتك حاضرة في دقيقتين",
-      "إنتي تحدّد ثمنك — \u2066100 %\u2069 متاعك في فترة التجربة",
+      `إنتي تحدّد ثمنك — ${PRICING.ar.badge}`,
       "التثبّت يتعمل بيدينا",
     ],
     previewNote: "هكّا باش يشوفوك تلامذتك.",
