@@ -32,7 +32,7 @@ const copy = bilingual({
 export function ProfBand({ locale }: { locale: AppLocale }) {
   const c = copy[locale];
   return (
-    <section className="hs-sec hs-sec-tight hs-sec-last" aria-labelledby="hs-prof-title" data-e2e="home-prof">
+    <section className="hs-sec hs-sec-tight" aria-labelledby="hs-prof-title" data-e2e="home-prof">
       <div className="container">
         <Reveal {...HS_RV} className="hs-prof">
           <div className="hs-prof-main">

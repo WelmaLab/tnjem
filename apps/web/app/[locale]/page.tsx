@@ -12,6 +12,7 @@ import { StepsSection } from "@/components/home/StepsSection";
 import { FactsSection } from "@/components/home/FactsSection";
 import { CtaBanner } from "@/components/home/CtaBanner";
 import { ProfBand } from "@/components/home/ProfBand";
+import { AboutSection } from "@/components/home/AboutSection"; // december-sprint · D (D15, D16)
 
 /* ── SERVER COMPONENT (home v2 · E) ────────────────────────────────────────────
    This page was one big "use client" module: the whole page — copy for BOTH
@@ -46,6 +47,8 @@ export const revalidate = 60;
      3. 3 FACTS   — price shown first · hand-verified tutors · payment, plainly
      4. FINAL CTA — one line, one button (text only: no photo yet)
      5. TEACHER   — cross-link for the other audience (bottom, not top)
+     6. ABOUT     — « Qui sommes-nous ? »: who runs it, who the pilot is open to,
+                    the contact address (december-sprint · D, founder's request)
    The body sections (chips, 2–5) are components/home/{Subjects,Steps,Facts}Section,
    CtaBanner and ProfBand (home v2 · C): server components with their own FR/AR copy.
    Each promise is stated ONCE. If you add a section, delete one.
@@ -127,6 +130,7 @@ export default async function HomePage(props: { params: Promise<{ locale: string
       <FactsSection locale={locale} />
       <CtaBanner locale={locale} />
       <ProfBand locale={locale} />
+      <AboutSection locale={locale} />
       {/* ── /SECTIONS (lane C) ── */}
     </SiteShell>
   );
