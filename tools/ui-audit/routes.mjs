@@ -250,6 +250,7 @@ export const ROUTES = [
   /* Production readiness Stage 2: account blocks. Audited from day one. */
   { path: "/admin/accounts", name: "admin-accounts", auth: "admin" },
   { path: "/admin/leads", name: "admin-leads", auth: "admin" }, // december-sprint · B (D13)
+  { path: "/admin/exports", name: "admin-exports", auth: "admin" }, // december-sprint · F (D19)
 
   /* ── Stage C screens that shipped with no audit coverage at all ─────────────
      Found by the final verification pass: four real, reachable screens had never

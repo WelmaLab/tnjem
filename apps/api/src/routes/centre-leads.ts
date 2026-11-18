@@ -9,6 +9,7 @@ import { auditAdmin, auditAdminStrict } from "../lib/audit";
 import { checkRateLimit, ipBucket, rlSubject } from "../lib/rate-limit";
 import { parseBody } from "../lib/parse-body";
 import { sendCentreLeadMail } from "../lib/centre-lead-mail";
+import { csvCell, csvFile, CSV_SEP } from "../lib/csv"; // december-sprint · F: moved to a shared module
 
 /* december-sprint · B (D13) — the centre lead form, and the admin's view of it.
 
@@ -76,17 +77,9 @@ function toAdminLead(r: LeadRow) {
 }
 
 /* ── CSV ──────────────────────────────────────────────────────────────────────
-   For French Excel (the founder's): « ; » between cells, the separator it expects
-   under a French locale. Otherwise RFC 4180: every cell quoted (so a « ; » or a
-   newline inside a cell stays in it), a quote doubled, CRLF between rows. A cell that a
-   spreadsheet would run as a formula (= + - @, or a tab / CR that some apps strip
-   first) gets a leading apostrophe — a visitor writes the text, an admin opens it.
-   The file starts with a UTF-8 BOM so Excel shows accents and Arabic. */
-export function csvCell(value: unknown): string {
-  let s = value === null || value === undefined ? "" : String(value);
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
-  return `"${s.replace(/"/g, '""')}"`;
-}
+   The escaping rule (« ; », every cell quoted, formula guard, BOM) lives in
+   lib/csv.ts since december-sprint · F, shared with the bookings export. */
+export { csvCell, CSV_SEP };
 
 const CSV_COLUMNS: [string, (r: ReturnType<typeof toAdminLead>) => unknown][] = [
   ["created_at", (r) => r.createdAt],
@@ -108,12 +101,8 @@ const CSV_COLUMNS: [string, (r: ReturnType<typeof toAdminLead>) => unknown][] = 
   ["id", (r) => r.id],
 ];
 
-export const CSV_SEP = ";";
-
 export function leadsCsv(rows: ReturnType<typeof toAdminLead>[]): string {
-  const lines = [CSV_COLUMNS.map(([h]) => csvCell(h)).join(CSV_SEP)];
-  for (const r of rows) lines.push(CSV_COLUMNS.map(([, get]) => csvCell(get(r))).join(CSV_SEP));
-  return `﻿${lines.join("\r\n")}\r\n`;
+  return csvFile(CSV_COLUMNS, rows); // byte-identical to the old inline writer
 }
 
 /** Newest first. `limit` for the list; the export passes none and gets every row. */
