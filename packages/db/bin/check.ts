@@ -113,7 +113,12 @@ function checkEnv() {
      checked under Database below). It is only who gets e-mailed about a new verification. */
   if (keyState("ADMIN_EMAILS") === "set") ok("ADMIN_EMAILS", "set (notification only — it grants no access)");
   else warn("ADMIN_EMAILS", `${keyState("ADMIN_EMAILS")}. Nobody is e-mailed when a verification arrives (it grants no access either way).`);
-  requireKey("CRON_SECRET", "production", "Unset, /cron/purge refuses to run and nothing is ever purged.");
+  /* VULN-021: the API refuses to boot in production with a CRON_SECRET under 32
+     characters. Failing here first stops deploy.sh BEFORE pm2 reload, so the
+     previous release keeps serving instead of a crash-looping API. */
+  const cron = process.env.CRON_SECRET?.trim() ?? "";
+  if (cron && cron.length < 32) (production ? fail : warn)("CRON_SECRET", "set, but shorter than 32 characters: openssl rand -hex 32");
+  else requireKey("CRON_SECRET", "production", "Unset, /cron/purge refuses to run and nothing is ever purged.");
   requireKey("CORS_ORIGINS", "production", "Empty in production, the API refuses to boot.");
   requireKey("TRUSTED_PROXIES", "production", "Unset in production, the API refuses to boot (one rate-limit bucket for every visitor).");
   if (production) {
