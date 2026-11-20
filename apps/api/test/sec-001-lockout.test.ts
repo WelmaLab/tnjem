@@ -2,6 +2,7 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { rlSubject } from "../src/lib/rate-limit";
 import { hashPassword } from "../src/lib/password";
+import { issueTrustedToken } from "../src/lib/trusted-browser";
 import { startApp, stopApp, seedProfile, sql, fxClientIp, fxSignupEmail, cleanupIp, type App, type Res } from "./support/fx";
 
 /* VULN-001 — targeted lockout (security audit, Nov 2026).
@@ -20,7 +21,14 @@ import { startApp, stopApp, seedProfile, sql, fxClientIp, fxSignupEmail, cleanup
      • reset and sign-in count separately.
 
    Every request carries its own private client address (fxClientIp), as in
-   ep2-passwords.test.ts: the rate_limits table is shared with every test file. */
+   ep2-passwords.test.ts: the rate_limits table is shared with every test file.
+
+   VULN-001 follow-up: what this file pins is now the LENIENT path — the one a browser
+   holding a valid trusted-browser token for the address meets (`tb`, minted here with
+   issueTrustedToken as a sign-in would). The OWNER signs in from such a browser; a
+   stranger's attempts carry none and also meet the strict identity-wide delay
+   (sec-001b-trusted-browser.test.ts), which is why the owner here is the trusted one
+   and why the lenient mechanics are driven from trusted browsers. */
 
 let app: App;
 const ips: string[] = [];
@@ -35,9 +43,9 @@ const STRONG = "Le-soleil-de-Sousse-26";
 const WRONG_PW = "Mon cartable bleu 2026!";
 const NEW_PW = "Une-autre-phrase-2026";
 
-async function req(url: string, from: string, body: Record<string, unknown>): Promise<Res> {
+async function req(url: string, from: string, body: Record<string, unknown>, tb?: string): Promise<Res> {
   if (typeof body.identifier === "string") addresses.add(body.identifier.toLowerCase());
-  const res = await app.inject({ method: "POST", url, payload: body, remoteAddress: from });
+  const res = await app.inject({ method: "POST", url, payload: body, remoteAddress: from, ...(tb ? { cookies: { tnajem_tb: tb } } : {}) });
   let parsed: any = null;
   try {
     parsed = res.body ? JSON.parse(res.body) : null;
@@ -55,11 +63,13 @@ async function devCode(address: string, from: string, purpose?: "password"): Pro
   return String(r.body.devCode);
 }
 
-const wrongOtp = (address: string, from: string) => req("/auth/otp/verify", from, { identifier: address, code: "000000" });
-const wrongReset = (address: string, from: string) =>
-  req("/auth/password/reset", from, { identifier: address, code: "000000", password: NEW_PW });
-const pwLogin = (address: string, password: string, from: string) =>
-  req("/auth/password/login", from, { identifier: address, password, locale: "fr" });
+const wrongOtp = (address: string, from: string, tb?: string) => req("/auth/otp/verify", from, { identifier: address, code: "000000" }, tb);
+const wrongReset = (address: string, from: string, tb?: string) =>
+  req("/auth/password/reset", from, { identifier: address, code: "000000", password: NEW_PW }, tb);
+const pwLogin = (address: string, password: string, from: string, tb?: string) =>
+  req("/auth/password/login", from, { identifier: address, password, locale: "fr" }, tb);
+/** The owner's browser: a trusted-browser token for this account, as a sign-in hands out. */
+const trustedBy = (p: { id: string; email: string }) => issueTrustedToken(p.id, p.email, 0);
 
 /** A seeded account with a password on file. */
 async function withPassword(): Promise<{ email: string; id: string }> {
@@ -69,10 +79,17 @@ async function withPassword(): Promise<{ email: string; id: string }> {
 }
 
 /** "Wait out" every progressive delay on this address: the test's clock hook is the
-    reset_at of its rows, moved by hand like ep2-passwords.test.ts does. */
+    reset_at of its rows, moved by hand like ep2-passwords.test.ts does. `%gate:` takes
+    the strict untrusted wait (`:sgate:`) as well as the lenient one (`:gate:`). */
 async function waitOutDelays(address: string): Promise<void> {
   await sql`update rate_limits set reset_at = now() - interval '1 second'
-            where key like ${`%:gate:${rlSubject(address)}`}`;
+            where key like ${`%gate:${rlSubject(address)}`}`;
+}
+/** Only the strict untrusted wait elapses: for tests that measure the lenient counters
+    with browsers that hold no token. */
+async function waitOutStrict(address: string): Promise<void> {
+  await sql`update rate_limits set reset_at = now() - interval '1 second'
+            where key like ${`%:sgate:${rlSubject(address)}`}`;
 }
 
 /** Seconds left on this address's gate in one scope, or 0. */
@@ -103,7 +120,7 @@ describe("VULN-001 · a stranger's wrong codes cannot lock the owner out", () =>
     }
     const home = ip();
     const code = await devCode(victim.email, home);
-    const v = await req("/auth/otp/verify", home, { identifier: victim.email, code });
+    const v = await req("/auth/otp/verify", home, { identifier: victim.email, code }, trustedBy(victim));
     assert.equal(v.body.ok, true, `the owner's correct code from another IP must succeed: ${v.raw}`);
   });
 
@@ -116,45 +133,49 @@ describe("VULN-001 · a stranger's wrong codes cannot lock the owner out", () =>
 
     const home = ip();
     const code = await devCode(victim.email, home, "password");
-    const r = await req("/auth/password/reset", home, { identifier: victim.email, code, password: NEW_PW, locale: "fr" });
+    const r = await req("/auth/password/reset", home, { identifier: victim.email, code, password: NEW_PW, locale: "fr" }, trustedBy(victim));
     assert.equal(r.body.ok, true, `the owner's reset from another IP must succeed: ${r.raw}`);
     assert.equal((await pwLogin(victim.email, NEW_PW, ip())).body.ok, true, "and the new password works");
   });
 
   test("(b2) reset and sign-in count separately: a flood of one never delays the other", async () => {
+    // The lenient counters, so trusted browsers throughout (the strict untrusted count is
+    // shared by sign-in and reset on purpose: sec-001b-trusted-browser.test.ts).
     const victim = await withPassword();
+    const tb = trustedBy(victim);
     // Flood code SIGN-IN from many networks until its delay is armed.
     for (let n = 0; n < 6; n++) {
       const h = ip();
-      await wrongOtp(victim.email, h);
-      await wrongOtp(victim.email, h);
+      await wrongOtp(victim.email, h, tb);
+      await wrongOtp(victim.email, h, tb);
     }
     assert.ok((await gateSecs("otp:vfy", victim.email)) > 0, "sign-in's delay is armed");
     assert.equal(await gateSecs("reset:vfy", victim.email), 0, "reset's is not");
 
     // The owner typed two wrong codes from home (their IP is now "dirty" on sign-in)…
     const home = ip();
-    await wrongOtp(victim.email, home);
-    await wrongOtp(victim.email, home);
-    assert.equal((await wrongOtp(victim.email, home)).body.error, "too-many-attempts", "sign-in waits from home");
+    await wrongOtp(victim.email, home, tb);
+    await wrongOtp(victim.email, home, tb);
+    assert.equal((await wrongOtp(victim.email, home, tb)).body.error, "too-many-attempts", "sign-in waits from home");
     // …and « Mot de passe oublié » from that same home network is not delayed at all.
     const code = await devCode(victim.email, home, "password");
-    const r = await req("/auth/password/reset", home, { identifier: victim.email, code, password: NEW_PW });
+    const r = await req("/auth/password/reset", home, { identifier: victim.email, code, password: NEW_PW }, tb);
     assert.equal(r.body.ok, true, r.raw);
 
     // The other way round: a flood of wrong RESET codes does not delay code sign-in.
     const other = await seedProfile({ role: "student" });
+    const otb = trustedBy(other);
     for (let n = 0; n < 6; n++) {
       const h = ip();
-      await wrongReset(other.email, h);
-      await wrongReset(other.email, h);
+      await wrongReset(other.email, h, otb);
+      await wrongReset(other.email, h, otb);
     }
     assert.ok((await gateSecs("reset:vfy", other.email)) > 0, "reset's delay is armed");
     const dirty = ip();
-    await wrongOtp(other.email, dirty);
-    await wrongOtp(other.email, dirty);
+    await wrongOtp(other.email, dirty, otb);
+    await wrongOtp(other.email, dirty, otb);
     const c = await devCode(other.email, dirty);
-    assert.equal((await req("/auth/otp/verify", dirty, { identifier: other.email, code: c })).body.ok, true);
+    assert.equal((await req("/auth/otp/verify", dirty, { identifier: other.email, code: c }, otb)).body.ok, true);
   });
 });
 
@@ -164,24 +185,25 @@ describe("VULN-001 · passwords: a progressive delay replaces the account-wide l
     const hosts = Array.from({ length: 6 }, ip);
     for (const h of hosts) for (let i = 0; i < 4; i++) await pwLogin(victim.email, WRONG_PW, h);
 
-    const ok = await pwLogin(victim.email, STRONG, ip());
+    const ok = await pwLogin(victim.email, STRONG, ip(), trustedBy(victim));
     assert.equal(ok.body.ok, true, `the owner signs in from a fresh network: ${ok.raw}`);
   });
 
   test("(c2) a network that already failed waits at most 60 s, then the right password succeeds", async () => {
     const victim = await withPassword();
-    for (const h of Array.from({ length: 6 }, ip)) for (let i = 0; i < 4; i++) await pwLogin(victim.email, WRONG_PW, h);
+    const tb = trustedBy(victim); // the lenient delay is what trusted browsers meet
+    for (const h of Array.from({ length: 6 }, ip)) for (let i = 0; i < 4; i++) await pwLogin(victim.email, WRONG_PW, h, tb);
 
     // The owner mistypes twice at home: their network is now behind the delay.
     const home = ip();
-    await pwLogin(victim.email, WRONG_PW, home);
-    await pwLogin(victim.email, WRONG_PW, home);
-    const waiting = await pwLogin(victim.email, STRONG, home);
+    await pwLogin(victim.email, WRONG_PW, home, tb);
+    await pwLogin(victim.email, WRONG_PW, home, tb);
+    const waiting = await pwLogin(victim.email, STRONG, home, tb);
     assert.equal(waiting.body.error, "too-many-attempts", waiting.raw);
     assert.ok(waiting.body.retryAfter >= 1 && waiting.body.retryAfter <= 60, `retryAfter ${waiting.body.retryAfter}s is a short delay`);
 
     await waitOutDelays(victim.email); // the wait elapses
-    const ok = await pwLogin(victim.email, STRONG, home);
+    const ok = await pwLogin(victim.email, STRONG, home, tb);
     assert.equal(ok.body.ok, true, `after the wait the right password succeeds: ${ok.raw}`);
   });
 
@@ -191,6 +213,7 @@ describe("VULN-001 · passwords: a progressive delay replaces the account-wide l
       for (let n = 0; n < 7; n++) {
         const h = ip();
         for (let i = 0; i < 2; i++) {
+          await waitOutStrict(address); // no token here: the strict wait elapses, this measures the lenient one
           await pwLogin(address, WRONG_PW, h);
           seen.push(await gateSecs("pw:fail", address));
         }
@@ -210,6 +233,7 @@ describe("VULN-001 · passwords: a progressive delay replaces the account-wide l
     for (let n = 0; n < 7; n++) {
       const h = ip();
       for (let i = 0; i < 2; i++) {
+        await waitOutStrict(address);
         await wrongOtp(address, h);
         seen.push(await gateSecs("otp:vfy", address));
       }

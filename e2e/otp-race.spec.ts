@@ -62,7 +62,10 @@ test.describe("OTP under concurrency", () => {
     );
     expect(results.map((r) => r.status), "no request may crash").toEqual([200, 200, 200, 200, 200]);
     expect(results.filter((r) => r.json.ok === true), "exactly one caller consumes the code").toHaveLength(1);
-    for (const r of results.filter((x) => x.json.ok !== true)) expect(r.json.error).toBe("invalid-code");
+    /* VULN-001 follow-up: these callers hold no trusted-browser token, so past the 3rd
+       concurrent attempt the strict identity-wide delay may tell one to wait instead.
+       Either answer refuses; only the one consumer signs in. */
+    for (const r of results.filter((x) => x.json.ok !== true)) expect(["invalid-code", "too-many-attempts"]).toContain(r.json.error);
 
     const profiles = await sql<{ id: string }[]>`select id from profiles where email = ${id}`;
     expect(profiles).toHaveLength(1);
@@ -90,16 +93,22 @@ test.describe("OTP under concurrency", () => {
     const code = await recoverOtp(id);
     const wrong = String((Number(code) + 1) % 1_000_000).padStart(6, "0");
 
-    const results = await Promise.all(Array.from({ length: 8 }, () => verify(id, wrong, { role: "student", birthYear: 1995, birthMonth: 3 /* phase-a lane L2 (A24) */ })));
     /* VULN-001: past 5 failures for one address its progressive delay (≤ 60 s) holds a
        network that has already failed, so a request that lands after six failures were
-       recorded may be told to wait instead. Either answer refuses; neither signs in. */
-    expect(results.every((r) => r.status === 200 && ["invalid-code", "too-many-attempts"].includes(String(r.json.error)))).toBe(true);
+       recorded may be told to wait instead. Either answer refuses; neither signs in.
+       VULN-001 follow-up: these requests carry no trusted-browser token, so the strict
+       identity-wide delay lets only 3 of a burst through before every other one waits.
+       So the burst is repeated, the waits elapsing in between (resetRateLimits), until
+       the code's own budget is spent: it must never exceed five, whatever the bursts. */
+    for (let round = 0; round < 3; round++) {
+      const results = await Promise.all(Array.from({ length: 8 }, () => verify(id, wrong, { role: "student", birthYear: 1995, birthMonth: 3 /* phase-a lane L2 (A24) */ })));
+      expect(results.every((r) => r.status === 200 && ["invalid-code", "too-many-attempts"].includes(String(r.json.error)))).toBe(true);
+      await resetRateLimits();
+    }
 
     const [row] = await sql<{ attempts: number }[]>`select attempts from otp_codes where identifier = ${id}`;
     expect(row.attempts, "the budget binds a burst").toBe(5);
 
-    await resetRateLimits(); // the wait that burst armed has elapsed: what is left to test is the code itself
     const late = await verify(id, code, { role: "student", birthYear: 1995, birthMonth: 3 /* phase-a lane L2 (A24) */ });
     expect(late.json, "a code whose budget is spent is dead, even the right one").toMatchObject({ ok: false, error: "invalid-code" });
     const [p] = await sql<{ n: number }[]>`select count(*)::int n from profiles where email = ${id}`;

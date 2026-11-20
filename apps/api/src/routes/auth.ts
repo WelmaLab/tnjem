@@ -12,7 +12,7 @@ import {
 import { db } from "../db";
 import { createSession, destroyProfileSessions, destroySession, getSession } from "../lib/session";
 // espace prof v2 · phase 2: the send / prove / post-login steps are shared with routes/passwords.ts.
-import { identityMatch, postLoginState, proveCode, resolveIdentity, sendCode } from "../lib/auth-flow";
+import { identityMatch, postLoginState, proveCode, resolveIdentity, retireTrustedBrowsers, sendCode, trustThisBrowser } from "../lib/auth-flow";
 import { issuePasswordGrant } from "../lib/password";
 
 /* auth-write. Ported from apps/web/app/actions.ts, branch for branch.
@@ -245,6 +245,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         : {}),
       // For the web to set the cookie — see the header. Redacted in logs.
       session: { token, expiresAt: expiresAt.toISOString() },
+      /* VULN-001 follow-up: this browser is now trusted for this account — the web
+         sets it as the httpOnly tnajem_tb cookie (lib/trusted-browser.ts). */
+      trustedBrowser: trustThisBrowser(req, profile, id),
     };
   });
 
@@ -253,6 +256,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const session = await getSession(req);
     if (!session) return { ok: false, error: "not-authenticated" };
     const ended = await destroyProfileSessions(session.profile.id);
+    /* VULN-001 follow-up: and every trusted browser is forgotten, this one included.
+       Plain logout leaves the token alone: it marks the device, not the session. */
+    await retireTrustedBrowsers(session.profile.id);
     return { ok: true, ended };
   });
 

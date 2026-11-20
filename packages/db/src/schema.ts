@@ -148,7 +148,10 @@ export const profiles = pgTable("profiles", {
      on a form stays NULL (contact data), and changing the number clears it. Phone
      sign-in matches a verified number only. */
   phoneVerifiedAt: timestamp("phone_verified_at", { withTimezone: true }),
-
+  /* VULN-001 follow-up (0048). Covered by every trusted-browser token's MAC
+     (apps/api/src/lib/trusted-browser.ts); bumped by « Se déconnecter partout » and
+     a password reset, which retires every token issued before. */
+  trustedBrowserEpoch: integer("trusted_browser_epoch").notNull().default(0),
 
 });
 

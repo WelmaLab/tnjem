@@ -9,8 +9,19 @@ import { mailEnabled, sendMail } from "@tnajem/shared/mail";
 import { logEvent } from "@tnajem/shared/observability";
 import { db } from "../db";
 import { auditAdmin } from "./audit";
-import { peekRateLimit, rlSubject, type RateLimitResult } from "./rate-limit";
-import { countFailure, guardCheck, guardFailure, guardKeys, type AttemptGuard, type FailureBudget, type ProgressiveDelay } from "./attempt-guard";
+import { peekRateLimit, rlSubject } from "./rate-limit";
+import {
+  countFailure,
+  guardCheck,
+  guardFailure,
+  guardKeys,
+  strictEnter,
+  UNTRUSTED_DELAY,
+  type AttemptGuard,
+  type FailureBudget,
+  type ProgressiveDelay,
+  type StrictPass,
+} from "./attempt-guard";
 import { PASSWORD_MAIL, type PasswordEvent } from "./password-copy";
 
 /* espace prof v2 · phase 2 — PASSWORDS. Everything that touches one lives here.
@@ -133,27 +144,34 @@ export function passwordGrantValid(profileId: string, grant: string | undefined 
    whether or not it has an account, so being held back is no oracle. A pair's window
    is extended when it fills, so the wait runs from the failure that filled it. While
    held back, attempts are refused before any hashing and are not counted, so the
-   wait cannot be stretched by hammering. */
+   wait cannot be stretched by hammering.
+
+   VULN-001 follow-up: those are the LENIENT rules, kept for a browser holding a
+   valid trusted-browser token for the address (lib/trusted-browser.ts). Every other
+   attempt also meets the strict identity-wide delay (attempt-guard.ts): past 3
+   untrusted attempts in 24 h, one at a time, 60 s doubling to 15 minutes. */
 export const PASSWORD_PAIR_BUDGET: FailureBudget = { max: 5, windowMs: 15 * 60_000 };
 export const PASSWORD_IP_BUDGET: FailureBudget = { max: 50, windowMs: 15 * 60_000 };
 export const PASSWORD_DELAY: ProgressiveDelay = { free: 5, baseSec: 2, capSec: 60, windowMs: 60 * 60_000, cleanPairFailures: 2 };
-const PASSWORD_GUARD: AttemptGuard = { prefix: "pw:fail", pair: PASSWORD_PAIR_BUDGET, delay: PASSWORD_DELAY };
+const PASSWORD_GUARD: AttemptGuard = { prefix: "pw:fail", pair: PASSWORD_PAIR_BUDGET, delay: PASSWORD_DELAY, strict: UNTRUSTED_DELAY };
 
 /* The pair key ENDS in the IP (test cleanup and every per-IP key do), and starts
    with the account's prefix, so a reset can lift every pair of one address. */
 const pairPrefix = (identifier: string) => `pw:fail:pair:${rlSubject(identifier)}:`;
 export const passwordFailKeys = (identifier: string, ip: string) => {
   const g = guardKeys(PASSWORD_GUARD.prefix, identifier, ip);
-  return { pair: g.pair, ip: `pw:fail:ip:${ip}`, account: g.id, gate: g.gate };
+  return { pair: g.pair, ip: `pw:fail:ip:${ip}`, account: g.id, gate: g.gate, untrusted: g.sid, untrustedGate: g.sgate };
 };
 
-export async function passwordLockout(identifier: string, ip: string): Promise<RateLimitResult> {
+/** May this attempt be evaluated? When it may, it has also been RESERVED against the
+    strict delay (untrusted browsers): call `succeeded()` on the right password. */
+export async function passwordLockout(identifier: string, ip: string, trusted = false): Promise<StrictPass | { ok: false; retryAfter: number }> {
   const [perIp, held] = await Promise.all([
     peekRateLimit(passwordFailKeys(identifier, ip).ip, PASSWORD_IP_BUDGET.max),
-    guardCheck(PASSWORD_GUARD, identifier, ip),
+    guardCheck(PASSWORD_GUARD, identifier, ip, trusted),
   ]);
-  if (perIp.ok && held.ok) return { ok: true, retryAfter: 0 };
-  return { ok: false, retryAfter: Math.max(perIp.retryAfter, held.retryAfter) };
+  if (!perIp.ok || !held.ok) return { ok: false, retryAfter: Math.max(perIp.retryAfter, held.retryAfter) };
+  return strictEnter(PASSWORD_GUARD, identifier, trusted);
 }
 
 export async function recordPasswordFailure(identifier: string, ip: string): Promise<void> {
@@ -172,12 +190,21 @@ export async function clearPasswordFailures(identifier: string, ip: string): Pro
 }
 
 /** After a reset, which proved the mailbox: everything that was holding this ADDRESS
-    back — its count, its wait and its pair with every IP. The per-IP caps stay. */
+    back from password sign-in — its counts, its waits (lenient and strict) and its
+    pair with every IP. The per-IP caps stay. */
 export async function liftPasswordLockout(identifier: string): Promise<void> {
   const k = passwordFailKeys(identifier, "");
   await db
     .delete(rateLimits)
-    .where(or(eq(rateLimits.key, k.account), eq(rateLimits.key, k.gate), like(rateLimits.key, `${pairPrefix(identifier)}%`)));
+    .where(
+      or(
+        eq(rateLimits.key, k.account),
+        eq(rateLimits.key, k.gate),
+        eq(rateLimits.key, k.untrusted),
+        eq(rateLimits.key, k.untrustedGate),
+        like(rateLimits.key, `${pairPrefix(identifier)}%`),
+      ),
+    );
 }
 
 /* ── Writing a password ───────────────────────────────────────────────────────

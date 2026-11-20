@@ -27,6 +27,14 @@ export const SESSION_COOKIE = "tnajem_session";
    It stays entirely on the web side — the API must never read it. */
 export const ROLE_HINT_COOKIE = "tnajem_role";
 
+/* VULN-001 follow-up — the « trusted browser » cookie. httpOnly, set by the web
+   (apps/web/lib/auth.ts::adoptTrustedBrowser) from the value apps/api returns after
+   a successful sign-in, and forwarded back to the API's /auth/* routes only. It
+   marks the DEVICE, not the session: logout leaves it. Holds up to five signed
+   tokens (apps/api/src/lib/trusted-browser.ts), never an address. */
+export const TRUSTED_BROWSER_COOKIE = "tnajem_tb";
+export const TRUSTED_BROWSER_DAYS = 180;
+
 /* Two clocks on every session. ABSOLUTE: 30 days from login, whatever happens.
    IDLE: a session nobody has used for SESSION_IDLE_DAYS stops working, so a
    forgotten login on a shared or lost phone does not stay open for a month. */

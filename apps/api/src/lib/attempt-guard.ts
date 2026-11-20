@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { rateLimits, sql as raw } from "@tnajem/db";
+import { eq, rateLimits, sql as raw } from "@tnajem/db";
 import { peekRateLimit, rateLimitInProcess, rlSubject, type RateLimitResult } from "./rate-limit";
 
 /* ── GUESSING WITHOUT LOCKING ANYONE OUT (VULN-001, security audit Nov 2026) ──────
@@ -31,6 +31,30 @@ import { peekRateLimit, rateLimitInProcess, rlSubject, type RateLimitResult } fr
 
    Plus the per-IP caps each caller keeps (one host spraying many addresses).
 
+   ── THE STRICT DELAY FOR UNTRUSTED BROWSERS (VULN-001 follow-up) ──────────────
+   The above is the LENIENT path, and a botnet with fresh networks could ride it at
+   the speed otp.ts allows (5 guesses per code, a code a minute: ~7,200 a day). It
+   is now kept for browsers holding a valid « trusted browser » token for the
+   address (lib/trusted-browser.ts) — something only whoever already signed in to
+   that account can have. Every OTHER attempt, from any network, also meets:
+
+     sid   (address, untrusted)   a sliding 24 h count of untrusted attempts,
+                                  RESERVED atomically before the attempt is
+                                  evaluated and given back on success;
+     sgate (address, untrusted)   from the `free`-th (3rd) untrusted attempt on,
+                                  each one must CLAIM this gate — atomically, only
+                                  if it is open — and re-arms it: 60 s doubling to
+                                  a 15-minute cap. Rotating IPs does not help: the
+                                  gate is the address's, not the network's. A
+                                  parallel burst cannot slip through either: the
+                                  count and the claim are single statements.
+   Still a delay, never a lock: the right answer after the wait succeeds, and the
+   owner's trusted browser is never held by it (the escape hatch while an attack
+   runs). A held attempt is refused before any hashing and gives its reservation
+   back. Unknown addresses are counted exactly like real ones. `strictPrefix` lets
+   flows that guess the SAME secret share one count (code sign-in and reset both
+   guess the one code row).
+
    What this costs: a botnet with many fresh networks gets `cleanPairFailures`
    unthrottled guesses per network per pair window before the gate holds it. For
    codes that is still bounded by otp.ts (5 guesses per code, a new code at most
@@ -58,12 +82,33 @@ export type ProgressiveDelay = {
   /** A network with fewer failures than this for the address is not held by the gate. */
   cleanPairFailures: number;
 };
-export type AttemptGuard = { prefix: string; pair: FailureBudget; delay: ProgressiveDelay };
-
-export const guardKeys = (prefix: string, identifier: string, ip: string) => {
-  const h = rlSubject(identifier);
-  return { pair: `${prefix}:pair:${h}:${ip}`, id: `${prefix}:id:${h}`, gate: `${prefix}:gate:${h}` };
+/** The identity-wide delay every UNTRUSTED attempt meets (see the header). */
+export type StrictDelay = {
+  /** Untrusted attempts on the address before the gate must be claimed (the `free`-th arms it). */
+  free: number;
+  /** The wait the `free`-th attempt arms; each further one doubles it. */
+  baseSec: number;
+  /** The longest wait. */
+  capSec: number;
+  /** Sliding: the count forgets everything this long after its last untrusted attempt. */
+  windowMs: number;
 };
+/** The founder's numbers (VULN-001 follow-up): past 3 untrusted attempts on an address
+    in 24 h, 60 s doubling to a 15-minute cap. Codes and passwords both use it. */
+export const UNTRUSTED_DELAY: StrictDelay = { free: 3, baseSec: 60, capSec: 15 * 60, windowMs: 24 * 60 * 60_000 };
+export type AttemptGuard = { prefix: string; pair: FailureBudget; delay: ProgressiveDelay; strict: StrictDelay; strictPrefix?: string };
+
+export const guardKeys = (prefix: string, identifier: string, ip: string, strictPrefix = prefix) => {
+  const h = rlSubject(identifier);
+  return {
+    pair: `${prefix}:pair:${h}:${ip}`,
+    id: `${prefix}:id:${h}`,
+    gate: `${prefix}:gate:${h}`,
+    sid: `${strictPrefix}:sid:${h}`,
+    sgate: `${strictPrefix}:sgate:${h}`,
+  };
+};
+const keysOf = (g: AttemptGuard, identifier: string, ip: string) => guardKeys(g.prefix, identifier, ip, g.strictPrefix);
 
 /** Seconds of wait armed by the n-th address-wide failure in the window (0 = none). */
 export function delayAfter(failures: number, d: ProgressiveDelay): number {
@@ -71,22 +116,56 @@ export function delayAfter(failures: number, d: ProgressiveDelay): number {
   return Math.min(d.capSec, d.baseSec * 2 ** Math.min(16, failures - d.free - 1));
 }
 
-/** May this (address, IP) attempt now? Spends nothing. Fails open, like the limiter. */
-export async function guardCheck(g: AttemptGuard, identifier: string, ip: string): Promise<RateLimitResult> {
-  const k = guardKeys(g.prefix, identifier, ip);
-  const [pairFull, dirty, gate] = await Promise.all([
+/** Seconds of strict wait armed by the n-th untrusted attempt in the window (0 = none). */
+export function strictDelayAfter(attempt: number, s: StrictDelay): number {
+  if (attempt < s.free) return 0;
+  return Math.min(s.capSec, s.baseSec * 2 ** Math.min(16, attempt - s.free));
+}
+
+/** May this (address, IP) attempt now? Spends nothing. Fails open, like the limiter.
+    An untrusted caller is also held by the address's strict gate. */
+export async function guardCheck(g: AttemptGuard, identifier: string, ip: string, trusted = false): Promise<RateLimitResult> {
+  const k = keysOf(g, identifier, ip);
+  const [pairFull, dirty, gate, strict] = await Promise.all([
     peekRateLimit(k.pair, g.pair.max),
     peekRateLimit(k.pair, g.delay.cleanPairFailures),
     peekRateLimit(k.gate, 1),
+    trusted ? Promise.resolve<RateLimitResult>({ ok: true, retryAfter: 0 }) : peekRateLimit(k.sgate, 1),
   ]);
   if (!pairFull.ok) return pairFull;
+  if (!strict.ok) return strict;
   if (!dirty.ok && !gate.ok) return gate;
   return { ok: true, retryAfter: 0 };
 }
 
+/** Let through by the strict delay. Call `succeeded()` when the attempt was right:
+    a success is no attack, so it gives its reservation back. */
+export type StrictPass = { ok: true; retryAfter: 0; succeeded: () => Promise<void> };
+const TRUSTED_PASS: StrictPass = { ok: true, retryAfter: 0, succeeded: async () => {} };
+
+/** Reserve this attempt against the address's strict delay, atomically. A trusted
+    browser passes untouched. Run it LAST before evaluating the attempt (after every
+    other check), so a reservation is only ever spent on an evaluated attempt. */
+export async function strictEnter(
+  g: AttemptGuard,
+  identifier: string,
+  trusted: boolean,
+): Promise<StrictPass | { ok: false; retryAfter: number }> {
+  if (trusted) return TRUSTED_PASS;
+  const k = keysOf(g, identifier, "");
+  const n = await countSliding(k.sid, g.strict.windowMs);
+  const giveBack = () => uncount(k.sid);
+  const pass: StrictPass = { ok: true, retryAfter: 0, succeeded: giveBack };
+  if (n < g.strict.free) return pass; // n = 0 too: the count could not be written (fail open)
+  const claimed = await claimGate(k.sgate, strictDelayAfter(n, g.strict));
+  if (claimed.ok) return pass;
+  await giveBack();
+  return { ok: false, retryAfter: claimed.retryAfter };
+}
+
 /** One failure: the pair's budget, the address's counter, and the wait it arms. */
 export async function guardFailure(g: AttemptGuard, identifier: string, ip: string): Promise<void> {
-  const k = guardKeys(g.prefix, identifier, ip);
+  const k = keysOf(g, identifier, ip);
   const [, failures] = await Promise.all([countFailure(k.pair, g.pair), countSliding(k.id, g.delay.windowMs)]);
   const wait = delayAfter(failures, g.delay);
   if (wait > 0) await armGate(k.gate, wait);
@@ -153,5 +232,39 @@ async function armGate(key: string, seconds: number): Promise<void> {
       });
   } catch (e) {
     console.error("[tnajem-api] delay write failed:", (e as { code?: string }).code ?? (e as Error).name);
+  }
+}
+
+/** Take the strict gate if it is open, re-arming it for `seconds`: one statement, so
+    of any number of concurrent claimants exactly one wins. Fails open. */
+async function claimGate(key: string, seconds: number): Promise<RateLimitResult> {
+  try {
+    const won = await db
+      .insert(rateLimits)
+      .values({ key, count: 1, resetAt: raw`now() + ${seconds} * interval '1 second'` })
+      .onConflictDoUpdate({
+        target: rateLimits.key,
+        set: { count: 1, resetAt: raw`now() + ${seconds} * interval '1 second'` },
+        setWhere: raw`${rateLimits.resetAt} <= now()`,
+      })
+      .returning({ key: rateLimits.key });
+    if (won.length) return { ok: true, retryAfter: 0 };
+    const held = await peekRateLimit(key, 1);
+    return held.ok ? { ok: false, retryAfter: 1 } : held;
+  } catch (e) {
+    console.error("[tnajem-api] delay write failed:", (e as { code?: string }).code ?? (e as Error).name);
+    return { ok: true, retryAfter: 0 };
+  }
+}
+
+/** Give one reservation back (a success, or an attempt the gate refused). */
+async function uncount(key: string): Promise<void> {
+  try {
+    await db
+      .update(rateLimits)
+      .set({ count: raw`greatest(${rateLimits.count} - 1, 0)` })
+      .where(eq(rateLimits.key, key));
+  } catch (e) {
+    console.error("[tnajem-api] failure count write failed:", (e as { code?: string }).code ?? (e as Error).name);
   }
 }

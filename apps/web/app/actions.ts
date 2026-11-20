@@ -2,7 +2,7 @@
 /* Cookies only. Everything that decides identity now lives in apps/api — see the
    header of lib/auth.ts. */
 import {
-  destroySession, setDemoCookie, setRoleHint, adoptSession,
+  destroySession, setDemoCookie, setRoleHint, adoptSession, adoptTrustedBrowser,
   OTP_RESEND_COOLDOWN_SEC, OTP_TTL_SEC,
 } from "@/lib/auth";
 import { demoClasses, demoEnabled } from "@/lib/demo";
@@ -127,12 +127,19 @@ export async function verifyOtp(input: { identifier: string; code: string; role?
     error?: string; retryAfter?: number;
     needsPassword?: boolean; promptPassword?: boolean; passwordGrant?: string; // espace prof v2 · auth
     session?: { token: string; expiresAt: string };
+    trustedBrowser?: { token: string; expiresAt: string }; // VULN-001 follow-up
   }>("/auth/otp/verify", input);
 
   if (res.ok && res.session) {
     await adoptSession(res.session.token, new Date(res.session.expiresAt), res.role);
   }
-  const { session: _session, ...rest } = res;
+  /* VULN-001 follow-up: a successful sign-in marks this browser as trusted for the
+     account (httpOnly, 180 days, kept across logout — lib/auth.ts). It is forwarded
+     to /auth/* on the next sign-in (lib/api.ts), where it keeps the lenient delay. */
+  if (res.ok && res.trustedBrowser) {
+    await adoptTrustedBrowser(res.trustedBrowser.token, new Date(res.trustedBrowser.expiresAt));
+  }
+  const { session: _session, trustedBrowser: _trustedBrowser, ...rest } = res;
   return rest;
 }
 

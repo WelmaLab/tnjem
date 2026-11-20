@@ -5,7 +5,17 @@ import { otpChannel, SESSION_IDLE_DAYS, sessionTokenHash } from "@tnajem/shared/
 import { db } from "../db";
 import { createSession, getSession } from "../lib/session";
 import { checkRateLimit, rlSubject } from "../lib/rate-limit";
-import { clientIp, identityMatch, postLoginState, proveCode, resolveIdentity, sendCode } from "../lib/auth-flow";
+import {
+  browserTrusted,
+  clientIp,
+  identityMatch,
+  postLoginState,
+  proveCode,
+  resolveIdentity,
+  retireTrustedBrowsers,
+  sendCode,
+  trustThisBrowser,
+} from "../lib/auth-flow";
 import {
   clearPasswordFailures,
   currentPasswordSchema,
@@ -118,7 +128,10 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     /* The per-IP cap counts failures (50 / 15 min) and is checked before any hashing,
        so it is also what bounds the argon2 work one host can ask for. A success costs a
        hash too, but only a holder of the right password can ask for one. */
-    const lock = await passwordLockout(id, ip);
+    /* VULN-001 follow-up: a browser holding a trusted-browser token for this address
+       keeps the lenient rules; any other meets the strict identity-wide delay too. */
+    const trusted = await browserTrusted(req, id);
+    const lock = await passwordLockout(id, ip, trusted);
     if (!lock.ok) return { ok: false, error: "too-many-attempts", retryAfter: lock.retryAfter };
 
     const [profile] = await db.select().from(profiles).where(identityMatch(channel, id)).limit(1); // VULN-006
@@ -127,6 +140,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
       await recordPasswordFailure(id, ip);
       return INVALID_CREDENTIALS;
     }
+    await lock.succeeded();
     await clearPasswordFailures(id, ip);
 
     // After the password is proven, like the code path: this answer only reaches the owner.
@@ -141,6 +155,8 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
       ...state,
       // For the web to set the cookie (auth.ts header). Redacted in logs.
       session: { token, expiresAt: expiresAt.toISOString() },
+      // VULN-001 follow-up: this browser is now trusted for this account (web sets tnajem_tb).
+      trustedBrowser: trustThisBrowser(req, profile, id),
     };
   });
 
@@ -212,12 +228,13 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     if (!p.hash) return { ok: false, error: "no-password" };
 
     const lockKey = signInIdentity(p) ?? me.id;
-    const lock = await passwordLockout(lockKey, ip);
+    const lock = await passwordLockout(lockKey, ip, await browserTrusted(req, lockKey));
     if (!lock.ok) return { ok: false, error: "too-many-attempts", retryAfter: lock.retryAfter };
     if (!(await verifyPassword(p.hash, input.currentPassword))) {
       await recordPasswordFailure(lockKey, ip);
       return { ok: false, error: "wrong-password" };
     }
+    await lock.succeeded();
     await clearPasswordFailures(lockKey, ip);
 
     const stored = await storePassword({ profileId: me.id, password: input.newPassword, event: "change", expect: p.hash, keepToken: session.token });
@@ -276,6 +293,10 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     const stored = await storePassword({ profileId: profile.id, password: input.password, event: "reset", expect: profile.passwordHash ?? null });
     if (!stored.ok) return { ok: false, error: "conflict" };
     await liftPasswordLockout(id);
+    /* VULN-001 follow-up: a reset retires every trusted-browser token issued before
+       (a thief's browser that once signed in loses the lenient path), then trusts
+       this one under the new epoch. */
+    const epoch = await retireTrustedBrowsers(profile.id);
     sendPasswordNotice(profile, "reset");
 
     const { token, expiresAt } = await createSession(profile.id);
@@ -286,6 +307,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
       ...state,
       ended: stored.ended,
       session: { token, expiresAt: expiresAt.toISOString() },
+      trustedBrowser: trustThisBrowser(req, { id: profile.id, trustedBrowserEpoch: epoch }, id),
     };
   });
 

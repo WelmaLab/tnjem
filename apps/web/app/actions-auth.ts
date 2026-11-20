@@ -10,21 +10,23 @@
 
    Demo mode (no API, dev only) answers as an account that does not exist yet, so the
    screens stay walkable for the UI audit without pretending a password was checked. */
-import { adoptSession } from "@/lib/auth";
+import { adoptSession, adoptTrustedBrowser } from "@/lib/auth";
 import { call } from "@/lib/api";
 import { demoFallback } from "@/lib/backend";
 
 type Fail = { ok: false; error: string; retryAfter?: number; reason?: string };
-type SessionBody = { session?: { token: string; expiresAt: string } };
+type SessionBody = { session?: { token: string; expiresAt: string }; trustedBrowser?: { token: string; expiresAt: string } };
 
 /** What the post-login screens need (lib/auth-destination.ts reads these). */
 export type PasswordLoginResult =
   | { ok: true; role?: string; needsConsent?: boolean; needsProfile?: boolean; hasStorefront?: boolean }
   | Fail;
 
-async function adopt<T extends { ok: boolean; role?: string } & SessionBody>(res: T): Promise<Omit<T, "session">> {
+async function adopt<T extends { ok: boolean; role?: string } & SessionBody>(res: T): Promise<Omit<T, "session" | "trustedBrowser">> {
   if (res.ok && res.session) await adoptSession(res.session.token, new Date(res.session.expiresAt), res.role);
-  const { session: _session, ...rest } = res;
+  // VULN-001 follow-up: this browser is now trusted for the account (lib/auth.ts).
+  if (res.ok && res.trustedBrowser) await adoptTrustedBrowser(res.trustedBrowser.token, new Date(res.trustedBrowser.expiresAt));
+  const { session: _session, trustedBrowser: _trustedBrowser, ...rest } = res;
   return rest;
 }
 

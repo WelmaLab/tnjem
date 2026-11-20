@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
-import { SESSION_COOKIE } from "@tnajem/shared/auth-core";
+import { SESSION_COOKIE, TRUSTED_BROWSER_COOKIE } from "@tnajem/shared/auth-core";
 import { revalidateTutor, revalidatePublicTutors } from "./cache";
 import { clientIpFrom } from "./client-ip";
 import type { ActionResult } from "@tnajem/shared/contracts";
@@ -69,6 +69,18 @@ async function sessionToken(): Promise<string | undefined> {
   }
 }
 
+/** The trusted-browser cookie (VULN-001 follow-up), forwarded to the API's /auth/*
+    routes only: it decides which brute-force delay a sign-in attempt meets there, and
+    no other endpoint has any use for it. */
+async function trustedBrowserToken(path: string): Promise<string | undefined> {
+  if (!path.startsWith("/auth/")) return undefined;
+  try {
+    return (await cookies()).get(TRUSTED_BROWSER_COOKIE)?.value;
+  } catch {
+    return undefined;
+  }
+}
+
 class ApiTransportError extends Error {
   /* apiRequestId: the API's own x-request-id, which it sets on EVERY response
      (apps/api/src/server.ts's onSend hook) and logs with the failure. It was
@@ -102,7 +114,9 @@ async function request(path: string, opts: CallOptions): Promise<unknown> {
 
   if (!opts.anonymous) {
     const token = await sessionToken();
-    if (token) headersOut.cookie = `${SESSION_COOKIE}=${token}`;
+    const tb = await trustedBrowserToken(path);
+    const jar = [token ? `${SESSION_COOKIE}=${token}` : "", tb ? `${TRUSTED_BROWSER_COOKIE}=${tb}` : ""].filter(Boolean);
+    if (jar.length) headersOut.cookie = jar.join("; ");
     const ip = await forwardedFor();
     if (ip) headersOut["x-forwarded-for"] = ip; // OVERWRITE, never append
   }

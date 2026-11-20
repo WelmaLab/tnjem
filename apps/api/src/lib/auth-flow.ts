@@ -1,13 +1,14 @@
 import type { FastifyRequest } from "fastify";
-import { and, eq, isNotNull, isNull, profiles, consents, tutors } from "@tnajem/db";
-import { otpChannel, OTP_RESEND_COOLDOWN_SEC, OTP_TTL_SEC, type OtpChannel } from "@tnajem/shared/auth-core";
+import { and, eq, isNotNull, isNull, profiles, consents, tutors, sql as raw } from "@tnajem/db";
+import { otpChannel, OTP_RESEND_COOLDOWN_SEC, OTP_TTL_SEC, TRUSTED_BROWSER_COOKIE, type OtpChannel } from "@tnajem/shared/auth-core";
 import { normalizeEmail, normalizePhone, isValidEmail, isValidPhone, isAdult } from "@tnajem/shared";
 import { mailEnabled, sendMail } from "@tnajem/shared/mail";
 import { smsEnabled, sendSms } from "@tnajem/shared/sms";
 import { db } from "../db";
 import { IS_PROD } from "../env";
 import { checkRateLimit, ipBucket } from "./rate-limit";
-import { guardCheck, guardFailure, type AttemptGuard } from "./attempt-guard";
+import { guardCheck, guardFailure, strictEnter, UNTRUSTED_DELAY, type AttemptGuard } from "./attempt-guard";
+import { nextTrustedCookie, tokenFor, trustedTokenValid } from "./trusted-browser";
 import { createOtp, otpCooldownRemaining, verifyOtpCode } from "./otp";
 import { OTP_MAIL, type OtpPurpose } from "./otp-copy";
 
@@ -46,6 +47,43 @@ export function identityMatch(channel: OtpChannel, id: string) {
   return channel === "email"
     ? eq(profiles.email, id)
     : and(eq(profiles.phone, id), isNotNull(profiles.phoneVerifiedAt));
+}
+
+/* ── « Trusted browser » (VULN-001 follow-up; lib/trusted-browser.ts) ──────────
+   Does the caller's browser hold a valid token for this identity? The cookie is
+   searched for a token bound to the identity FIRST, with no database access, so a
+   caller without one (any stranger, for any address, account or not) costs and
+   learns nothing. Only then is the account's id and epoch read to check the MAC. */
+export async function browserTrusted(req: FastifyRequest, id: string): Promise<boolean> {
+  const token = tokenFor(req.cookies?.[TRUSTED_BROWSER_COOKIE], id);
+  if (!token) return false;
+  const [p] = await db
+    .select({ id: profiles.id, epoch: profiles.trustedBrowserEpoch })
+    .from(profiles)
+    .where(identityMatch(otpChannel(), id))
+    .limit(1);
+  return p ? trustedTokenValid(token, p.id, id, p.epoch) : false;
+}
+
+/** After a successful sign-in: the browser's new trusted-browser cookie value, for
+    the web to set (apps/web/lib/auth.ts::adoptTrustedBrowser). Redacted in logs (`token`). */
+export function trustThisBrowser(
+  req: FastifyRequest,
+  profile: { id: string; trustedBrowserEpoch: number },
+  id: string,
+): { token: string; expiresAt: string } {
+  return nextTrustedCookie(req.cookies?.[TRUSTED_BROWSER_COOKIE], profile.id, id, profile.trustedBrowserEpoch);
+}
+
+/** Retire every token issued for this account so far (« Se déconnecter partout », a
+    password reset). Returns the new epoch, for a token issued in the same breath. */
+export async function retireTrustedBrowsers(profileId: string): Promise<number> {
+  const [row] = await db
+    .update(profiles)
+    .set({ trustedBrowserEpoch: raw`${profiles.trustedBrowserEpoch} + 1` })
+    .where(eq(profiles.id, profileId))
+    .returning({ epoch: profiles.trustedBrowserEpoch });
+  return row?.epoch ?? 0;
 }
 
 export type SendCodeResult =
@@ -120,13 +158,19 @@ export type ProveCodeResult =
    and the other way round.
      pair  10 failures for (address, IP) in 15 min → that network waits 15 min
      delay past 5 failures for the address (any IP) in 15 min, 2 s doubling to 60 s
+     strict  every attempt from a browser WITHOUT a trusted-browser token for the
+           address, any IP: past 3 in 24 h, one at a time, 60 s doubling to 15 min
+           — and SHARED by sign-in and reset (strictPrefix "code"), because both
+           guess the same code row. A trusted browser is never held by it.
    otp_codes.attempts still caps guesses at 5 PER CODE (otp.ts) — that is what
-   bounds guessing one code; these bound the rate around it. */
+   bounds guessing one code; these bound the rate around it. Net effect for a
+   stranger with unlimited IPs: ~96 guesses a day per address against 900,000
+   possible codes (≈ 1 in 9,400 a day), where the lenient path alone allowed 7,200. */
 const CODE_PAIR = { max: 10, windowMs: 15 * 60_000 };
 const CODE_DELAY = { free: 5, baseSec: 2, capSec: 60, windowMs: 15 * 60_000, cleanPairFailures: 2 };
 export const CODE_GUARDS = {
-  login: { prefix: "otp:vfy", pair: CODE_PAIR, delay: CODE_DELAY },
-  reset: { prefix: "reset:vfy", pair: CODE_PAIR, delay: CODE_DELAY },
+  login: { prefix: "otp:vfy", pair: CODE_PAIR, delay: CODE_DELAY, strict: UNTRUSTED_DELAY, strictPrefix: "code" },
+  reset: { prefix: "reset:vfy", pair: CODE_PAIR, delay: CODE_DELAY, strict: UNTRUSTED_DELAY, strictPrefix: "code" },
 } satisfies Record<string, AttemptGuard>;
 /** Every attempt from one IP, across addresses, per flow: 30 / 15 min. */
 export const CODE_IP_BUDGET = { max: 30, windowMs: 15 * 60_000 };
@@ -151,16 +195,21 @@ export async function proveCode(req: FastifyRequest, id: string, code: string, s
      the address. */
   const guard = CODE_GUARDS[scope];
   const ip = clientIp(req);
-  const held = await guardCheck(guard, id, ip);
+  const trusted = await browserTrusted(req, id);
+  const held = await guardCheck(guard, id, ip, trusted);
   if (!held.ok) return { ok: false, error: "too-many-attempts", retryAfter: held.retryAfter };
   const perIp = await checkRateLimit(`${guard.prefix}:ip:${ip}`, CODE_IP_BUDGET.max, CODE_IP_BUDGET.windowMs);
   if (!perIp.ok) return { ok: false, error: "too-many-attempts", retryAfter: perIp.retryAfter };
+  // Last, so a reservation is only spent on an attempt that is then evaluated.
+  const pass = await strictEnter(guard, id, trusted);
+  if (!pass.ok) return { ok: false, error: "too-many-attempts", retryAfter: pass.retryAfter };
 
   const valid = await verifyOtpCode(id, (code || "").trim());
   if (!valid) {
     await guardFailure(guard, id, ip);
     return { ok: false, error: "invalid-code" };
   }
+  await pass.succeeded();
   return { ok: true };
 }
 
