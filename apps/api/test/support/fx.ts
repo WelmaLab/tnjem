@@ -250,3 +250,20 @@ export async function cleanupIp(ip: string): Promise<void> {
 export async function backdateBooking(bookingId: string, minutes = 60): Promise<void> {
   await sql`update bookings set created_at = now() - ${minutes} * interval '1 minute' where id = ${bookingId}`;
 }
+
+// VULN-002 ────────────────────────────────────────────────────────────────────
+/* Re-booking a class the student cancelled waits 10 minutes (routes/bookings.ts,
+   REBOOK_COOLDOWN_MS), measured from the ledger's cancelled_at. A test whose
+   SETUP means "cancelled earlier, re-booked later" moves those rows back with this. */
+export async function endRebookCooldown(bookingId: string, minutes = 11): Promise<void> {
+  await sql`update cancellations set cancelled_at = cancelled_at - ${minutes} * interval '1 minute' where booking_id = ${bookingId}`;
+}
+
+/* A tutor's booking e-mails share a 10-minute window (lib/tutor-mail-gate.ts): the
+   first goes out at once, the next ones wait for a digest. A test that means "a
+   later, separate event" closes the window first, as the clock would. */
+export async function closeTutorMailWindow(tutorProfileId: string, minutes = 60): Promise<void> {
+  await sql`update tutor_mail_digest set created_at = created_at - ${minutes} * interval '1 minute',
+                                         mailed_at = mailed_at - ${minutes} * interval '1 minute'
+            where tutor_profile_id = ${tutorProfileId}`;
+}

@@ -4,7 +4,7 @@ import { logEvent } from "@tnajem/shared/observability";
 import { db } from "../db";
 import { BOOKING_MAIL } from "./booking-mail-copy";
 import {
-  deliverTo, mailClass, mailDeliveryAvailable, mailLinks, recipientOf, type SendResult,
+  deliverTo, flushTutorDigests, mailClass, mailDeliveryAvailable, mailLinks, recipientOf, type SendResult,
 } from "./booking-mail";
 
 /* THE REMINDER RUN — POST /cron/reminders (espace prof v2 · phase 7).
@@ -18,6 +18,9 @@ import {
      review prompt  classes that ENDED 2 h to 7 days ago, for students who attended
                     (@tnajem/shared reviewEligibility — the rule POST /reviews applies)
                     and have not reviewed yet
+
+     tutor digest   VULN-002: a tutor's queued booking/cancellation events, as ONE
+                    e-mail once their window has closed (lib/tutor-mail-gate.ts)
 
    "Booked ahead" keeps a reminder from landing a minute after the confirmation:
    whoever books 3 h before gets the confirmation and the 1 h reminder, not a
@@ -46,6 +49,8 @@ export type ReminderRun = {
   tutor24h: number;
   tutor1h: number;
   reviewPrompts: number;
+  /** VULN-002: tutor digests sent (lib/tutor-mail-gate.ts). */
+  tutorDigests: number;
   skipped: number;
   failed: number;
   failedJobs: string[];
@@ -291,6 +296,7 @@ export async function runReminders(opts: { now?: Date; limit?: number } = {}): P
     tutor24h: 0,
     tutor1h: 0,
     reviewPrompts: 0,
+    tutorDigests: 0,
     skipped: 0,
     failed: 0,
     failedJobs: [],
@@ -303,6 +309,13 @@ export async function runReminders(opts: { now?: Date; limit?: number } = {}): P
     ["tutor-1h", () => tutorReminders("1h", now, limit, run)],
     ["tutor-24h", () => tutorReminders("24h", now, limit, run)],
     ["review-prompt", () => reviewPrompts(now, limit, run)],
+    // VULN-002: the tutors' booking digests whose window has closed.
+    ["tutor-digest", async () => {
+      const d = await flushTutorDigests(limit);
+      run.tutorDigests += d.sent;
+      run.skipped += d.skipped;
+      run.failed += d.failed;
+    }],
   ];
   for (const [name, job] of jobs) {
     try {

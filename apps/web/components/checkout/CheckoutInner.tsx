@@ -94,6 +94,9 @@ const copy = bilingual({
     errOwnClass: "C'est ta propre séance.",
     errOwnClassCta: "Démarrer la séance",
     errTooMany: "Trop d'essais d'un coup. Attends une minute, puis réessaie.",
+    // VULN-002: re-booking a class just cancelled waits a few minutes; the day's booking changes are capped (never a cancel).
+    errRebookCooldown: (min: number) => `Tu viens d'annuler cette séance. Tu pourras la réserver de nouveau dans ${min} min.`,
+    errDailyLimit: "Tu as fait beaucoup de réservations et d'annulations aujourd'hui : tu pourras réserver de nouveau demain. Annuler une place reste toujours possible.",
     // espace prof v2 · growth (P5): a promotion on this seat, or a seat covered by the monthly subscription.
     paidPromo: (p: number, was: number, pct: number, end: string) => `Cette séance est à ${p} TND au lieu de ${was} TND (−${pct} % jusqu'au ${end}).`,
     covered: (used: number, n: number) => `Comprise dans ton abonnement mensuel (${used} / ${n} séances utilisées ce mois).`,
@@ -156,6 +159,9 @@ const copy = bilingual({
     errOwnClass: "هاذي حصتك إنت.",
     errOwnClassCta: "ابدا الحصة",
     errTooMany: "برشا محاولات في مرّة. استنّى دقيقة وعاود.",
+    // VULN-002
+    errRebookCooldown: (min: number) => `توّا لغيت الحصة هاذي. تنجّم تحجزها من جديد بعد ${min} دقيقة.`,
+    errDailyLimit: "عملت برشا حجوزات وإلغاءات اليوم : تنجّم تحجز من جديد غدوة. إلغاء بلاصة ديما ممكن.",
     paidPromo: (p: number, was: number, pct: number, end: string) => `الحصة هاذي بـ ${p} د.ت عوض ${was} د.ت (\u2066−${pct} %\u2069 حتى لـ ${end}).`,
     covered: (used: number, n: number) => `محسوبة في الاشتراك الشهري متاعك (${used} / ${n} حصص استعملتهم هالشهر).`,
     okCovered: "محسوبة في الاشتراك متاعك.",
@@ -307,7 +313,8 @@ export default function CheckoutInner() {
     }).catch(() => {});
     getMySubscription(tutorSlug).then((r) => setSub(r.ok ? (r.subscription ?? null) : null)).catch(() => {});
   }, [tutorSlug, searchParams, classId]);
-  const [err, setErr] = useState<"auth" | "full" | "unavailable" | "consent" | "adults" | "own" | "toomany" | "generic" | null>(null); // phase-a lane L2 (A24): "adults" · live-fixes-3 · A5: "own", "toomany"
+  const [err, setErr] = useState<"auth" | "full" | "unavailable" | "consent" | "adults" | "own" | "toomany" | "cooldown" | "daily" | "generic" | null>(null); // phase-a lane L2 (A24): "adults" · live-fixes-3 · A5: "own", "toomany" · VULN-002: "cooldown", "daily"
+  const [errWaitMin, setErrWaitMin] = useState(1); // VULN-002: the cooldown left, in whole minutes
 
   const handleConfirm = useCallback(async () => {
     setErr(null);
@@ -336,6 +343,11 @@ export default function CheckoutInner() {
     // live-fixes-3 · A5: the tutor's own class (no self-booking) — not « réessaie ».
     else if (res.error === "own-class") setErr("own");
     else if (res.error === "too-many-requests") setErr("toomany");
+    // VULN-002: a re-booking right after a cancel, and the day's booking changes spent.
+    else if (res.error === "rebook-cooldown") {
+      setErrWaitMin(Math.max(1, Math.ceil((res.retryAfter ?? 60) / 60)));
+      setErr("cooldown");
+    } else if (res.error === "daily-limit") setErr("daily");
     // Guardian consent (INPDP) is enforced server-side in reserveSeat. Retrying
     // can never fix it — send them to the consent form and back to this class.
     else if (res.error === "needs-consent") setErr("consent");
@@ -596,7 +608,11 @@ export default function CheckoutInner() {
                       ? c.errOwnClass
                       : err === "toomany"
                         ? c.errTooMany
-                        : c.errGeneric}
+                        : err === "cooldown" // VULN-002
+                          ? c.errRebookCooldown(errWaitMin)
+                          : err === "daily"
+                            ? c.errDailyLimit
+                            : c.errGeneric}
           {err === "own" && (
             <>
               {" "}

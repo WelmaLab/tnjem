@@ -147,6 +147,8 @@ export type PricedReserveResult = {
   promotionPercent?: number | null;
   /** Why a code the visitor brought did not apply: expired · invalid · exhausted · … */
   promoNotice?: string;
+  /** VULN-002: seconds to wait, with error rebook-cooldown or daily-limit. */
+  retryAfter?: number;
 };
 
 /** POST /bookings with the visitor's promo code. The same endpoint as reserveSeat

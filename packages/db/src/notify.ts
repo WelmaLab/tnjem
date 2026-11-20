@@ -1,5 +1,5 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { eq } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { profiles, notifications } from "./schema";
 import { smsEnabled, sendSms } from "@tnajem/shared/sms";
 import { logEvent } from "@tnajem/shared/observability";
@@ -46,6 +46,12 @@ export type NotifyInput<K extends NotificationKey = NotificationKey> = {
   /** Also text it, in the recipient's language, when an SMS provider is configured
       and the message has an SMS form. */
   sms?: boolean;
+  /** VULN-002: a row for the same recipient and `key`, written less than `withinMs`
+      ago, is UPDATED with this message (and moved back to the top, unread) instead
+      of one more row being inserted. The window slides: each update restarts it.
+      For repeated events about one thing (a student booking and cancelling the
+      same class), where only the latest state matters to the reader. */
+  collapse?: { key: string; withinMs: number };
 };
 
 export async function notify<K extends NotificationKey>(
@@ -60,14 +66,38 @@ export async function notify<K extends NotificationKey>(
     logEvent("warn", "notify_name_without_about", { kind });
   }
   try {
-    await db.insert(notifications).values({
-      profileId,
-      kind,
-      msgKey: input.key,
-      msgParams: input.params,
-      href: input.href ?? null,
-      aboutProfileId: input.aboutProfileId ?? null,
-    });
+    const collapsed = input.collapse
+      ? await db
+          .update(notifications)
+          .set({
+            kind,
+            msgKey: input.key,
+            msgParams: input.params,
+            href: input.href ?? null,
+            aboutProfileId: input.aboutProfileId ?? null,
+            readAt: null,
+            createdAt: sql`now()`,
+          })
+          .where(
+            and(
+              eq(notifications.profileId, profileId),
+              eq(notifications.collapseKey, input.collapse.key),
+              gt(notifications.createdAt, sql`now() - ${input.collapse.withinMs} * interval '1 millisecond'`),
+            ),
+          )
+          .returning({ id: notifications.id })
+      : [];
+    if (collapsed.length === 0) {
+      await db.insert(notifications).values({
+        profileId,
+        kind,
+        msgKey: input.key,
+        msgParams: input.params,
+        href: input.href ?? null,
+        aboutProfileId: input.aboutProfileId ?? null,
+        collapseKey: input.collapse?.key ?? null,
+      });
+    }
 
     if (input.sms && smsEnabled()) {
       const [p] = await db.select({ phone: profiles.phone, locale: profiles.locale }).from(profiles).where(eq(profiles.id, profileId)).limit(1);
