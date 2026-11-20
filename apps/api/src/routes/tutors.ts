@@ -13,6 +13,7 @@ import { parseLevels, isLevelCode, levelFromText } from "@tnajem/shared"; // pha
 import { subjectSearchTerms } from "@tnajem/shared"; // Phase A+ (P2)
 import { db } from "../db";
 import { getSession } from "../lib/session";
+import { phoneWrite } from "../lib/phone-write"; // VULN-006
 import { checkRateLimit } from "../lib/rate-limit";
 import { isUniqueViolation } from "../lib/db-errors";
 import { assertNoContactInfo, CONTACT_ERROR } from "../lib/contact-guard";
@@ -96,6 +97,11 @@ export async function tutorRoutes(app: FastifyInstance): Promise<void> {
     if (session.profile.role !== "tutor") return { ok: false, error: "not-a-tutor" };
     const uid = session.profile.id;
 
+    /* VULN-006: stored UNVERIFIED; under OTP_CHANNEL=sms this form cannot set or
+       change the number (it is the sign-in identity there). Omitted = unchanged. */
+    const phoneSet = phoneWrite(session.profile.phone, normalizedPhone ?? undefined);
+    if (!phoneSet.ok) return { ok: false, error: phoneSet.error };
+
     /* ZERO CONTACT EXCHANGE (Step 8). A storefront is a PUBLIC page: a number in
        the bio is not a leak to one counterparty, it is a leak to the open internet
        and every scraper on it. REJECTED rather than masked, because the tutor is
@@ -159,7 +165,7 @@ export async function tutorRoutes(app: FastifyInstance): Promise<void> {
         // Never null out a number already on file just because this submit omitted it.
         const profileSet = {
           ...(renameForReview ? {} : { fullName: name.value }), // phase-a lane L4 (A26)
-          ...(normalizedPhone ? { phone: normalizedPhone } : {}),
+          ...phoneSet.set, // VULN-006
         };
         if (Object.keys(profileSet).length > 0) {
           await tx.update(profiles).set(profileSet).where(eq(profiles.id, uid));

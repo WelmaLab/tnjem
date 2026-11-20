@@ -123,6 +123,11 @@ export async function seedBooking(opts: {
   return row;
 }
 
+/** VULN-006: make a profile an admin the way the operator CLI does (profiles.admin_granted_at). */
+export async function grantAdmin(profileId: string): Promise<void> {
+  await sql`update profiles set admin_granted_at = now() where id = ${profileId}`;
+}
+
 /** A real session row (sha256 of the token, as 0020 stores it). Returns the Cookie header. */
 export async function login(profileId: string): Promise<string> {
   const token = randomBytes(32).toString("hex");

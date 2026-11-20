@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { objectStore } from "@tnajem/db";
 import { startApp, stopApp, seedProfile, seedTutor, login, call, sql, type App } from "./support/fx";
+import { grantAdmin } from "./support/fx"; // VULN-006
 
 /* phase-a lane L4 (A26) — verified tutors: rename and resubmit.
 
@@ -31,7 +32,7 @@ before(async () => {
   process.env.MAIL_HOST = ""; // never send mail from a test
   const admin = await seedProfile({ role: "tutor" });
   process.env.OTP_CHANNEL = "email";
-  process.env.ADMIN_EMAILS = admin.email;
+  await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
   adminCookie = await login(admin.id);
 });
 after(async () => {

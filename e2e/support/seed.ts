@@ -130,18 +130,21 @@ export async function purgeAllRuns(): Promise<void> {
   await sql`delete from profiles where email like 'e2e-%@tnajem.invalid'`;
 }
 
-/* The admin identity. Fixed (not run-namespaced) because it must match the
-   ADMIN_EMAILS value pinned in playwright.config.ts's webServer env. Teardown's
-   `e2e-%@tnajem.invalid` pattern still matches it. */
+/* The admin identity. Fixed (not run-namespaced) so every spec shares one admin.
+   Teardown's `e2e-%@tnajem.invalid` pattern still matches it.
+   VULN-006: admin is profiles.admin_granted_at (what `npm run admin:grant` sets),
+   never an env allow-list — so the seed sets the column, on an existing row too. */
 export const ADMIN_EMAIL = "e2e-admin@tnajem.invalid";
 
 export async function seedAdmin(): Promise<{ id: string }> {
   const [existing] = await sql<{ id: string }[]>`
-    select id from profiles where email = ${ADMIN_EMAIL}`;
+    update profiles set admin_granted_at = coalesce(admin_granted_at, now())
+     where email = ${ADMIN_EMAIL}
+    returning id`;
   if (existing) return existing;
   const [row] = await sql<{ id: string }[]>`
-    insert into profiles (id, email, role, locale, full_name, birth_year)
-    values (${randomUUID()}, ${ADMIN_EMAIL}, 'tutor', 'fr', 'E2E Admin', 1990)
+    insert into profiles (id, email, role, locale, full_name, birth_year, admin_granted_at)
+    values (${randomUUID()}, ${ADMIN_EMAIL}, 'tutor', 'fr', 'E2E Admin', 1990, now())
     returning id`;
   return row;
 }

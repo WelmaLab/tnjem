@@ -1,5 +1,5 @@
 import type { FastifyRequest } from "fastify";
-import { and, eq, isNull, profiles, consents, tutors } from "@tnajem/db";
+import { and, eq, isNotNull, isNull, profiles, consents, tutors } from "@tnajem/db";
 import { otpChannel, OTP_RESEND_COOLDOWN_SEC, OTP_TTL_SEC, type OtpChannel } from "@tnajem/shared/auth-core";
 import { normalizeEmail, normalizePhone, isValidEmail, isValidPhone, isAdult } from "@tnajem/shared";
 import { mailEnabled, sendMail } from "@tnajem/shared/mail";
@@ -35,9 +35,17 @@ export function resolveIdentity(raw: string): { channel: OtpChannel; id: string;
   return { channel, id, ok: channel === "email" ? isValidEmail(id) : isValidPhone(id) };
 }
 
-/** The profiles column the ACTIVE channel signs in with. */
-export function identityColumn(channel: OtpChannel) {
-  return channel === "email" ? profiles.email : profiles.phone;
+/** The profile the ACTIVE channel signs in as: WHERE condition for an identity.
+
+    Under e-mail it is profiles.email. Under OTP_CHANNEL=sms it is profiles.phone,
+    but only a VERIFIED one (VULN-006): a number typed on a profile or storefront
+    form is contact data, and must never be the key to someone else's sign-in, «
+    Mot de passe oublié » or account-status. phone_verified_at is set only by an SMS
+    proof at sign-in (routes/auth.ts). */
+export function identityMatch(channel: OtpChannel, id: string) {
+  return channel === "email"
+    ? eq(profiles.email, id)
+    : and(eq(profiles.phone, id), isNotNull(profiles.phoneVerifiedAt));
 }
 
 export type SendCodeResult =

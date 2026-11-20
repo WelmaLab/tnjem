@@ -1,32 +1,28 @@
 import type { FastifyRequest } from "fastify";
-import { adminAuthIdentities, isAllowlistedAdmin } from "@tnajem/shared";
-import { otpChannel } from "@tnajem/shared/auth-core";
 import { getSession, type Session } from "./session";
 
 /* The API's admin gate.
 
-   The PARSING and the ALLOWLIST DECISION come from @tnajem/shared/admin — the same
-   functions apps/web uses and apps/api/test/admin.test.ts covers. Only the session
-   lookup differs between the two processes, and that is all that lives here.
+   ADMIN IS A DATABASE FACT (security audit VULN-006): profiles.admin_granted_at,
+   set and cleared only by the operator CLI (`npm run admin:grant` /
+   `admin:revoke`, packages/db/bin/admin.ts). The session reloads the profile row
+   on every request, so a revoke — or a block, which ends the session — takes
+   effect on the very next call.
 
-   That split is deliberate and was learned the hard way: this gate briefly had two
-   implementations, and the tested one was not the one that ran. Do not inline the
-   allowlist logic here, however small it looks. */
+   It used to be an env allow-list (ADMIN_EMAILS, or ADMIN_PHONES under
+   OTP_CHANNEL=sms) matched against profiles.email / profiles.phone. The phone is a
+   field the user types on their own profile, so under sms typing the admin's
+   number made you an admin. No environment variable is consulted here any more,
+   and none may be: an authorization decision must never read a value the user can
+   write. ADMIN_EMAILS survives only as the list of addresses to NOTIFY. */
+
+/** Is this session's profile an admin? The one rule — GET /me and the accounts page ask it too. */
+export function isAdminProfile(profile: { adminGrantedAt: Date | string | null }): boolean {
+  return profile.adminGrantedAt != null;
+}
 
 export async function requireAdmin(req: FastifyRequest): Promise<Session | null> {
-  const channel = otpChannel();
-  const allow = adminAuthIdentities(process.env, channel);
-
-  if (allow.length === 0) {
-    req.log.error(
-      `${channel === "email" ? "ADMIN_EMAILS" : "ADMIN_PHONES"} is not configured — ` +
-        "refusing all admin access.",
-    );
-    return null; // fail closed, never open
-  }
-
   const session = await getSession(req);
   if (!session) return null;
-
-  return isAllowlistedAdmin(session.profile, allow, channel) ? session : null;
+  return isAdminProfile(session.profile) ? session : null; // fail closed
 }

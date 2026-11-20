@@ -1,7 +1,7 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { startApp, stopApp, seedProfile, login, call, sql, fxEmail, type App } from "./support/fx";
+import { startApp, stopApp, seedProfile, login, call, sql, fxEmail, grantAdmin, type App } from "./support/fx";
 
 /* Phase A · A18.14 (lane L5). The moderation queue labelled every report without
    a typed-in e-mail "Signalement anonyme" — including reports filed by a SIGNED-IN
@@ -10,12 +10,11 @@ import { startApp, stopApp, seedProfile, login, call, sql, fxEmail, type App } f
    when nobody was signed in. */
 
 let app: App;
-// Not fx-tagged (it must equal ADMIN_EMAILS), so this file deletes it itself.
+// Not fx-tagged (a fixed address this file chose), so this file deletes it itself.
 const adminEmail = fxEmail(`l5-mod-admin-${randomBytes(6).toString("hex")}`);
 const reportIds: string[] = [];
 
 before(async () => {
-  process.env.ADMIN_EMAILS = adminEmail; // read per request by the allowlist
   // POST /reports is limited per IP (10/h); tests re-run often from the same box.
   await sql`delete from rate_limits where key like 'report:%'`;
   app = await startApp();
@@ -30,6 +29,7 @@ after(async () => {
 describe("A18.14 — a signed-in report is not 'anonyme'", () => {
   test("the queue carries the reporter's role and account; only a signed-out report is anonymous", async () => {
     const admin = await seedProfile({ role: "tutor", email: adminEmail });
+    await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
     const student = await seedProfile({ role: "student" });
 
     const signedIn = await call(app, "POST", "/reports", await login(student.id), {

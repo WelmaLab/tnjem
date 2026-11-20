@@ -1,6 +1,6 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { startApp, stopApp, seedProfile, seedTutor, login, call, sql, type App } from "./support/fx";
+import { startApp, stopApp, seedProfile, seedTutor, login, call, sql, type App, grantAdmin } from "./support/fx";
 
 /* phase-a lane L4 (A15) — approval did not enforce the Décret 2015-1619 declaration.
 
@@ -18,7 +18,7 @@ before(async () => {
   app = await startApp();
   const admin = await seedProfile({ role: "tutor" });
   process.env.OTP_CHANNEL = "email";
-  process.env.ADMIN_EMAILS = admin.email;
+  await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
   adminCookie = await login(admin.id);
 });
 after(async () => {

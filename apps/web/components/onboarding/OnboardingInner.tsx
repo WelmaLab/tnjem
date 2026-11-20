@@ -71,6 +71,7 @@ const copy = bilingual({
     phonePh: "+216 …",
     phoneHelp: "Pour qu'on te prévienne d'une réservation. Il n'apparaît jamais sur ta page publique.",
     errPhone: "Ce numéro n'est pas valide.",
+    errPhoneLocked: "Ton numéro te sert à te connecter : il ne se change pas ici.",
 
     linkHelp: "Tu peux le changer maintenant. Lettres sans accents, chiffres et tirets.",
     linkLocked: "Ce lien est définitif — c'est celui que tu as déjà partagé. Le changer casserait les liens envoyés à tes élèves.",
@@ -116,6 +117,7 @@ const copy = bilingual({
     phonePh: "+216 …",
     phoneHelp: "باش نعلموك كي يحجز تلميذ. ما تظهرش في صفحتك العمومية.",
     errPhone: "هذي النمرة موش صحيحة.",
+    errPhoneLocked: "نمرتك هي اللي تدخل بيها : ما تتبدّلش من هوني.",
 
     linkHelp: "تنجم تبدّلو توّا. حروف لاتينية، أرقام وشرطات.",
     linkLocked: "هذا اللينك ثابت — هو اللي شاركتو قبل. كان تبدّلو، اللينكات اللي بعثتهم لتلامذتك يتفسدو.",
@@ -277,7 +279,7 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
       case "invalid-name": case "name-too-long": return "name";
       case "invalid-subject": case "subject-too-long": return "subject";
       case "bio-too-long": return "bio";
-      case "invalid-phone": return "phone";
+      case "invalid-phone": case "phone-locked": return "phone";
       default: return null;
     }
   }
@@ -293,6 +295,7 @@ export function OnboardingInner({ state }: { state: OnboardingState | null }) {
       case "subject-too-long":
       case "bio-too-long": return c.errTooLong;
       case "invalid-phone": return c.errPhone;
+      case "phone-locked": return c.errPhoneLocked; // VULN-006
       case "not-a-tutor": return c.errNotTutor;
       case "not-authenticated": return c.errAuth;
       case "invalid-level": return c.errLevel; // phase-a lane L5 (A18.7)

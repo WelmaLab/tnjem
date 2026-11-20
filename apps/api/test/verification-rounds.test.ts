@@ -2,6 +2,7 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { startApp, stopApp, seedProfile, seedTutor, login, call, sql, type App } from "./support/fx";
+import { grantAdmin } from "./support/fx"; // VULN-006
 
 /* phase-a lane L4 (A10) — the verification card mixed submission rounds.
 
@@ -18,7 +19,7 @@ before(async () => {
   app = await startApp();
   const admin = await seedProfile({ role: "tutor" });
   process.env.OTP_CHANNEL = "email";
-  process.env.ADMIN_EMAILS = admin.email;
+  await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
   adminCookie = await login(admin.id);
 });
 after(async () => {

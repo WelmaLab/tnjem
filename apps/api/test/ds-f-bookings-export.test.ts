@@ -1,7 +1,7 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { startApp, stopApp, seedProfile, seedTutor, seedClass, seedBooking, login, call, sql, type App, type Tutor } from "./support/fx";
+import { startApp, stopApp, seedProfile, seedTutor, seedClass, seedBooking, login, call, sql, type App, type Tutor, grantAdmin } from "./support/fx";
 import { parseExportQuery, splitTutorTokens, tunisDayStart, setExportRowLimitForTests, MAX_TUTORS, EXPORT_ROW_LIMIT } from "../src/routes/bookings-export";
 import { csvCell as leadsCsvCell, CSV_SEP as LEADS_SEP, leadsCsv } from "../src/routes/centre-leads";
 import { csvCell, CSV_SEP } from "../src/lib/csv";
@@ -41,7 +41,7 @@ async function setClass(id: string, title: string, level: string | null) {
 before(async () => {
   app = await startApp();
   const admin = await seedProfile({ role: "tutor" });
-  process.env.ADMIN_EMAILS = admin.email;
+  await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
   process.env.OTP_CHANNEL = "email";
   adminCookie = await login(admin.id);
   outsiderCookie = await login((await seedProfile({ role: "student" })).id);

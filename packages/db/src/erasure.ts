@@ -337,6 +337,8 @@ export async function eraseAccount(
       .set({
         email: null,
         phone: null,
+        phoneVerifiedAt: null, // VULN-006 (0046)
+        adminGrantedAt: null, // VULN-006 (0046): an erased account is nobody's admin
         fullName: null,
         birthYear: null,
         birthMonth: null, // phase-a lane L2 (A24): 0025's profiles_purged_has_no_birth_month
@@ -376,6 +378,7 @@ export async function inactiveAccountsDue(
     .where(and(
       isNull(profiles.purgedAt),
       lt(profiles.lastSeenAt, cutoff),
+      isNull(profiles.adminGrantedAt), // VULN-006 (0046): admin is this column
       opts.excludeEmails.length
         ? or(isNull(profiles.email), notInArray(profiles.email, opts.excludeEmails))
         : undefined,

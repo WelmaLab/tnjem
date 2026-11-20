@@ -5,14 +5,13 @@ import {
   bookings, cancellations, classes, profiles, sessions, tutors,
 } from "@tnajem/db";
 import {
-  vText, vUuid, normalizeEmail, isValidEmail, adminAuthIdentities, isAllowlistedAdmin,
+  vText, vUuid, normalizeEmail, isValidEmail,
   cancellationOutcome,
   type AdminAccount,
 } from "@tnajem/shared";
-import { otpChannel } from "@tnajem/shared/auth-core";
 import { paymentsEnabled } from "@tnajem/shared/payments";
 import { db } from "../db";
-import { requireAdmin } from "../lib/admin";
+import { isAdminProfile, requireAdmin } from "../lib/admin";
 import { auditAdmin } from "../lib/audit";
 import { cancelClassForEveryone } from "../lib/class-cancel";
 import { releaseBookings } from "../lib/booking-release";
@@ -36,8 +35,8 @@ import { recomputeTutorStats } from "../lib/stats";
        place — never why. A tutor blocked mid-week must not leave students waiting
        in a room, and an admin must not discover that consequence afterwards.
 
-   Refused: blocking yourself, and blocking an account on the admin allowlist (that
-   is an ADMIN_EMAILS change, made where the allowlist lives).
+   Refused: blocking yourself, and blocking an admin (profiles.admin_granted_at,
+   VULN-006): that is an `npm run admin:revoke` on the server, made by the operator.
    Every block and unblock writes an admin_actions row. The reason is stored on
    the profile for admins; the audit row carries no copy of it. */
 
@@ -97,7 +96,6 @@ export async function adminAccountRoutes(app: FastifyInstance): Promise<void> {
 
     const [t] = await db.select().from(tutors).where(eq(tutors.profileId, p.id)).limit(1);
     const { classRows, bookingRows } = await upcomingFor(p.id, t?.id ?? null);
-    const channel = otpChannel();
 
     const account: AdminAccount = {
       id: p.id,
@@ -106,7 +104,7 @@ export async function adminAccountRoutes(app: FastifyInstance): Promise<void> {
       name: p.fullName,
       blockedAt: p.blockedAt ? new Date(p.blockedAt).toISOString() : null,
       blockedReason: p.blockedReason,
-      isAdmin: isAllowlistedAdmin(p, adminAuthIdentities(process.env, channel), channel),
+      isAdmin: isAdminProfile(p), // VULN-006: the DB column
       tutor: t ? { id: t.id, slug: t.slug, status: t.status ?? "draft", suspended: Boolean(t.suspendedAt), isTest: t.isTest } : null,
       upcomingClasses: classRows.length,
       upcomingBookings: bookingRows.length,
@@ -132,8 +130,7 @@ export async function adminAccountRoutes(app: FastifyInstance): Promise<void> {
     if (p.id === session.profile.id) return { ok: false, error: "cannot-block-self" };
     // An erased account has nothing left to block, and must not be brought back.
     if (p.purgedAt) return { ok: false, error: "account-erased" };
-    const channel = otpChannel();
-    if (isAllowlistedAdmin(p, adminAuthIdentities(process.env, channel), channel)) {
+    if (isAdminProfile(p)) {
       return { ok: false, error: "cannot-block-admin" };
     }
     if (p.blockedAt) return { ok: true, already: true };

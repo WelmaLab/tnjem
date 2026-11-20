@@ -141,6 +141,13 @@ export const profiles = pgTable("profiles", {
   /* student-space-v1 · pages (0042): when the student last opened « Mes fiches ».
      A fiche they may open created after it is « Nouveau ». NULL = never opened. */
   lastSeenFichesAt: timestamp("last_seen_fiches_at", { withTimezone: true }),
+  /* VULN-006 (0046). Admin is THIS column, never an env allow-list matched against
+     a field the user types. Set/cleared only by the operator CLI (bin/admin.ts). */
+  adminGrantedAt: timestamp("admin_granted_at", { withTimezone: true }),
+  /* VULN-006 (0046). Set when an SMS code proved `phone` at sign-in; a number typed
+     on a form stays NULL (contact data), and changing the number clears it. Phone
+     sign-in matches a verified number only. */
+  phoneVerifiedAt: timestamp("phone_verified_at", { withTimezone: true }),
 
 
 });

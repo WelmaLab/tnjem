@@ -46,7 +46,7 @@ const copy = bilingual({
       `${classes} cours à venir · ${bookings} réservation(s) à venir`,
     blockedSince: (when: string) => `Bloqué depuis le ${when}`,
     reasonShown: "Motif",
-    isAdmin: "Compte administrateur : il se retire de ADMIN_EMAILS, pas d'ici.",
+    isAdmin: "Compte administrateur : il se retire sur le serveur (npm run admin:revoke), pas d'ici.",
     reasonLabel: "Motif du blocage (visible par les admins uniquement)",
     reasonRequired: "Écris le motif du blocage (5 caractères minimum).",
     cancelUpcoming: (classes: number, bookings: number) =>
@@ -89,7 +89,7 @@ const copy = bilingual({
       `${classes} حصص جاية · ${bookings} حجوزات جاية`,
     blockedSince: (when: string) => `محظور من ${when}`,
     reasonShown: "السبب",
-    isAdmin: "حساب أدمين: يتنحّى من ADMIN_EMAILS، موش من هوني.",
+    isAdmin: "حساب أدمين: يتنحّى من السيرفر (npm run admin:revoke)، موش من هوني.",
     reasonLabel: "سبب الحظر (يشوفوه الأدمين برك)",
     reasonRequired: "اكتب سبب الحظر (5 حروف على الأقل).",
     cancelUpcoming: (classes: number, bookings: number) =>

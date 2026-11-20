@@ -13,6 +13,7 @@ import { db } from "../db";
 import { checkRateLimit } from "../lib/rate-limit";
 import { isUniqueViolation } from "../lib/db-errors";
 import { getSession, rotateSession } from "../lib/session";
+import { phoneWrite } from "../lib/phone-write"; // VULN-006
 import { parseBody } from "../lib/parse-body";
 
 /* profile — becomeTutor, saveStudentProfile, getOnboardingState.
@@ -100,6 +101,12 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
     // Symmetric with createTutor's gate: the student screen writes a student profile.
     if (session.profile.role !== "student") return { ok: false, error: "not-a-student" };
 
+    /* VULN-006: the number is stored UNVERIFIED, and under OTP_CHANNEL=sms — where
+       it is the sign-in identity — this form cannot set or change it at all.
+       Never null out a number already on file just because this submit omitted it. */
+    const phone = phoneWrite(session.profile.phone, v.phone ? v.phone : parsed.data.phoneClear ? null : undefined);
+    if (!phone.ok) return { ok: false, error: phone.error };
+
     /* Throttled: each submit can probe whether a phone number is already on another
        account (profiles.phone is unique). */
     const rl = await checkRateLimit(`profile:write:${session.profile.id}`, 20, 60 * 60_000);
@@ -112,8 +119,7 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
           fullName: v.fullName,
           level: v.level,
           subjects: v.subjects.length ? v.subjects.join(",") : null,
-          // Never null out a number already on file just because this submit omitted it.
-          ...(v.phone ? { phone: v.phone } : parsed.data.phoneClear ? { phone: null } : {}),
+          ...phone.set,
         })
         .where(eq(profiles.id, session.profile.id));
     } catch (e) {

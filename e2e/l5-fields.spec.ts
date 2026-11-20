@@ -215,7 +215,7 @@ test.describe("A18.13 — /account names the role", () => {
   }
 
   test("an admin reads 'Admin'", async ({ browser }) => {
-    const admin = await seedAdmin(); // ADMIN_EMAILS is pinned to this identity in playwright.config.ts
+    const admin = await seedAdmin(); // VULN-006: seedAdmin sets profiles.admin_granted_at
     const ctx = await contextAs(browser, admin.id);
     const page = await ctx.newPage();
     await page.goto("/fr/account", { waitUntil: "networkidle" });

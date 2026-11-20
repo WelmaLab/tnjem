@@ -5,7 +5,7 @@ import { otpChannel, SESSION_IDLE_DAYS, sessionTokenHash } from "@tnajem/shared/
 import { db } from "../db";
 import { createSession, getSession } from "../lib/session";
 import { checkRateLimit, rlSubject } from "../lib/rate-limit";
-import { clientIp, identityColumn, postLoginState, proveCode, resolveIdentity, sendCode } from "../lib/auth-flow";
+import { clientIp, identityMatch, postLoginState, proveCode, resolveIdentity, sendCode } from "../lib/auth-flow";
 import {
   clearPasswordFailures,
   currentPasswordSchema,
@@ -63,9 +63,11 @@ function refusal(error: z.ZodError): { status: 200; body: { ok: false; error: "w
     : { status: 400, body: { error: "bad-request" } };
 }
 
-/** The identity this account signs in with under the active channel. */
-function signInIdentity(p: { email: string | null; phone: string | null }): string | null {
-  return otpChannel() === "email" ? p.email : p.phone;
+/** The identity this account signs in with under the active channel. Under sms, a
+    VERIFIED phone only (VULN-006): a typed number is contact data, not an identity. */
+function signInIdentity(p: { email: string | null; phone: string | null; phoneVerifiedAt: Date | null }): string | null {
+  if (otpChannel() === "email") return p.email;
+  return p.phoneVerifiedAt ? p.phone : null;
 }
 
 export async function passwordRoutes(app: FastifyInstance): Promise<void> {
@@ -92,7 +94,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     const [p] = await db
       .select({ hash: profiles.passwordHash })
       .from(profiles)
-      .where(eq(identityColumn(channel), id))
+      .where(identityMatch(channel, id)) // VULN-006: a verified phone only
       .limit(1);
     return { ok: true, exists: Boolean(p), hasPassword: Boolean(p?.hash) };
   });
@@ -119,7 +121,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     const lock = await passwordLockout(id, ip);
     if (!lock.ok) return { ok: false, error: "too-many-attempts", retryAfter: lock.retryAfter };
 
-    const [profile] = await db.select().from(profiles).where(eq(identityColumn(channel), id)).limit(1);
+    const [profile] = await db.select().from(profiles).where(identityMatch(channel, id)).limit(1); // VULN-006
     const good = await verifyPassword(profile?.passwordHash, input.password);
     if (!profile || !profile.passwordHash || !good) {
       await recordPasswordFailure(id, ip);
@@ -163,7 +165,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     if (!limit.ok) return { ok: false, error: "too-many-attempts", retryAfter: limit.retryAfter };
 
     const [p] = await db
-      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, locale: profiles.locale })
+      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, phoneVerifiedAt: profiles.phoneVerifiedAt, locale: profiles.locale })
       .from(profiles)
       .where(eq(profiles.id, me.id))
       .limit(1);
@@ -202,7 +204,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     const ip = clientIp(req);
 
     const [p] = await db
-      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, locale: profiles.locale })
+      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, phoneVerifiedAt: profiles.phoneVerifiedAt, locale: profiles.locale })
       .from(profiles)
       .where(eq(profiles.id, me.id))
       .limit(1);
@@ -234,7 +236,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return reply.code(400).send({ error: "bad-request" });
 
     const [p] = await db
-      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, locale: profiles.locale })
+      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, phoneVerifiedAt: profiles.phoneVerifiedAt, locale: profiles.locale })
       .from(profiles)
       .where(eq(profiles.id, session.profile.id))
       .limit(1);
@@ -266,7 +268,8 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     if (!proof.ok) return proof;
 
     // The code is proven, so these answers only ever reach the mailbox's owner.
-    const [profile] = await db.select().from(profiles).where(eq(identityColumn(channel), id)).limit(1);
+    // VULN-006: under sms, a VERIFIED phone only — never an account that merely typed the number.
+    const [profile] = await db.select().from(profiles).where(identityMatch(channel, id)).limit(1);
     if (!profile) return { ok: false, error: "no-account" };
     if (profile.blockedAt) return { ok: false, error: "account-blocked" };
 

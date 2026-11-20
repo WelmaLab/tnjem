@@ -1,7 +1,7 @@
 import { test, describe, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { CONTACT_EMAIL } from "@tnajem/shared";
-import { startApp, stopApp, seedProfile, login, call, sql, fxClientIp, type App } from "./support/fx";
+import { startApp, stopApp, seedProfile, login, call, sql, fxClientIp, type App, grantAdmin } from "./support/fx";
 import { setCentreLeadMailForTests, settleCentreLeadMail } from "../src/lib/centre-lead-mail";
 import { csvCell, leadsCsv, LIST_LIMIT } from "../src/routes/centre-leads";
 import { rlSubject, ipBucket } from "../src/lib/rate-limit";
@@ -25,7 +25,7 @@ const saved = { ADMIN_EMAILS: process.env.ADMIN_EMAILS, OTP_CHANNEL: process.env
 before(async () => {
   app = await startApp();
   const admin = await seedProfile({ role: "tutor" });
-  process.env.ADMIN_EMAILS = admin.email;
+  await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
   process.env.OTP_CHANNEL = "email";
   adminCookie = await login(admin.id);
   outsiderCookie = await login((await seedProfile({ role: "student" })).id);
