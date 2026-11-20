@@ -100,9 +100,10 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
   /* ── POST /auth/password/login ────────────────────────────────────────────
      One answer for every failure that could tell an address apart: unknown,
      password-less and wrong-password all get INVALID_CREDENTIALS after one argon2
-     verify (lib/password.ts's dummy hash for the first two). Locked — 5 failures for
-     this address from this IP, 50 from this IP in 15 minutes, or 20 for this address
-     in an hour (lib/password.ts) — is "too-many-attempts": a fact about the caller,
+     verify (lib/password.ts's dummy hash for the first two). Held back — 5 failures
+     for this address from this IP, 50 from this IP in 15 minutes, or the address's
+     short progressive wait (≤ 60 s, and only for networks that have failed for it:
+     lib/password.ts, VULN-001) — is "too-many-attempts": a fact about the caller,
      given whether or not the address has an account. */
   app.post("/auth/password/login", async (req, reply) => {
     const parsed = loginBody.safeParse(req.body);
@@ -245,7 +246,8 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
   });
 
   /* ── POST /auth/password/reset — « Mot de passe oublié » ──────────────────
-     A code proves the mailbox (the SAME budget as a code sign-in: proveCode), then
+     A code proves the mailbox (proveCode, with the RESET counters: a stranger
+     hammering sign-in cannot delay « Mot de passe oublié », VULN-001), then
      the new password replaces whatever was there and EVERY session ends — this
      device arrives with none and gets a fresh one. The policy is checked before
      the code is spent, so a refused password does not burn it. A reset also lifts
@@ -260,7 +262,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     const { channel, id, ok } = resolveIdentity(input.identifier);
     if (!ok) return { ok: false, error: "invalid-code" };
 
-    const proof = await proveCode(req, id, input.code);
+    const proof = await proveCode(req, id, input.code, "reset");
     if (!proof.ok) return proof;
 
     // The code is proven, so these answers only ever reach the mailbox's owner.

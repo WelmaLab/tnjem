@@ -79,7 +79,7 @@ async function login(address: string, role: "student" | "tutor" | undefined, bir
 
 before(async () => {
   // inject() always comes from 127.0.0.1: start from a fresh per-IP OTP budget.
-  await db.delete(rateLimits).where(or(like(rateLimits.key, "otp:vfy:ip:127.0.0.1"), like(rateLimits.key, "otp:req:ip:127.0.0.1")));
+  await db.delete(rateLimits).where(or(like(rateLimits.key, "otp:vfy:ip:127.0.0.1"), like(rateLimits.key, "reset:vfy:ip:127.0.0.1"), like(rateLimits.key, "otp:req:ip:127.0.0.1")));
   // espace prof v2 · phase 2: the password and account-status budgets of the same address.
   await db.delete(rateLimits).where(or(like(rateLimits.key, "pw:%:ip:127.0.0.1"), like(rateLimits.key, "acct:status:ip:127.0.0.1")));
   process.env.ADMIN_EMAILS = ADMIN;
@@ -116,7 +116,7 @@ describe("security: no personal data reaches a log line", () => {
     const found = await call("POST", "/admin/accounts/find", ADMIN, { email: STUDENT });
     assert.equal((found.body?.account as { email?: string } | undefined)?.email, STUDENT);
 
-    // A throttled identity: wrong codes until the budget is spent.
+    // A throttled identity: wrong codes until the progressive delay holds this network (VULN-001).
     await call("POST", "/auth/otp/request", null, { identifier: OTHER, locale: "fr" });
     let last: Record<string, unknown> | null = null;
     for (let i = 0; i < 12; i++) {

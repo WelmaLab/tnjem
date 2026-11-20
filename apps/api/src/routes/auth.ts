@@ -87,7 +87,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const { channel, id, ok } = resolveIdentity(input.identifier);
     if (!ok) return { ok: false, error: "invalid-code" };
 
-    // The two brute-force throttles and the atomic consume: lib/auth-flow.ts::proveCode.
+    // The brute-force guards (sign-in scope) and the atomic consume: lib/auth-flow.ts::proveCode.
     const proof = await proveCode(req, id, input.code);
     if (!proof.ok) return proof;
 

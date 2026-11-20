@@ -6,7 +6,8 @@ import { mailEnabled, sendMail } from "@tnajem/shared/mail";
 import { smsEnabled, sendSms } from "@tnajem/shared/sms";
 import { db } from "../db";
 import { IS_PROD } from "../env";
-import { checkRateLimit, ipBucket, peekRateLimit, rlSubject } from "./rate-limit";
+import { checkRateLimit, ipBucket } from "./rate-limit";
+import { guardCheck, guardFailure, type AttemptGuard } from "./attempt-guard";
 import { createOtp, otpCooldownRemaining, verifyOtpCode } from "./otp";
 import { OTP_MAIL, type OtpPurpose } from "./otp-copy";
 
@@ -106,37 +107,50 @@ export type ProveCodeResult =
   | { ok: false; error: "too-many-attempts"; retryAfter: number }
   | { ok: false; error: "invalid-code" };
 
-/** Check — and CONSUME — a code for an already-normalised identity, inside the
-    shared brute-force budget. Every route that accepts a code goes through here, so
-    « Mot de passe oublié » cannot become a second, separate guessing budget. */
-export async function proveCode(req: FastifyRequest, id: string, code: string): Promise<ProveCodeResult> {
-  /* Brute-force budget. otp_codes.attempts caps guesses at 5 PER CODE, but that
-     counter is reset by every new code — and requesting one only costs a 60s
-     cooldown. So the pre-existing ceiling was really "5 guesses per minute,
-     forever, per identity" against a 6-digit space. Two throttles close it:
-       • per-identity: 10 guesses / 15 min — with the 5-per-code cap this leaves
-         an attacker ~960 guesses/day against 1,000,000 codes (about 0.1%/day).
-       • per-IP: stops one host farming many identities in parallel.
+/* ── The code-guessing guards (lib/attempt-guard.ts, VULN-001) ─────────────────
+   One per flow, with its own key prefix, so attacking sign-in never delays a reset
+   and the other way round.
+     pair  10 failures for (address, IP) in 15 min → that network waits 15 min
+     delay past 5 failures for the address (any IP) in 15 min, 2 s doubling to 60 s
+   otp_codes.attempts still caps guesses at 5 PER CODE (otp.ts) — that is what
+   bounds guessing one code; these bound the rate around it. */
+const CODE_PAIR = { max: 10, windowMs: 15 * 60_000 };
+const CODE_DELAY = { free: 5, baseSec: 2, capSec: 60, windowMs: 15 * 60_000, cleanPairFailures: 2 };
+export const CODE_GUARDS = {
+  login: { prefix: "otp:vfy", pair: CODE_PAIR, delay: CODE_DELAY },
+  reset: { prefix: "reset:vfy", pair: CODE_PAIR, delay: CODE_DELAY },
+} satisfies Record<string, AttemptGuard>;
+/** Every attempt from one IP, across addresses, per flow: 30 / 15 min. */
+export const CODE_IP_BUDGET = { max: 30, windowMs: 15 * 60_000 };
+export type CodeScope = keyof typeof CODE_GUARDS;
 
-     Being THROTTLED is reported distinctly as "too-many-attempts". That is a
-     fact about the CALLER, not the account: it is returned for any identity
-     once the budget is spent, so it reveals nothing about whether an account
-     exists. Expiry, by contrast, stays folded into "invalid-code" — telling a
-     caller their code "expired" would confirm one had been issued, which is
-     exactly the enumeration oracle this opacity exists to prevent. */
-  /* ONLY A WRONG CODE SPENDS THE PER-IDENTITY BUDGET. It used to be spent by every
-     attempt, a person's own correct one included; brute force is made of failures,
-     so counting successes bought nothing. The key holds a keyed hash, never the
-     address. The per-IP budget still counts every attempt: it is about the host. */
-  const idKey = `otp:vfy:id:${rlSubject(id)}`;
-  const perId = await peekRateLimit(idKey, 10);
-  if (!perId.ok) return { ok: false, error: "too-many-attempts", retryAfter: perId.retryAfter };
-  const perIp = await checkRateLimit(`otp:vfy:ip:${clientIp(req)}`, 30, 15 * 60_000);
+/** Check — and CONSUME — a code for an already-normalised identity, inside the
+    brute-force guards. Every route that accepts a code goes through here. `scope`
+    picks the counters: « Mot de passe oublié » counts apart from sign-in. */
+export async function proveCode(req: FastifyRequest, id: string, code: string, scope: CodeScope = "login"): Promise<ProveCodeResult> {
+  /* Being HELD BACK is reported distinctly as "too-many-attempts". That is a fact
+     about the CALLER (this network, or this address's recent failures), and it is
+     given for any identity, account or not, so it reveals nothing about whether an
+     account exists. Expiry, by contrast, stays folded into "invalid-code" — telling
+     a caller their code "expired" would confirm one had been issued, which is
+     exactly the enumeration oracle this opacity exists to prevent.
+
+     It used to be a 10-failures-per-ADDRESS budget from any IP: a stranger could
+     spend it and the owner's correct code was refused everywhere (VULN-001). Now the
+     address-wide count only slows networks that have themselves failed; see
+     attempt-guard.ts. Only a wrong code counts there; the per-IP budget still
+     counts every attempt: it is about the host. The keys hold a keyed hash, never
+     the address. */
+  const guard = CODE_GUARDS[scope];
+  const ip = clientIp(req);
+  const held = await guardCheck(guard, id, ip);
+  if (!held.ok) return { ok: false, error: "too-many-attempts", retryAfter: held.retryAfter };
+  const perIp = await checkRateLimit(`${guard.prefix}:ip:${ip}`, CODE_IP_BUDGET.max, CODE_IP_BUDGET.windowMs);
   if (!perIp.ok) return { ok: false, error: "too-many-attempts", retryAfter: perIp.retryAfter };
 
   const valid = await verifyOtpCode(id, (code || "").trim());
   if (!valid) {
-    await checkRateLimit(idKey, 10, 15 * 60_000);
+    await guardFailure(guard, id, ip);
     return { ok: false, error: "invalid-code" };
   }
   return { ok: true };

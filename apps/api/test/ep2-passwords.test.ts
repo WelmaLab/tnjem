@@ -8,7 +8,7 @@ import {
 } from "./support/fx";
 import {
   ARGON2_OPTIONS, hashPassword, verifyPassword, issuePasswordGrant, passwordGrantValid, PASSWORD_GRANT_TTL_MS,
-  PASSWORD_PAIR_BUDGET, PASSWORD_IP_BUDGET, PASSWORD_ACCOUNT_BUDGET, passwordFailKeys,
+  PASSWORD_PAIR_BUDGET, PASSWORD_IP_BUDGET, PASSWORD_DELAY, passwordFailKeys,
 } from "../src/lib/password";
 
 /* espace prof v2 · phase 2 — PASSWORDS, against the real routes and a real Postgres.
@@ -171,7 +171,7 @@ describe("ep2 · the generic answer: no oracle for existence or for having a pas
   });
 });
 
-describe("ep2 · lockout: 5 per (address, IP) pair; caps of 50 per IP / 15 min and 20 per address / hour", () => {
+describe("ep2 · lockout: 5 per (address, IP) pair; a cap of 50 per IP / 15 min; a ≤ 60 s delay per address (VULN-001)", () => {
   const rowOf = async (key: string) =>
     (await sql<{ count: number; secs: number }[]>`
       select count, extract(epoch from reset_at - now())::int as secs from rate_limits where key = ${key}`)[0];
@@ -218,24 +218,32 @@ describe("ep2 · lockout: 5 per (address, IP) pair; caps of 50 per IP / 15 min a
     assert.equal((await passwordLogin(me.email, STRONG, ip())).body.ok, true, "another IP is unaffected");
   });
 
-  test("account cap: 20 failures in an hour from many IPs lock that address everywhere — even from a fresh IP", async () => {
+  /* VULN-001: this was "account cap: 20 failures in an hour from many IPs lock that
+     address everywhere — even from a fresh IP". That lock was the vulnerability: any
+     stranger could turn it on the owner. Many hosts guessing one address now meet a
+     progressive delay (≤ 60 s) that holds only the networks that have failed. */
+  test("many IPs: no account-wide lock — a fresh network gets in; networks that failed wait at most 60 s", async () => {
     const me = await signUpWithPassword();
     const other = await signUpWithPassword();
-    const hosts = Array.from({ length: 5 }, ip);
-    // 5 hosts × 4 failures: no pair ever reaches 5, so only the account cap can stop this.
-    let n = 0;
-    for (const h of hosts) {
-      for (let i = 0; i < 4 && n < PASSWORD_ACCOUNT_BUDGET.max - 1; i++, n++) await passwordLogin(me.email, OTHER_STRONG, h);
-    }
-    assert.equal(n, PASSWORD_ACCOUNT_BUDGET.max - 1);
-    assert.equal((await passwordLogin(me.email, STRONG, ip())).body.ok, true, "19 failures: the owner still gets in");
-    await passwordLogin(me.email, OTHER_STRONG, hosts[4]); // the 20th
-    const locked = await passwordLogin(me.email, STRONG, ip());
-    assert.equal(locked.body.error, "too-many-attempts", locked.raw);
-    assert.ok(locked.body.retryAfter > 59 * 60 && locked.body.retryAfter <= 60 * 60, `retryAfter ${locked.body.retryAfter}s ≈ 1 h`);
+    const hosts = Array.from({ length: 6 }, ip);
+    // 6 hosts × 4 tries: no pair ever reaches 5. The old account cap (20) would have
+    // locked the address; now the tries a network makes while held are refused uncounted.
+    for (const h of hosts) for (let i = 0; i < 4; i++) await passwordLogin(me.email, OTHER_STRONG, h);
+    const counted = (await rowOf(passwordFailKeys(me.email, "").account)).count;
+    assert.ok(counted > PASSWORD_DELAY.free, `${counted} failures counted: the delay is armed`);
+    assert.equal((await passwordLogin(me.email, STRONG, ip())).body.ok, true, "24 failures: the owner still gets in from their own network");
+
+    const held = await passwordLogin(me.email, STRONG, hosts[0]);
+    assert.equal(held.body.error, "too-many-attempts", held.raw);
+    assert.ok(held.body.retryAfter >= 1 && held.body.retryAfter <= PASSWORD_DELAY.capSec, `retryAfter ${held.body.retryAfter}s ≤ ${PASSWORD_DELAY.capSec}s`);
     const row = await rowOf(passwordFailKeys(me.email, "").account);
-    assert.equal(row.count, PASSWORD_ACCOUNT_BUDGET.max, "the owner's success did not hand the guessers a fresh budget");
+    assert.equal(row.count, counted, "the owner's success did not hand the guessers a fresh run of undelayed tries");
+    assert.ok(row.secs > 59 * 60, "the address's count forgets an hour after its last failure");
     assert.equal((await passwordLogin(other.email, STRONG, hosts[0])).body.ok, true, "those hosts can still sign other people in");
+
+    // The wait elapses (moved by hand): the right password from that same network works.
+    await sql`update rate_limits set reset_at = now() - interval '1 second' where key = ${passwordFailKeys(me.email, "").gate}`;
+    assert.equal((await passwordLogin(me.email, STRONG, hosts[0])).body.ok, true);
   });
 
   test("a locked address reveals nothing: unknown and existing addresses get the same locked answer", async () => {
@@ -306,18 +314,21 @@ describe("ep2 · reset: a code, a new password, and EVERY session ends", () => {
     assert.equal(good.body.ok, true, "the code survived the weak password and the wrong guess");
   });
 
-  test("a reset lifts the address's locks — its hourly cap and every pair — but not the IP caps", async () => {
+  test("a reset lifts the address's holds — its count, its delay and every pair — but not the IP caps", async () => {
     const me = await signUpWithPassword();
     const hosts = Array.from({ length: 5 }, ip);
-    // The account cap (5 × 4 = 20), and a full pair on hosts[0] (one more there).
+    // 5 × 4 = 20 failures (the delay is armed), and a full pair on hosts[0] (one more there).
     for (const h of hosts) for (let i = 0; i < 4; i++) await passwordLogin(me.email, OTHER_STRONG, h);
     await passwordLogin(me.email, OTHER_STRONG, hosts[0]);
-    assert.equal((await passwordLogin(me.email, STRONG, ip())).body.error, "too-many-attempts");
+    assert.equal((await passwordLogin(me.email, STRONG, hosts[1])).body.error, "too-many-attempts", "hosts[1] is held by the delay");
+    assert.equal((await passwordLogin(me.email, STRONG, hosts[0])).body.error, "too-many-attempts", "hosts[0] by its full pair");
     const from = ip();
     const code = await devCode(me.email, from, "password");
     assert.equal((await req("POST", "/auth/password/reset", { ip: from, body: { identifier: me.email, code, password: OTHER_STRONG } })).body.ok, true);
-    assert.equal((await passwordLogin(me.email, OTHER_STRONG, ip())).body.ok, true, "the hourly cap is lifted");
+    assert.equal((await passwordLogin(me.email, OTHER_STRONG, hosts[1])).body.ok, true, "the delay is lifted");
     assert.equal((await passwordLogin(me.email, OTHER_STRONG, hosts[0])).body.ok, true, "the full pair is lifted");
+    const gone = await sql`select 1 from rate_limits where key in ${sql([passwordFailKeys(me.email, "").account, passwordFailKeys(me.email, "").gate])}`;
+    assert.equal(gone.length, 0, "the address's count and its delay are gone");
     const kept = await sql`select 1 from rate_limits where key = ${passwordFailKeys("", hosts[0]).ip}`;
     assert.equal(kept.length, 1, "the IP's own count stays");
   });

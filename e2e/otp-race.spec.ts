@@ -91,11 +91,15 @@ test.describe("OTP under concurrency", () => {
     const wrong = String((Number(code) + 1) % 1_000_000).padStart(6, "0");
 
     const results = await Promise.all(Array.from({ length: 8 }, () => verify(id, wrong, { role: "student", birthYear: 1995, birthMonth: 3 /* phase-a lane L2 (A24) */ })));
-    expect(results.every((r) => r.status === 200 && r.json.error === "invalid-code")).toBe(true);
+    /* VULN-001: past 5 failures for one address its progressive delay (≤ 60 s) holds a
+       network that has already failed, so a request that lands after six failures were
+       recorded may be told to wait instead. Either answer refuses; neither signs in. */
+    expect(results.every((r) => r.status === 200 && ["invalid-code", "too-many-attempts"].includes(String(r.json.error)))).toBe(true);
 
     const [row] = await sql<{ attempts: number }[]>`select attempts from otp_codes where identifier = ${id}`;
     expect(row.attempts, "the budget binds a burst").toBe(5);
 
+    await resetRateLimits(); // the wait that burst armed has elapsed: what is left to test is the code itself
     const late = await verify(id, code, { role: "student", birthYear: 1995, birthMonth: 3 /* phase-a lane L2 (A24) */ });
     expect(late.json, "a code whose budget is spent is dead, even the right one").toMatchObject({ ok: false, error: "invalid-code" });
     const [p] = await sql<{ n: number }[]>`select count(*)::int n from profiles where email = ${id}`;
