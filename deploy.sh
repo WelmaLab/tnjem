@@ -24,7 +24,7 @@
 set -euo pipefail
 
 # ── Node on PATH ─────────────────────────────────────────────────────────────
-# appleboy/ssh-action gives a NON-LOGIN, NON-INTERACTIVE shell: ~/.bashrc and
+# The workflow's `ssh host "<script>"` gives a NON-LOGIN, NON-INTERACTIVE shell: ~/.bashrc and
 # ~/.profile are never read, so nvm's shim is absent and `node` does not exist.
 # This must be here as well as in the workflow, because a hand-run over plain ssh
 # hits exactly the same wall.

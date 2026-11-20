@@ -64,6 +64,7 @@ Until the first deploy, the site answers **502**: nginx is waiting for the app. 
 | `SERVER_USER` | `ubuntu` |
 | `SERVER_PORT` | `22` |
 | `SERVER_SSH_KEY` | the **whole private file** `tnajem_actions` (BEGIN/END lines included) |
+| `SERVER_KNOWN_HOSTS` | the VPS's **host keys**, as `known_hosts` lines — see below. The deploy refuses to connect without them (`StrictHostKeyChecking=yes`) |
 | `APP_DIR` | `/var/www/tnajem` |
 | `DATABASE_URL` | the **APP RUNTIME (limited)** URL, `tnajem_app`, from `/root/tnajem-secrets.txt` |
 | `MIGRATION_DATABASE_URL` | the **MIGRATIONS (owner)** URL, `tnajem_owner` |
@@ -83,6 +84,17 @@ Until the first deploy, the site answers **502**: nginx is waiting for the app. 
 | **leave unset** | `PAYMENTS_ENABLED`, `ALLOW_MINORS`, `COOKIE_DOMAIN` |
 
 The deploy refuses to touch the server if a required secret is missing, and it lists key names only, never values.
+
+**`SERVER_KNOWN_HOSTS` — pin the server's identity (VULN-004).** On your PC:
+```bash
+ssh-keyscan -p 22 -t ed25519,ecdsa,rsa VPS_IP > tnajem_known_hosts   # use EXACTLY the SERVER_HOST value; -p = SERVER_PORT
+ssh-keygen -lf tnajem_known_hosts                                    # fingerprints of what you just fetched
+```
+Then compare those fingerprints with the server's own, read **over a channel you already trust** (your existing ssh session, or the provider's web console):
+```bash
+for f in /etc/ssh/ssh_host_*_key.pub; do ssh-keygen -lf "$f"; done
+```
+Every `SHA256:` value must match. Only then: `gh secret set SERVER_KNOWN_HOSTS --env deploy -R $R < tnajem_known_hosts`. Re-do this if the VPS is rebuilt or its host keys are rotated, or the deploy will (correctly) refuse to connect.
 
 **Or with the GitHub CLI** (PowerShell, after `gh auth login`):
 ```powershell

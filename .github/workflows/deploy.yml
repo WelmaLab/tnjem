@@ -44,7 +44,7 @@ jobs:
     steps:
       # Only needed for the .env we are about to write — the server gets its code
       # from git itself, not from this checkout.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # ── The environment file, from the "deploy" environment ──────────────────
       # The API and every db:* CLI read this repo-root .env; .gitignore covers it, so
@@ -133,10 +133,9 @@ jobs:
           BACKUP_DIR=${{ vars.BACKUP_DIR || secrets.BACKUP_DIR }}
           PG_BIN=${{ vars.PG_BIN || secrets.PG_BIN }}
           EOF
-          # 644, not 600: appleboy/scp-action runs in a Docker container as another user
-          # and cannot read a 600 file ("tar: can't open 'tnajem.env': Permission denied").
-          # The runner is a throwaway VM; on the server the file is installed as 600 below.
-          chmod 644 tnajem.env
+          # 600: only the runner user reads it. (It was 644 for the old scp action, which
+          # read it from a Docker container as another user; plain scp needs no such hole.)
+          chmod 600 tnajem.env
 
       # ── Fail before the server is touched if a secret is missing ─────────────
       # A secret that does not exist expands to an EMPTY STRING, silently. An empty
@@ -165,98 +164,157 @@ jobs:
           fi
           echo "✓ all $(echo $required | wc -w) required keys are set"
 
-      # /tmp, not $APP_DIR: on the first ever run that directory does not exist yet.
-      # The ssh step below moves it into place with mode 600 immediately.
-      - name: Copy the environment file to the server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ vars.SERVER_USER || secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ vars.SERVER_PORT || secrets.SERVER_PORT }}
-          source: "tnajem.env"
-          target: "/tmp"
+      # ── Copy the env file, then bootstrap (idempotent) + deploy, over plain ssh ──
+      # VULN-004. No third-party action ever sees the SSH key: this is the ONLY
+      # step that has it (step-level env, not job env), it lives in a 0600 file under
+      # $RUNNER_TEMP, and the always() step below deletes it. The server's host key
+      # is PINNED: known_hosts comes from the SERVER_KNOWN_HOSTS secret and ssh/scp run
+      # with StrictHostKeyChecking=yes, so a host that cannot prove it is the VPS gets
+      # neither the .env nor a session. (The third-party scp/ssh actions used before had no
+      # known_hosts and were referenced by mutable tags.)
+      #
+      # The env file goes to /tmp, not $APP_DIR: on the first ever run that directory
+      # does not exist yet. scp creates it 0600 (it is 0600 here); the remote script
+      # moves it into place with install -m 600 immediately.
+      #
+      # timeout-minutes 30 replaces ssh-action's command_timeout: a cold `npm ci` plus
+      # two builds plus the smoke test does not fit in ten minutes on a small VPS.
+      # ServerAlive* keeps a silent `next build` from looking like a dead link.
+      - name: Copy the environment file and deploy (ssh, host key pinned)
+        timeout-minutes: 30
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SERVER_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ vars.SERVER_USER || secrets.SERVER_USER }}
+          SSH_PORT: ${{ vars.SERVER_PORT || secrets.SERVER_PORT }}
+          DEPLOY_APP_DIR: ${{ vars.APP_DIR || secrets.APP_DIR }}
+          DEPLOY_REPO: ${{ github.repository }}
+          DEPLOY_REPO_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          for v in SSH_PRIVATE_KEY SSH_KNOWN_HOSTS SSH_HOST SSH_USER; do
+            if [ -z "${!v}" ]; then
+              echo "✗ $v is empty. Settings > Environments > Production: SERVER_SSH_KEY,"
+              echo "  SERVER_KNOWN_HOSTS, SERVER_HOST and SERVER_USER must all be set (DEPLOY.md §5.2)."
+              echo "  Nothing was sent to the server."
+              exit 1
+            fi
+          done
 
-      # ── Bootstrap (idempotent) + deploy ─────────────────────────────────────
-      # command_timeout is 30m, not the action's 10m default: a cold `npm ci` plus two
-      # builds plus a Playwright-free smoke test does not fit in ten minutes on a small
-      # VPS, and the action kills the SSH session mid-build without saying why.
-      - name: Deploy
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ vars.SERVER_USER || secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ vars.SERVER_PORT || secrets.SERVER_PORT }}
-          command_timeout: 30m
-          script: |
-            # set -eu, NOT -o pipefail: this runs in the login user's shell, and
-            # `set -o pipefail` is a hard error in dash — which would abort the deploy
-            # on line 1 with a message about the option rather than about the app.
-            set -eu
+          KEY_FILE="$RUNNER_TEMP/deploy_key"
+          KNOWN_HOSTS_FILE="$RUNNER_TEMP/known_hosts"
+          REMOTE_SCRIPT="$RUNNER_TEMP/remote-deploy.sh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$KEY_FILE"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$KNOWN_HOSTS_FILE"
+          chmod 600 "$KEY_FILE" "$KNOWN_HOSTS_FILE" tnajem.env
 
-            APP_DIR="${{ vars.APP_DIR || secrets.APP_DIR }}"
-            APP_DIR="${APP_DIR:-/var/www/tnajem}"
+          SSH_OPTS=(
+            -i "$KEY_FILE"
+            -o IdentitiesOnly=yes
+            -o BatchMode=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$KNOWN_HOSTS_FILE"
+            -o GlobalKnownHostsFile=/dev/null
+            -o ServerAliveInterval=30
+            -o ServerAliveCountMax=10
+          )
+          PORT="${SSH_PORT:-22}"
+          TARGET="$SSH_USER@$SSH_HOST"
 
-            # This shell is NON-LOGIN and NON-INTERACTIVE: ~/.bashrc is never read, so
-            # nvm's shim is missing and `node` does not exist. deploy.sh repeats these
-            # two lines for the same reason.
+          scp "${SSH_OPTS[@]}" -P "$PORT" tnajem.env "$TARGET:/tmp/tnajem.env"
+
+          # The remote script runs in the login user's shell (ssh hands the command
+          # string to "$SHELL -c", exactly as ssh-action did), so it must stay POSIX.
+          # Values reach it as single-quoted assignments on its first lines — never
+          # pasted into the script text by the workflow engine.
+          # shq: POSIX single-quoting ( it's -> 'it'"'"'s' ).
+          shq() { local sq="'" rep="'\"'\"'"; printf "'%s'" "${1//$sq/$rep}"; }
+          {
+            printf 'DEPLOY_APP_DIR=%s\n' "$(shq "$DEPLOY_APP_DIR")"
+            printf 'DEPLOY_REPO=%s\n' "$(shq "$DEPLOY_REPO")"
+            printf 'DEPLOY_REPO_TOKEN=%s\n' "$(shq "$DEPLOY_REPO_TOKEN")"
+            cat << 'REMOTE'
+          # set -eu, NOT -o pipefail: this runs in the login user's shell, and
+          # `set -o pipefail` is a hard error in dash — which would abort the deploy
+          # on line 1 with a message about the option rather than about the app.
+          set -eu
+
+          APP_DIR="$DEPLOY_APP_DIR"
+          APP_DIR="${APP_DIR:-/var/www/tnajem}"
+
+          # This shell is NON-LOGIN and NON-INTERACTIVE: ~/.bashrc is never read, so
+          # nvm's shim is missing and `node` does not exist. deploy.sh repeats these
+          # two lines for the same reason.
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          export PATH="$PATH:/usr/local/bin:/usr/bin"
+
+          if ! command -v node >/dev/null 2>&1; then
+            echo "Installing Node via nvm..."
+            curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
             export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-            export PATH="$PATH:/usr/local/bin:/usr/bin"
+            . "$NVM_DIR/nvm.sh"
+            nvm install --lts
+            nvm use --lts
+          fi
+          command -v pm2 >/dev/null 2>&1 || npm install -g pm2
 
-            if ! command -v node >/dev/null 2>&1; then
-              echo "Installing Node via nvm..."
-              curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-              export NVM_DIR="$HOME/.nvm"
-              . "$NVM_DIR/nvm.sh"
-              nvm install --lts
-              nvm use --lts
+          REPO_URL="https://x-access-token:${DEPLOY_REPO_TOKEN}@github.com/${DEPLOY_REPO}.git"
+
+          # WRONG-DIRECTORY GUARD. If APP_DIR already holds a checkout of a DIFFERENT
+          # repository, stop: this environment's APP_DIR was probably copied from
+          # another project, and `git reset --hard` would overwrite that app in place.
+          # The message names no URL — after the first deploy the origin carries a token.
+          if [ -d "$APP_DIR/.git" ]; then
+            if ! git -C "$APP_DIR" remote get-url origin 2>/dev/null | grep -q "$DEPLOY_REPO"; then
+              echo "✗ $APP_DIR is a git checkout of a different repository. Refusing to overwrite it."
+              echo "  Point the APP_DIR secret at this app's own directory (e.g. /var/www/tnajem)."
+              exit 1
             fi
-            command -v pm2 >/dev/null 2>&1 || npm install -g pm2
-
-            REPO_URL="https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
-
-            # WRONG-DIRECTORY GUARD. If APP_DIR already holds a checkout of a DIFFERENT
-            # repository, stop: this environment's APP_DIR was probably copied from
-            # another project, and `git reset --hard` would overwrite that app in place.
-            # The message names no URL — after the first deploy the origin carries a token.
-            if [ -d "$APP_DIR/.git" ]; then
-              if ! git -C "$APP_DIR" remote get-url origin 2>/dev/null | grep -q "${{ github.repository }}"; then
-                echo "✗ $APP_DIR is a git checkout of a different repository. Refusing to overwrite it."
-                echo "  Point the APP_DIR secret at this app's own directory (e.g. /var/www/tnajem)."
-                exit 1
-              fi
-              echo "Updating $APP_DIR ..."
-              git -C "$APP_DIR" remote set-url origin "$REPO_URL"
-              git -C "$APP_DIR" fetch origin --prune
-              git -C "$APP_DIR" checkout production
-              git -C "$APP_DIR" reset --hard origin/production
-            else
-              # NOT `rm -rf "$APP_DIR"`. A mistyped APP_DIR secret would then delete
-              # whatever is there — an nginx web root, another app, /var/www itself.
-              # git clones happily into an existing EMPTY directory, so refuse the
-              # only case that is left and let a human look at it.
-              if [ -e "$APP_DIR" ] && [ -n "$(ls -A "$APP_DIR" 2>/dev/null)" ]; then
-                echo "✗ $APP_DIR exists, is not empty, and is not a git checkout."
-                echo "  Refusing to delete it. Empty it by hand, or fix the APP_DIR secret."
-                exit 1
-              fi
-              echo "First run — cloning into $APP_DIR ..."
-              mkdir -p "$(dirname "$APP_DIR")"
-              git clone -b production "$REPO_URL" "$APP_DIR"
+            echo "Updating $APP_DIR ..."
+            git -C "$APP_DIR" remote set-url origin "$REPO_URL"
+            git -C "$APP_DIR" fetch origin --prune
+            git -C "$APP_DIR" checkout production
+            git -C "$APP_DIR" reset --hard origin/production
+          else
+            # NOT `rm -rf "$APP_DIR"`. A mistyped APP_DIR secret would then delete
+            # whatever is there — an nginx web root, another app, /var/www itself.
+            # git clones happily into an existing EMPTY directory, so refuse the
+            # only case that is left and let a human look at it.
+            if [ -e "$APP_DIR" ] && [ -n "$(ls -A "$APP_DIR" 2>/dev/null)" ]; then
+              echo "✗ $APP_DIR exists, is not empty, and is not a git checkout."
+              echo "  Refusing to delete it. Empty it by hand, or fix the APP_DIR secret."
+              exit 1
             fi
+            echo "First run — cloning into $APP_DIR ..."
+            mkdir -p "$(dirname "$APP_DIR")"
+            git clone -b production "$REPO_URL" "$APP_DIR"
+          fi
 
-            # install -m sets the mode as it copies: scp left it 0644, and this file
-            # holds AUTH_SECRET, DOC_ENCRYPTION_KEY and the database password.
-            install -m 600 /tmp/tnajem.env "$APP_DIR/.env"
-            rm -f /tmp/tnajem.env
+          # install -m sets the mode as it copies: scp left it 0644, and this file
+          # holds AUTH_SECRET, DOC_ENCRYPTION_KEY and the database password.
+          install -m 600 /tmp/tnajem.env "$APP_DIR/.env"
+          rm -f /tmp/tnajem.env
 
-            chmod +x "$APP_DIR/deploy.sh"
-            cd "$APP_DIR"
-            bash deploy.sh
+          chmod +x "$APP_DIR/deploy.sh"
+          cd "$APP_DIR"
+          bash deploy.sh
 
-            # Survive a reboot. Both are safe to re-run; the sudo line needs
-            # passwordless sudo, so a failure here must not fail the deploy.
-            pm2 startup systemd -u "$USER" --hp "$HOME" 2>/dev/null | grep "sudo env" | bash || true
-            pm2 save
+          # Survive a reboot. Both are safe to re-run; the sudo line needs
+          # passwordless sudo, so a failure here must not fail the deploy.
+          pm2 startup systemd -u "$USER" --hp "$HOME" 2>/dev/null | grep "sudo env" | bash || true
+          pm2 save
+          REMOTE
+          } > "$REMOTE_SCRIPT"
+
+          # -n: the remote script never reads stdin. ssh exits with the script's status,
+          # so a failed deploy.sh fails this step, as the action did.
+          ssh "${SSH_OPTS[@]}" -p "$PORT" -n "$TARGET" "$(cat "$REMOTE_SCRIPT")"
+
+      # Runs even when the deploy failed or was cancelled. No secret is needed to
+      # delete files, so none is given.
+      - name: Remove the SSH key and the generated files from the runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/deploy_key" "$RUNNER_TEMP/known_hosts" "$RUNNER_TEMP/remote-deploy.sh" tnajem.env

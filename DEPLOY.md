@@ -333,7 +333,8 @@ there, so the major on the box is whatever you put there. Both Dockerfiles pin 2
 | secret | example / note |
 | --- | --- |
 | `SERVER_HOST` `SERVER_USER` `SERVER_PORT` | the VPS, the deploying user, `22` |
-| `SERVER_SSH_KEY` | the **private** key, whole file including the BEGIN/END lines |
+| `SERVER_SSH_KEY` | the **private** key, whole file including the BEGIN/END lines. Only the deploy step sees it |
+| `SERVER_KNOWN_HOSTS` | the server's host keys (`ssh-keyscan` output, fingerprints checked against the box — ops/PIPELINE_SETUP.md). ssh/scp run with `StrictHostKeyChecking=yes` against it |
 | `APP_DIR` | `/var/www/tnajem` — **re-point it if you copied this environment from another project**; the deploy refuses to run in a checkout of a different repo, but get it right anyway |
 | `DATABASE_URL` `AUTH_SECRET` `DOC_ENCRYPTION_KEY` `CRON_SECRET` | §3. Losing `DOC_ENCRYPTION_KEY` makes every stored ID scan unreadable |
 | `NEXT_PUBLIC_SITE_URL` `CORS_ORIGINS` `TRUSTED_PROXIES` `COOKIE_DOMAIN` | §3. `NEXT_PUBLIC_SITE_URL` is **baked into the bundle at build time** |
