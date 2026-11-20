@@ -5,7 +5,7 @@ import { normalizeEmail, normalizePhone, isValidEmail, isValidPhone, isAdult } f
 import { mailEnabled, sendMail } from "@tnajem/shared/mail";
 import { smsEnabled, sendSms } from "@tnajem/shared/sms";
 import { db } from "../db";
-import { IS_PROD } from "../env";
+import { IS_DEV } from "../env";
 import { checkRateLimit, ipBucket } from "./rate-limit";
 import { guardCheck, guardFailure, strictEnter, UNTRUSTED_DELAY, type AttemptGuard } from "./attempt-guard";
 import { nextTrustedCookie, tokenFor, trustedTokenValid } from "./trusted-browser";
@@ -136,8 +136,10 @@ export async function sendCode(req: FastifyRequest, id: string, locale: string |
      gated only on mailEnabled()/smsEnabled(). Those are env-PRESENCE checks, so
      a production deploy shipped without MAIL_* became an oracle — type any
      stranger's address, read their login code off the screen, own the account.
-     Fail closed in production; keep the on-screen code for local dev only. */
-  if (IS_PROD) {
+     Fail closed in production; keep the on-screen code for local dev only.
+     VULN-008: shown ONLY when NODE_ENV is exactly "development" — any other value
+     (staging, Production, test, …) fails closed. */
+  if (!IS_DEV) {
     req.log.error(
       "requestOtp: no OTP provider configured in production — refusing to return " +
         "the code. Set MAIL_HOST/MAIL_USER/MAIL_PASS/MAIL_FROM_ADDRESS (or TWILIO_* " +

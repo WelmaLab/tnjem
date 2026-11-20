@@ -69,7 +69,11 @@ export const HOST = process.env.API_HOST ?? "127.0.0.1";
    read it directly, agree with this module. */
 if (!process.env.NODE_ENV?.trim()) process.env.NODE_ENV = "production";
 export const NODE_ENV = process.env.NODE_ENV;
-export const IS_PROD = NODE_ENV === "production";
+/* VULN-008: an ALLOW-LIST, not a deny-list. Only the two exact values below relax
+   anything; every other value — staging, Production, prod, a typo — is production,
+   with every boot check and fail-closed rule on. */
+export const IS_DEV = NODE_ENV === "development";
+export const IS_PROD = NODE_ENV !== "development" && NODE_ENV !== "test";
 
 /** Read at boot from package.json so /health reports something real. */
 export const VERSION = (() => {

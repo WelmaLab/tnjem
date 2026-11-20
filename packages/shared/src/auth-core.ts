@@ -93,9 +93,16 @@ export function authSecret(): string {
     cachedSecret = fromEnv;
     return cachedSecret;
   }
-  if (process.env.NODE_ENV === "production") throw missingSecretError();
+  /* VULN-008: the public default is an ALLOW-LIST — development and test only. Any
+     other NODE_ENV (production, staging, Production, unset, a typo) throws. */
+  if (!devOrTest()) throw missingSecretError();
   cachedSecret = DEV_SECRET;
   return cachedSecret;
+}
+
+function devOrTest(): boolean {
+  const env = process.env.NODE_ENV;
+  return env === "development" || env === "test";
 }
 
 /** Test seam. Never call this from application code. */
@@ -107,7 +114,7 @@ export function __resetAuthSecretCache(): void {
    without AUTH_SECRET says so in the logs on first import, then dies on the first
    login attempt (authSecret() above). `next build` is unaffected. */
 export function warnIfSecretMissing(): void {
-  if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET?.trim()) {
+  if (!devOrTest() && !process.env.AUTH_SECRET?.trim()) {
     console.error(
       "[Tnajem] FATAL CONFIG: AUTH_SECRET is not set. Every login WILL fail until it is. " +
         "Generate one with `openssl rand -hex 32`.",
