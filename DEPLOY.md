@@ -54,6 +54,16 @@ Both processes read the repo-root `.env` (and `.env.local`, which wins). A real
 environment variable beats both — that is deliberate, so systemd, a container or
 CI can configure the API without editing a file.
 
+**The web server only ever sees an allow-list** (VULN-003): `API_URL`,
+`NEXT_PUBLIC_*`, `SENTRY_DSN/ENVIRONMENT/RELEASE`, `NODE_ENV`, `PORT`, `HOSTNAME`,
+`ALLOW_MINORS`, `OTP_CHANNEL`, `PAYMENTS_ENABLED`, `TNAJEM_DEMO` (refused in
+production), plus OS basics. The list lives in `apps/web/scripts/web-env.mjs`;
+`security-audit/env-split.md` has the full table. On the server `deploy.sh` writes
+`<APP_DIR>/.env.web` from `.env` with that list and pm2 starts the web runner on it, so
+`DATABASE_URL`, `DOC_ENCRYPTION_KEY`, `AUTH_SECRET`, `CRON_SECRET` and the mail/S3/SMS
+credentials never reach the Next process. Locally, `npm run start:standalone` parses
+the root `.env` and passes the same allow-list to the Next child.
+
 ```
 # ── Required by the API ────────────────────────────────────────────────────
 NODE_ENV=production                        # unset is treated as production too — see below
@@ -298,7 +308,7 @@ by hand over ssh:
 | file | where it runs | what it is |
 | --- | --- | --- |
 | `.github/workflows/deploy.yml` | GitHub runner | writes `.env` from the `deploy` environment, ships it, calls `deploy.sh` |
-| `deploy.sh` | the VPS | install → build both → migrate → `db:check` → reload pm2 → smoke |
+| `deploy.sh` | the VPS | install → write `.env.web` → build both → migrate → `db:check` → reload pm2 → smoke |
 | `ecosystem.config.cjs` | the VPS | the two pm2 apps: `tnajem-api`, `tnajem-web` |
 
 ### 5.1 First-run server prep (you, once)
@@ -363,7 +373,7 @@ after that point is a real, visible failure.
 
 To do the same thing by hand (also the way to run it before the first `git push`):
 ```
-cd /var/www/tnajem && bash deploy.sh          # .env must already be in place, mode 600
+cd /var/www/tnajem && bash deploy.sh          # .env must already be in place, mode 600; deploy.sh writes .env.web
 ```
 
 `npm ci --include=dev` is not a typo. Root `devDependencies` hold `tsx`, `typescript`,
@@ -378,6 +388,10 @@ pm2 status                     # both apps, uptime, restarts, memory
 pm2 logs tnajem-api            # or tnajem-web; files are in <APP_DIR>/logs/
 pm2 reload ./ecosystem.config.cjs --only tnajem-web --env production
 ```
+Changed a key the web reads at runtime (`ALLOW_MINORS`, `OTP_CHANNEL`,
+`PAYMENTS_ENABLED`, `SENTRY_*`) by hand in `.env`? Regenerate the web's copy before
+that reload: `node apps/web/scripts/web-env.mjs .env .env.web`. Never edit `.env.web`.
+
 If `next build` is OOM-killed on a small VPS (the log just says `Killed`), add swap or
 `NODE_OPTIONS=--max-old-space-size=1024 bash deploy.sh`. The web app is one pm2 app, not
 a cluster: its process is a supervisor that spawns the Next server, so cluster mode would

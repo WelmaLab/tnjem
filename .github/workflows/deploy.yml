@@ -47,8 +47,12 @@ jobs:
       - uses: actions/checkout@v4
 
       # ── The environment file, from the "deploy" environment ──────────────────
-      # Both processes and every CLI read ONE repo-root .env; .gitignore covers it, so
-      # it is never in the repository and has to be written here.
+      # The API and every db:* CLI read this repo-root .env; .gitignore covers it, so
+      # it is never in the repository and has to be written here. The WEB process does
+      # not read it: deploy.sh derives .env.web from it with the web allow-list
+      # (apps/web/scripts/web-env.mjs), so DOC_ENCRYPTION_KEY, DATABASE_URL, AUTH_SECRET,
+      # CRON_SECRET and the mail/S3/SMS credentials never reach the Next server
+      # (VULN-003). A key the web reads at runtime is added to that allow-list, not here.
       #
       # << 'EOF' is quoted: the shell must not expand anything in a secret value.
       # Four keys are literals rather than secrets because they describe the shape of

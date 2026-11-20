@@ -6,7 +6,6 @@ import {
   SESSION_DAYS,
   OTP_RESEND_COOLDOWN_SEC,
   OTP_TTL_SEC,
-  warnIfSecretMissing,
 } from "@tnajem/shared/auth-core";
 
 /* COOKIES ONLY.
@@ -34,7 +33,9 @@ export {
   isValidEmail,
 } from "@tnajem/shared";
 
-warnIfSecretMissing();
+/* No warnIfSecretMissing() here (VULN-003): the web process is deliberately given
+   no AUTH_SECRET (scripts/web-env.mjs), so the check would print a false "FATAL
+   CONFIG" on every production boot. The API, which does hash OTPs, still runs it. */
 
 /* NON-SENSITIVE UI hint, readable by the client. It lets <SiteHeader> render the
    right nav link WITHOUT a getMe() round-trip on every page load — the request
