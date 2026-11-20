@@ -13,7 +13,7 @@
            node apps/web/scripts/web-env.mjs <source .env> <dest .env.web>
 
    Inventory (every process.env read in apps/web, plus the @tnajem/shared modules
-   the web imports at runtime): security-audit/env-split.md. Adding a variable the
+   the web imports at runtime) is the allow-list below. Adding a variable the
    web reads at runtime means adding it HERE, or the server will not see it. */
 import { readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";

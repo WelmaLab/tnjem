@@ -57,8 +57,8 @@ CI can configure the API without editing a file.
 **The web server only ever sees an allow-list** (VULN-003): `API_URL`,
 `NEXT_PUBLIC_*`, `SENTRY_DSN/ENVIRONMENT/RELEASE`, `NODE_ENV`, `PORT`, `HOSTNAME`,
 `ALLOW_MINORS`, `OTP_CHANNEL`, `PAYMENTS_ENABLED`, `TNAJEM_DEMO` (refused in
-production), plus OS basics. The list lives in `apps/web/scripts/web-env.mjs`;
-`security-audit/env-split.md` has the full table. On the server `deploy.sh` writes
+production), plus OS basics. The list, with the reason for each key, lives in
+`apps/web/scripts/web-env.mjs`. On the server `deploy.sh` writes
 `<APP_DIR>/.env.web` from `.env` with that list and pm2 starts the web runner on it, so
 `DATABASE_URL`, `DOC_ENCRYPTION_KEY`, `AUTH_SECRET`, `CRON_SECRET` and the mail/S3/SMS
 credentials never reach the Next process. Locally, `npm run start:standalone` parses

@@ -118,3 +118,6 @@ DECEMBER_SPRINT.md
 DECEMBER_SPRINT_REPORT.md
 # December sprint screenshots (lane G). Local only.
 ui-december-sprint/
+
+# Security audit working files (report, raw scans, runbooks). Local only, never committed.
+security-audit/
