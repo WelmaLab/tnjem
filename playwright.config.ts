@@ -30,7 +30,24 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   globalTeardown: "./e2e/global-teardown.ts",
   use: { baseURL: BASE, trace: "retain-on-failure" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      testIgnore: /sec-001b-trusted-browser\.spec\.ts$/,
+    },
+    /* The trusted-browser spec arms an identity-wide strict wait in rate_limits and then
+       asserts a stranger is held by it. Eighteen other specs call resetRateLimits(),
+       which empties that table; under --workers=2 one of them can wipe the wait
+       mid-test. So this spec runs alone, after every other spec, on one worker. */
+    {
+      name: "chromium-after-all",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /sec-001b-trusted-browser\.spec\.ts$/,
+      dependencies: ["chromium"],
+      workers: 1,
+    },
+  ],
 
   /* `next start` DOES NOT WORK with output:"standalone" — it logs Ready, listens,
      and never answers. And the standalone bundle ships without .next/static and
