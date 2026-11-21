@@ -1,8 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Me } from "@tnajem/shared";
 import { getSession } from "../lib/session";
-import { adminAuthIdentities, isAllowlistedAdmin } from "@tnajem/shared"; // phase-a lane L5 (A18.13)
-import { otpChannel } from "@tnajem/shared/auth-core"; // phase-a lane L5 (A18.13)
+import { isAdminProfile } from "../lib/admin"; // VULN-006: profiles.admin_granted_at only
 
 /* GET /me — the canary.
 
@@ -45,9 +44,10 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
       role: p.role,
       email: p.email,
       phone: p.phone,
-      /* phase-a lane L5 (A18.13): so /account can say "Admin". The SAME allowlist
-         decision requireAdmin() makes (lib/admin.ts) — it grants nothing here. */
-      isAdmin: isAllowlistedAdmin(p, adminAuthIdentities(process.env, otpChannel()), otpChannel()),
+      /* phase-a lane L5 (A18.13): so /account can say "Admin". The SAME decision
+         requireAdmin() makes (lib/admin.ts, VULN-006: the DB column, never an env
+         list matched against a typed field) — it grants nothing here. */
+      isAdmin: isAdminProfile(p),
     };
   });
 }

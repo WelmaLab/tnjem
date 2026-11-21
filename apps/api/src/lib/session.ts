@@ -28,6 +28,11 @@ export type SessionProfile = {
   birthYear: number | null;
   birthMonth: number | null; // phase-a lane L2 (A24): isAdult needs month + year
   locale: string | null;
+  /* VULN-006 (0046): THE source of admin (lib/admin.ts::requireAdmin). Reloaded with
+     the profile on every request, so a revoke takes effect on the next call. */
+  adminGrantedAt: Date | null;
+  /** VULN-006 (0046): set only by an SMS proof at sign-in; a typed number stays null. */
+  phoneVerifiedAt: Date | null;
 };
 
 export type Session = { token: string; profile: SessionProfile };
@@ -82,6 +87,8 @@ export async function getSession(req: FastifyRequest): Promise<Session | null> {
       birthYear: profiles.birthYear,
       birthMonth: profiles.birthMonth, // phase-a lane L2 (A24)
       locale: profiles.locale,
+      adminGrantedAt: profiles.adminGrantedAt, // VULN-006
+      phoneVerifiedAt: profiles.phoneVerifiedAt, // VULN-006
     })
     .from(sessions)
     .innerJoin(profiles, eq(profiles.id, sessions.profileId))
@@ -126,6 +133,8 @@ export async function getSession(req: FastifyRequest): Promise<Session | null> {
       birthYear: row.birthYear,
       birthMonth: row.birthMonth, // phase-a lane L2 (A24)
       locale: row.locale,
+      adminGrantedAt: row.adminGrantedAt,
+      phoneVerifiedAt: row.phoneVerifiedAt,
     },
   };
 }

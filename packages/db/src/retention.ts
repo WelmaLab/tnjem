@@ -30,7 +30,7 @@ import { and, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { isNull, lte } from "drizzle-orm"; // phase-a lane L4 (A26)
 import { SESSION_IDLE_DAYS } from "@tnajem/shared/auth-core";
 import { DELETION_GRACE_DAYS, ID_DOCUMENT_RETENTION_DAYS, INACTIVE_ACCOUNT_RETENTION_DAYS } from "@tnajem/shared/legal";
-import { adminAuthIdentities } from "@tnajem/shared/admin";
+import { adminNotifyEmails } from "@tnajem/shared/admin";
 import { eraseAccount, inactiveAccountsDue } from "./erasure";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 /* ONE object store, in ./storage, shared with the uploader and the admin doc
@@ -372,7 +372,9 @@ export async function purgeDeletedAccounts(
       ),
     )
     .limit(500);
-  const admins = adminAuthIdentities(process.env, "email");
+  /* Admins (profiles.admin_granted_at) are never due — inactiveAccountsDue checks the
+     column. The ADMIN_EMAILS notification list is still spared as well (VULN-006). */
+  const admins = adminNotifyEmails(process.env);
   const inactive = await inactiveAccountsDue(db, {
     retentionDays: INACTIVE_ACCOUNT_RETENTION_DAYS,
     excludeEmails: admins,

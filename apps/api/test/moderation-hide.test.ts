@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import {
   startApp, stopApp, seedProfile, seedTutor, seedClass, seedBooking, login, call, sql, type App,
 } from "./support/fx";
+import { grantAdmin } from "./support/fx"; // VULN-006
 
 /* phase-a lane L4 (A28) — admins could not remove reported content.
 
@@ -27,7 +28,7 @@ before(async () => {
   app = await startApp();
   const admin = await seedProfile({ role: "tutor" });
   process.env.OTP_CHANNEL = "email";
-  process.env.ADMIN_EMAILS = admin.email;
+  await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
   adminCookie = await login(admin.id);
 });
 after(async () => {

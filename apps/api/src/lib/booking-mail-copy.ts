@@ -37,6 +37,10 @@ export type Coverage =
   | { kind: "free" } // the free first session with this tutor (bookings.is_free)
   | { kind: "subscription" }; // covered by the student's monthly subscription (C7, bookings.subscription_id)
 
+/** VULN-002: one line of the tutor's digest — the LAST state of one (student, class)
+    pair inside the window, and how many events led to it. */
+export type DigestItem = { student: string; cls: MailClass; event: "booked" | "cancelled"; late: boolean; changes: number };
+
 export type CancelOutcome = {
   late: boolean; waived: boolean; wasFree: boolean; wasCovered?: boolean; retainedTnd: number;
   /** live-fixes-3 · C: cancelled within 15 min of booking — free, whatever the time to the class. */
@@ -184,6 +188,33 @@ const fr = {
       "",
       `${p.student} a annulé sa place pour « ${p.cls.title} » (${p.cls.date} à ${p.cls.time}). La place est de nouveau libre.`,
       p.late ? `Annulation tardive (moins de ${H} h avant).` : null,
+      "",
+      `Tes classes : ${p.dashboardUrl}`,
+      "",
+      fr.sign,
+      p.unsubscribeUrl ? fr.unsubscribe(p.unsubscribeUrl) : null,
+    ),
+  }),
+
+  /* VULN-002: the events that came after the tutor's last booking email, inside
+     the window, sent together as ONE email when it closes. No .ics: each class's
+     calendar entry came with its first booking email. */
+  tutorDigest: (p: { first?: string | null; items: DigestItem[]; dashboardUrl: string; unsubscribeUrl?: string | null }): MailText => ({
+    subject: `Récap : ${p.items.length} ${p.items.length > 1 ? "changements" : "changement"} dans tes réservations`,
+    text: lines(
+      fr.hello(p.first),
+      "",
+      "Depuis notre dernier email, voici ce qui a bougé dans tes classes :",
+      "",
+      ...p.items.map((i) =>
+        lines(
+          i.event === "booked"
+            ? `• ${i.student} a réservé une place pour « ${i.cls.title} » (${i.cls.date} à ${i.cls.time}).`
+            : `• ${i.student} a annulé sa place pour « ${i.cls.title} » (${i.cls.date} à ${i.cls.time}). La place est de nouveau libre.`,
+          i.event === "cancelled" && i.late ? `  Annulation tardive (moins de ${H} h avant).` : null,
+          i.changes > 1 ? `  (dernier état, après ${i.changes} changements)` : null,
+        ),
+      ),
       "",
       `Tes classes : ${p.dashboardUrl}`,
       "",
@@ -422,6 +453,30 @@ const ar: typeof fr = {
       "",
       `${p.student} لغى بلاصتو في « ${p.cls.title} » (${p.cls.date} على ${p.cls.time}). البلاصة ولّات فارغة.`,
       p.late ? `إلغاء متأخّر (قبل أقل من ${H} ساعة).` : null,
+      "",
+      `حصصك : ${p.dashboardUrl}`,
+      "",
+      ar.sign,
+      p.unsubscribeUrl ? ar.unsubscribe(p.unsubscribeUrl) : null,
+    ),
+  }),
+
+  tutorDigest: (p) => ({
+    subject: `ملخّص : ${p.items.length} ${p.items.length > 1 ? "تبديلات" : "تبديل"} في الحجوزات متاعك`,
+    text: lines(
+      ar.hello(p.first),
+      "",
+      "من آخر إيميل، هاذا اللي تبدّل في حصصك :",
+      "",
+      ...p.items.map((i) =>
+        lines(
+          i.event === "booked"
+            ? `• ${i.student} حجز بلاصة في « ${i.cls.title} » (${i.cls.date} على ${i.cls.time}).`
+            : `• ${i.student} لغى بلاصتو في « ${i.cls.title} » (${i.cls.date} على ${i.cls.time}). البلاصة ولّات فارغة.`,
+          i.event === "cancelled" && i.late ? `  إلغاء متأخّر (قبل أقل من ${H} ساعة).` : null,
+          i.changes > 1 ? `  (آخر حالة، بعد ${i.changes} تبديلات)` : null,
+        ),
+      ),
       "",
       `حصصك : ${p.dashboardUrl}`,
       "",

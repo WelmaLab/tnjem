@@ -109,8 +109,16 @@ function checkEnv() {
     (production ? fail : warn)("TNAJEM_DEMO", "set to 1 — demo data is development-only");
   }
 
-  requireKey("ADMIN_EMAILS", "production", "Empty means nobody can review verifications.");
-  requireKey("CRON_SECRET", "production", "Unset, /cron/purge refuses to run and nothing is ever purged.");
+  /* VULN-006: ADMIN_EMAILS grants nothing any more (admin is profiles.admin_granted_at,
+     checked under Database below). It is only who gets e-mailed about a new verification. */
+  if (keyState("ADMIN_EMAILS") === "set") ok("ADMIN_EMAILS", "set (notification only — it grants no access)");
+  else warn("ADMIN_EMAILS", `${keyState("ADMIN_EMAILS")}. Nobody is e-mailed when a verification arrives (it grants no access either way).`);
+  /* VULN-021: the API refuses to boot in production with a CRON_SECRET under 32
+     characters. Failing here first stops deploy.sh BEFORE pm2 reload, so the
+     previous release keeps serving instead of a crash-looping API. */
+  const cron = process.env.CRON_SECRET?.trim() ?? "";
+  if (cron && cron.length < 32) (production ? fail : warn)("CRON_SECRET", "set, but shorter than 32 characters: openssl rand -hex 32");
+  else requireKey("CRON_SECRET", "production", "Unset, /cron/purge refuses to run and nothing is ever purged.");
   requireKey("CORS_ORIGINS", "production", "Empty in production, the API refuses to boot.");
   requireKey("TRUSTED_PROXIES", "production", "Unset in production, the API refuses to boot (one rate-limit bucket for every visitor).");
   if (production) {
@@ -213,6 +221,7 @@ async function checkDatabase() {
     }
 
     await checkSchemaMatches(sql);
+    await checkAdmins(sql);
   } catch (e) {
     fail("connection", `cannot reach the database (${(e as { code?: string }).code ?? (e as Error).name})`);
   } finally {
@@ -259,6 +268,20 @@ async function checkSchemaMatches(sql: ReturnType<typeof postgres>) {
         .filter(Boolean)
         .join("; "),
     );
+  }
+}
+
+/* VULN-006: admin is profiles.admin_granted_at, granted by the operator CLI. None
+   is a WARNING, never a failure: a fresh database (CI, a new box) has no account
+   yet, and the founder grants theirs after signing up. Counts only, no identity. */
+async function checkAdmins(sql: ReturnType<typeof postgres>) {
+  try {
+    const [{ n }] = await sql<{ n: number }[]>`
+      select count(*)::int as n from profiles where admin_granted_at is not null and purged_at is null`;
+    if (n > 0) ok("admins", `${n} account(s) with admin_granted_at`);
+    else warn("admins", "no account is an admin — nobody can review verifications. Sign up, then: npm run admin:grant -- <email>");
+  } catch {
+    warn("admins", "could not count (is 0046 applied? npm run db:sql)");
   }
 }
 

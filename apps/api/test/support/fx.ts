@@ -123,6 +123,11 @@ export async function seedBooking(opts: {
   return row;
 }
 
+/** VULN-006: make a profile an admin the way the operator CLI does (profiles.admin_granted_at). */
+export async function grantAdmin(profileId: string): Promise<void> {
+  await sql`update profiles set admin_granted_at = now() where id = ${profileId}`;
+}
+
 /** A real session row (sha256 of the token, as 0020 stores it). Returns the Cookie header. */
 export async function login(profileId: string): Promise<string> {
   const token = randomBytes(32).toString("hex");
@@ -249,4 +254,21 @@ export async function cleanupIp(ip: string): Promise<void> {
    the booking back with this — its SETUP, never its assertions. */
 export async function backdateBooking(bookingId: string, minutes = 60): Promise<void> {
   await sql`update bookings set created_at = now() - ${minutes} * interval '1 minute' where id = ${bookingId}`;
+}
+
+// VULN-002 ────────────────────────────────────────────────────────────────────
+/* Re-booking a class the student cancelled waits 10 minutes (routes/bookings.ts,
+   REBOOK_COOLDOWN_MS), measured from the ledger's cancelled_at. A test whose
+   SETUP means "cancelled earlier, re-booked later" moves those rows back with this. */
+export async function endRebookCooldown(bookingId: string, minutes = 11): Promise<void> {
+  await sql`update cancellations set cancelled_at = cancelled_at - ${minutes} * interval '1 minute' where booking_id = ${bookingId}`;
+}
+
+/* A tutor's booking e-mails share a 10-minute window (lib/tutor-mail-gate.ts): the
+   first goes out at once, the next ones wait for a digest. A test that means "a
+   later, separate event" closes the window first, as the clock would. */
+export async function closeTutorMailWindow(tutorProfileId: string, minutes = 60): Promise<void> {
+  await sql`update tutor_mail_digest set created_at = created_at - ${minutes} * interval '1 minute',
+                                         mailed_at = mailed_at - ${minutes} * interval '1 minute'
+            where tutor_profile_id = ${tutorProfileId}`;
 }

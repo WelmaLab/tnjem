@@ -25,7 +25,7 @@ import { publicTutorName } from "@tnajem/shared"; // phase-a lane L2 (A23)
 import { paymentsEnabled } from "@tnajem/shared/payments";
 import { db } from "../db";
 import { getSession } from "../lib/session";
-import { checkRateLimit } from "../lib/rate-limit";
+import { checkRateLimit, peekRateLimit } from "../lib/rate-limit";
 import { recomputeTutorStats } from "../lib/stats";
 import { isUniqueViolation } from "../lib/db-errors";
 import { freeFirstStillAvailable } from "../lib/free-first-entitlement"; // phase-a/integrate (A6)
@@ -90,6 +90,41 @@ const cancelBody = z.object({ bookingId: z.string() });
    implemented twice is a deadline that eventually disagrees with the copy that
    promises it. apps/web's own copy of this constant was already dead and is
    deleted in the same commit. */
+
+/* ── VULN-002: THE BOOK → CANCEL LOOP ────────────────────────────────────────
+   Every booking and every cancellation mails and notifies the tutor, and a cancel
+   inside the 15-minute grace costs nothing — so a loop on one class was free and
+   flooded the tutor. Three limits, each sized so a real student never meets it:
+
+   CANCEL_BURST_PER_MIN — 10 cancels a minute per student. Cancelling is a tap and a
+     confirmation per seat; nobody does ten in a minute by hand, and the 11th can
+     simply wait. (Booking already had its own 20 a minute.)
+
+   REBOOK_COOLDOWN_MS — 10 minutes before re-booking a class you cancelled. Someone
+     who changes their mind twice in ten minutes waits a moment; a loop is cut to at
+     most 6 cycles an hour on one class, which also matches the tutor's mail window
+     (lib/tutor-mail-gate.ts). Distinct error code `rebook-cooldown` + retryAfter.
+
+   BOOKING_CHANGES_PER_DAY — 60 booking changes per student per 24 h, where a
+     booking AND a cancellation each count as one. A busy student booking a whole
+     week (10–15 classes) and changing a few is far below it; 60 is ~4× that. It is
+     ENFORCED ONLY WHEN BOOKING: a cancel is never refused by the daily cap, because
+     trapping someone in a seat they no longer want (with late-cancel rules
+     running) is worse than the spam. Cancels are bounded by the burst limit alone.
+
+   Named constants, no env var: they are product rules, not deployment settings. */
+export const CANCEL_BURST_PER_MIN = 10;
+export const REBOOK_COOLDOWN_MS = 10 * 60_000;
+export const BOOKING_CHANGES_PER_DAY = 60;
+const DAY_MS = 24 * 60 * 60_000;
+/** The student's daily budget in rate_limits (a fixed 24 h window from the first change). */
+const changesKey = (uid: string) => `bookchg:day:${uid}`;
+/** Spends one booking change. Never refuses anything itself: the cap is checked (peeked) at booking time. */
+const spendChange = (uid: string) => checkRateLimit(changesKey(uid), BOOKING_CHANGES_PER_DAY, DAY_MS);
+/* VULN-002: the tutor's notification about one (student, class) pair is updated in
+   place rather than duplicated while events keep coming less than an hour apart. */
+const TUTOR_NOTIFY_COLLAPSE_MS = 60 * 60_000;
+const tutorNotifyCollapse = (classId: string, studentId: string) => ({ key: `booking:${classId}:${studentId}`, withinMs: TUTOR_NOTIFY_COLLAPSE_MS });
 
 export async function bookingRoutes(app: FastifyInstance): Promise<void> {
   /* ── POST /bookings ──────────────────────────────────────────────────────── */
@@ -166,6 +201,24 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
     const [tut] = await db.select().from(tutors).where(eq(tutors.id, cls.tutorId)).limit(1);
     if (!tut || tut.status !== "verified" || tut.suspendedAt) return { ok: false, error: "unavailable" }; // A blocked account's storefront is suspended (0019): off every public read.
     if (tut.profileId === uid) return { ok: false, error: "own-class" }; // no self-booking
+
+    /* VULN-002: re-booking a class this student cancelled less than
+       REBOOK_COOLDOWN_MS ago waits (the database clock decides). Only the student's
+       own cancellations count — a class the tutor called off cannot be re-booked anyway. */
+    const [cool] = await db
+      .select({
+        wait: raw<number | null>`ceil(extract(epoch from (max(${cancellations.cancelledAt}) + ${REBOOK_COOLDOWN_MS} * interval '1 millisecond' - now())))::int`,
+      })
+      .from(cancellations)
+      .innerJoin(bookings, eq(cancellations.bookingId, bookings.id))
+      .where(and(eq(bookings.classId, cls.id), eq(bookings.studentId, uid), eq(cancellations.actor, "student")));
+    if (cool?.wait !== null && cool?.wait !== undefined && Number(cool.wait) > 0) {
+      return { ok: false, error: "rebook-cooldown", retryAfter: Number(cool.wait) };
+    }
+
+    // VULN-002: the day's booking changes are spent — a NEW booking waits (a cancel never does).
+    const day = await peekRateLimit(changesKey(uid), BOOKING_CHANGES_PER_DAY);
+    if (!day.ok) return { ok: false, error: "daily-limit", retryAfter: day.retryAfter };
 
     /* ---- Atomic seat claim ----
        BEFORE: read seats_taken → compare to seats → UPDATE seats_taken + 1. Two
@@ -289,6 +342,7 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
 
     if (outcome === "already") return { ok: true, already: true };
     if (outcome === "full") return { ok: false, error: "full" };
+    await spendChange(uid); // VULN-002: a real booking counts toward the day's changes
 
     /* Notifications AFTER the commit. notify() never throws, and it does SMS I/O:
        running it inside the transaction would hold the seat lock open across a
@@ -310,6 +364,7 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
         params: { classTitle: cls.title, at, who: publicDisplayName(session.profile.fullName) },
         href: "/dashboard",
         aboutProfileId: uid,
+        collapse: tutorNotifyCollapse(cls.id, uid), // VULN-002: one row per (student, class), not one per event
       });
     }
     // espace prof v2 · pro (P7): the confirmation emails (+ .ics) to both sides — after the commit, not awaited.
@@ -342,6 +397,10 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
     const session = await getSession(req);
     if (!session) return { ok: false, error: "not-authenticated" };
     const uid = session.profile.id;
+
+    // VULN-002: a burst limit only — the daily cap never blocks a cancel (see CANCEL_BURST_PER_MIN).
+    const rl = await checkRateLimit(`cancel:${uid}`, CANCEL_BURST_PER_MIN, 60_000);
+    if (!rl.ok) return { ok: false, error: "too-many-requests", retryAfter: rl.retryAfter };
 
     const [bk] = await db.select().from(bookings).where(eq(bookings.id, bookingId.value)).limit(1);
     if (!bk) return { ok: false, error: "not-found" };
@@ -482,6 +541,7 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
     });
 
     if (!released) return { ok: true }; // already cancelled — idempotent
+    await spendChange(uid); // VULN-002: counts toward the day's changes (checked only when booking)
 
     if (tut?.profileId) {
       /* The tutor is told WHEN it happened relative to the deadline, because that
@@ -501,6 +561,7 @@ export async function bookingRoutes(app: FastifyInstance): Promise<void> {
         },
         href: "/dashboard",
         aboutProfileId: uid,
+        collapse: tutorNotifyCollapse(cls.id, uid), // VULN-002: replaces this pair's « new booking » row
       });
     }
     /* espace prof v2 · pro (P7): the student's confirmation (with a METHOD:CANCEL .ics

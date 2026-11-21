@@ -593,7 +593,7 @@ export type AdminAccount = {
   name: string | null;
   blockedAt: string | null;     // ISO
   blockedReason: string | null;
-  /** On the ADMIN_EMAILS allowlist — cannot be blocked from this page. */
+  /** profiles.admin_granted_at is set (VULN-006) — cannot be blocked from this page. */
   isAdmin: boolean;
   /** id: the tutors row — the admin read-only promotions view (growth, phase 5) asks by it. */
   /** isTest (december-sprint · A, D11): tutors.is_test — off every public list, noindex by link. */

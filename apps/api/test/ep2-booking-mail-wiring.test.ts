@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { MailExtras } from "@tnajem/shared/mail";
 import { startApp, stopApp, seedProfile, seedTutor, seedClass, login, call, sql, type App } from "./support/fx";
 import { setMailDeliveryForTests, settleMail } from "../src/lib/booking-mail";
+import { closeTutorMailWindow } from "./support/fx"; // VULN-002
 
 /* espace prof v2 · pro (P7) — the booking emails, driven through the REAL routes.
 
@@ -141,6 +142,9 @@ describe("ep2 · cancellations and moves send their emails", () => {
     await book(s);
     const [bk] = await sql<{ id: string }[]>`select id from bookings where class_id = ${s.klass.id} and student_id = ${s.student.id}`;
     outbox.length = 0;
+    /* VULN-002: the booking e-mail just opened the tutor's 10-minute window; a cancel
+       inside it would wait for the digest. This test is about a LATER cancel. */
+    await closeTutorMailWindow(s.tutorProfile.id);
     const res = await call(app, "POST", "/bookings/cancel", s.studentCookie, { bookingId: bk.id });
     assert.equal(res.body.ok, true, res.raw);
     await settleMail();

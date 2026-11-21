@@ -1,8 +1,9 @@
 import { test, expect, type Browser, type Page } from "@playwright/test";
+import postgres from "postgres";
 import { sql } from "./support/db";
 import { seedProfile, seedTutor, seedClass, seedBooking, backdateBooking } from "./support/seed";
 import { loginAs } from "./support/session";
-import { BASE_URL } from "./support/env";
+import { BASE_URL, DB_URL } from "./support/env";
 
 /* ════════════════════════════════════════════════════════════════════════════
    student-space-v1 · H — bugs from the live test (5 Oct 2026).
@@ -105,6 +106,41 @@ async function visit(page: Page, path: string) {
 }
 
 const visible = (page: Page, selector: string) => page.locator(selector).filter({ visible: true });
+
+/* H2 HOLDS ITS ROW. /cron/reminders marks EVERY ended class `done`
+   (apps/api/src/lib/class-done.ts), and ssv1-i-journey.spec.ts calls it — with
+   --workers=2, on another worker, at any moment. No time window hides a class from
+   it: the sweep and the screens use the same end (start + duration), so a class the
+   screens call over is one the sweep may write. Before, a sweep landing mid-test
+   flipped the row and « derived — the cron has not run » failed.
+
+   So `check` runs while a transaction on its OWN connection (support/db's pool has
+   one, and the page visits need it) holds the row FOR UPDATE as `scheduled`: the
+   sweep's UPDATE waits on that lock until the screens are checked, then does its job
+   as usual. A plain SELECT never waits on it, so the API reads the row normally. If
+   the sweep got there first (between the seed and the lock), the row is put back to
+   `scheduled` — the state the seed made — and held again. Nothing in the product
+   changes, and the spec no longer depends on what another spec does. */
+async function holdScheduled(classId: string, check: () => Promise<void>): Promise<void> {
+  const own = postgres(DB_URL, { max: 1, onnotice: () => {} });
+  try {
+    for (let attempt = 1; ; attempt++) {
+      const held = await own.begin(async (tx) => {
+        const [row] = await tx`select id from classes where id = ${classId} and status = 'scheduled' for update`;
+        if (!row) return false;
+        await check();
+        const [after] = await tx<{ status: string }[]>`select status from classes where id = ${classId}`;
+        expect(after.status, "derived — the row still says « scheduled » while the screens say it is over").toBe("scheduled");
+        return true;
+      });
+      if (held) return;
+      expect(attempt, "the row could not be held as « scheduled »").toBeLessThan(5);
+      await sql`update classes set status = 'scheduled' where id = ${classId} and status = 'done'`;
+    }
+  } finally {
+    await own.end({ timeout: 5 });
+  }
+}
 
 async function expectBookingCta(page: Page, classId: string) {
   await expect(visible(page, `a[href*="/checkout?class=${classId}"]`).first(), "the booking CTA, as today").toBeVisible();
@@ -260,24 +296,25 @@ test.describe("H2 · a class is over at start + its own duration", () => {
         const long = await seedClass({ tutorId: w.tutor.id, at: new Date(Date.now() - 150 * MIN), seats: 6, isFreeFirst: false });
         await sql`update classes set duration_min = 180 where id = ${long.id}`;
         const { student } = await studentWithSeat(ended.id);
-
         const page = await open(browser, size, { id: student.id, role: "student" });
-        await visit(page, `/${locale}/class/${ended.id}`);
-        await expect(page.locator("[data-e2e=booked-panel]"), "over: nothing to join, nothing to cancel").toHaveCount(0);
-        await expect(page.getByText(L[locale].closed).filter({ visible: true })).toHaveCount(1);
-        await expect(page.locator(`a[href*="/live/${ended.id}"]`)).toHaveCount(0);
-        await page.context().close();
-
         const prof = await open(browser, size, { id: w.owner.id, role: "tutor" });
-        await visit(prof, `/${locale}/dashboard/classes`);
-        const phaseOf = (id: string) => prof.locator(`[data-e2e=class-row][data-class-id="${id}"] [data-e2e=class-phase]`);
-        await expect(prof.locator(`[data-e2e=classes-past] [data-class-id="${ended.id}"]`), "listed with the past ones").toHaveCount(1);
-        await expect(phaseOf(ended.id)).toHaveAttribute("data-phase", "done");
-        await expect(phaseOf(ended.id)).toHaveText(L[locale].ended);
-        await expect(prof.locator(`[data-e2e=classes-upcoming] [data-class-id="${long.id}"]`)).toHaveCount(1);
-        await expect(phaseOf(long.id)).toHaveAttribute("data-phase", "live");
-        await expect(phaseOf(long.id)).toHaveText(L[locale].onNow);
-        expect((await sql<{ status: string }[]>`select status from classes where id = ${ended.id}`)[0].status, "derived — the cron has not run").toBe("scheduled");
+
+        await holdScheduled(ended.id, async () => {
+          await visit(page, `/${locale}/class/${ended.id}`);
+          await expect(page.locator("[data-e2e=booked-panel]"), "over: nothing to join, nothing to cancel").toHaveCount(0);
+          await expect(page.getByText(L[locale].closed).filter({ visible: true })).toHaveCount(1);
+          await expect(page.locator(`a[href*="/live/${ended.id}"]`)).toHaveCount(0);
+
+          await visit(prof, `/${locale}/dashboard/classes`);
+          const phaseOf = (id: string) => prof.locator(`[data-e2e=class-row][data-class-id="${id}"] [data-e2e=class-phase]`);
+          await expect(prof.locator(`[data-e2e=classes-past] [data-class-id="${ended.id}"]`), "listed with the past ones").toHaveCount(1);
+          await expect(phaseOf(ended.id)).toHaveAttribute("data-phase", "done");
+          await expect(phaseOf(ended.id)).toHaveText(L[locale].ended);
+          await expect(prof.locator(`[data-e2e=classes-upcoming] [data-class-id="${long.id}"]`)).toHaveCount(1);
+          await expect(phaseOf(long.id)).toHaveAttribute("data-phase", "live");
+          await expect(phaseOf(long.id)).toHaveText(L[locale].onNow);
+        });
+        await page.context().close();
         await prof.context().close();
       });
     }

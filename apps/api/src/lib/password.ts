@@ -1,7 +1,7 @@
 import argon2 from "argon2";
 import { createHmac, randomBytes } from "node:crypto";
 import { z } from "zod";
-import { and, eq, isNull, like, ne, or, profiles, rateLimits, sessions, sql as raw } from "@tnajem/db";
+import { and, eq, isNull, like, ne, or, profiles, rateLimits, sessions } from "@tnajem/db";
 import { authSecret, safeEq, sessionTokenHash } from "@tnajem/shared/auth-core";
 import { formatNumericDate, normalizePassword, tunisClock, PASSWORD_MAX_LENGTH, type PasswordProblem } from "@tnajem/shared";
 import { passwordProblem } from "@tnajem/shared/password-check";
@@ -9,7 +9,19 @@ import { mailEnabled, sendMail } from "@tnajem/shared/mail";
 import { logEvent } from "@tnajem/shared/observability";
 import { db } from "../db";
 import { auditAdmin } from "./audit";
-import { peekRateLimit, rateLimitInProcess, rlSubject, type RateLimitResult } from "./rate-limit";
+import { peekRateLimit, rlSubject } from "./rate-limit";
+import {
+  countFailure,
+  guardCheck,
+  guardFailure,
+  guardKeys,
+  strictEnter,
+  UNTRUSTED_DELAY,
+  type AttemptGuard,
+  type FailureBudget,
+  type ProgressiveDelay,
+  type StrictPass,
+} from "./attempt-guard";
 import { PASSWORD_MAIL, type PasswordEvent } from "./password-copy";
 
 /* espace prof v2 · phase 2 — PASSWORDS. Everything that touches one lives here.
@@ -27,7 +39,7 @@ import { PASSWORD_MAIL, type PasswordEvent } from "./password-copy";
    Whether an address has an account, and whether that account has a password.
    So an unknown address and a password-less account still pay for one argon2
    verify (against DUMMY_HASH, same parameters) and get the same answer as a wrong
-   password; and the lockout counter is keyed on the SUBMITTED address, account or
+   password; and the lockout and delay counters are keyed on the SUBMITTED address, account or
    not, so being locked out is no oracle either. */
 
 export const ARGON2_OPTIONS = { type: argon2.argon2id, memoryCost: 19_456, timeCost: 2, parallelism: 1 } as const;
@@ -110,92 +122,89 @@ export function passwordGrantValid(profileId: string, grant: string | undefined 
   return safeEq(m[2], grantMac(profileId, issuedAt));
 }
 
-/* ── Lockout: three budgets, all counting FAILURES only (a success is no attack) ──
+/* ── Lockout and delay: all counting FAILURES only (a success is no attack) ──────
      pair     (address, IP)  5 failures → that pair waits 15 minutes
      ip       one IP         50 failures in 15 minutes, across every address
-     account  one address    20 failures in an hour, across every IP
+     delay    one address    past 5 failures in an hour from any IP, a wait of 2 s
+                             doubling to 60 s for the networks that have failed
+                             (lib/attempt-guard.ts) — never a refusal
    The PAIR is the lock a person meets. It used to be "5 per address" and "5 per IP"
    separately, and on a Tunisian mobile network hundreds of people share one IP: a
    single bad actor locked password login for all of them for 15 minutes. Now a
-   wrong-password streak only stops that address on that network. The two caps are
-   what stop the attacks the pair alone would let through: one host spraying many
-   addresses (ip), and many hosts guessing one address (account).
+   wrong-password streak only stops that address on that network. The IP cap stops
+   one host spraying many addresses.
+
+   Many hosts guessing one address used to meet an ACCOUNT cap — 20 failures an hour
+   locked the address everywhere — and that was a lock any stranger could turn on the
+   owner (VULN-001). It is now the progressive delay: a network that has not failed
+   for the address is never held, so the owner on their own network still gets in,
+   and a network that has waits at most a minute.
 
    The address goes in as a keyed hash, like every identity key, and is counted
-   whether or not it has an account, so being locked out is no oracle. A budget's
-   window is extended when it fills, so the wait runs from the failure that filled
-   it — a plain fixed window would lock for whatever was left of a window opened by
-   the FIRST failure, possibly seconds. While locked, attempts are refused before
-   any hashing and are not counted, so the lock cannot be stretched by hammering. */
-type FailureBudget = { max: number; windowMs: number };
+   whether or not it has an account, so being held back is no oracle. A pair's window
+   is extended when it fills, so the wait runs from the failure that filled it. While
+   held back, attempts are refused before any hashing and are not counted, so the
+   wait cannot be stretched by hammering.
+
+   VULN-001 follow-up: those are the LENIENT rules, kept for a browser holding a
+   valid trusted-browser token for the address (lib/trusted-browser.ts). Every other
+   attempt also meets the strict identity-wide delay (attempt-guard.ts): past 3
+   untrusted attempts in 24 h, one at a time, 60 s doubling to 15 minutes. */
 export const PASSWORD_PAIR_BUDGET: FailureBudget = { max: 5, windowMs: 15 * 60_000 };
 export const PASSWORD_IP_BUDGET: FailureBudget = { max: 50, windowMs: 15 * 60_000 };
-export const PASSWORD_ACCOUNT_BUDGET: FailureBudget = { max: 20, windowMs: 60 * 60_000 };
+export const PASSWORD_DELAY: ProgressiveDelay = { free: 5, baseSec: 2, capSec: 60, windowMs: 60 * 60_000, cleanPairFailures: 2 };
+const PASSWORD_GUARD: AttemptGuard = { prefix: "pw:fail", pair: PASSWORD_PAIR_BUDGET, delay: PASSWORD_DELAY, strict: UNTRUSTED_DELAY };
 
 /* The pair key ENDS in the IP (test cleanup and every per-IP key do), and starts
    with the account's prefix, so a reset can lift every pair of one address. */
 const pairPrefix = (identifier: string) => `pw:fail:pair:${rlSubject(identifier)}:`;
-export const passwordFailKeys = (identifier: string, ip: string) => ({
-  pair: `${pairPrefix(identifier)}${ip}`,
-  ip: `pw:fail:ip:${ip}`,
-  account: `pw:fail:id:${rlSubject(identifier)}`,
-});
+export const passwordFailKeys = (identifier: string, ip: string) => {
+  const g = guardKeys(PASSWORD_GUARD.prefix, identifier, ip);
+  return { pair: g.pair, ip: `pw:fail:ip:${ip}`, account: g.id, gate: g.gate, untrusted: g.sid, untrustedGate: g.sgate };
+};
 
-export async function passwordLockout(identifier: string, ip: string): Promise<RateLimitResult> {
-  const keys = passwordFailKeys(identifier, ip);
-  const checks = await Promise.all([
-    peekRateLimit(keys.pair, PASSWORD_PAIR_BUDGET.max),
-    peekRateLimit(keys.ip, PASSWORD_IP_BUDGET.max),
-    peekRateLimit(keys.account, PASSWORD_ACCOUNT_BUDGET.max),
+/** May this attempt be evaluated? When it may, it has also been RESERVED against the
+    strict delay (untrusted browsers): call `succeeded()` on the right password. */
+export async function passwordLockout(identifier: string, ip: string, trusted = false): Promise<StrictPass | { ok: false; retryAfter: number }> {
+  const [perIp, held] = await Promise.all([
+    peekRateLimit(passwordFailKeys(identifier, ip).ip, PASSWORD_IP_BUDGET.max),
+    guardCheck(PASSWORD_GUARD, identifier, ip, trusted),
   ]);
-  if (checks.every((c) => c.ok)) return { ok: true, retryAfter: 0 };
-  return { ok: false, retryAfter: Math.max(...checks.map((c) => c.retryAfter)) };
-}
-
-async function countFailure(key: string, { max, windowMs }: FailureBudget): Promise<void> {
-  try {
-    await db
-      .insert(rateLimits)
-      .values({ key, count: 1, resetAt: raw`now() + ${windowMs} * interval '1 millisecond'` })
-      .onConflictDoUpdate({
-        target: rateLimits.key,
-        set: {
-          count: raw`case when ${rateLimits.resetAt} <= now() then 1 else ${rateLimits.count} + 1 end`,
-          resetAt: raw`case when ${rateLimits.resetAt} <= now() or ${rateLimits.count} + 1 >= ${max}
-                            then now() + ${windowMs} * interval '1 millisecond'
-                            else ${rateLimits.resetAt} end`,
-        },
-      });
-  } catch (e) {
-    // The code only (see rate-limit.ts): the key's parameters must not reach a log.
-    console.error("[tnajem-api] password lockout write failed — in-process fallback:", (e as { code?: string }).code ?? (e as Error).name);
-    rateLimitInProcess(key, max, windowMs);
-  }
+  if (!perIp.ok || !held.ok) return { ok: false, retryAfter: Math.max(perIp.retryAfter, held.retryAfter) };
+  return strictEnter(PASSWORD_GUARD, identifier, trusted);
 }
 
 export async function recordPasswordFailure(identifier: string, ip: string): Promise<void> {
-  const keys = passwordFailKeys(identifier, ip);
   await Promise.all([
-    countFailure(keys.pair, PASSWORD_PAIR_BUDGET),
-    countFailure(keys.ip, PASSWORD_IP_BUDGET),
-    countFailure(keys.account, PASSWORD_ACCOUNT_BUDGET),
+    countFailure(passwordFailKeys(identifier, ip).ip, PASSWORD_IP_BUDGET),
+    guardFailure(PASSWORD_GUARD, identifier, ip),
   ]);
 }
 
 /** After a success: THIS pair's streak only. The IP cap stays (clearing it would let
     one host interleave its own logins between guesses at other addresses), and so
-    does the account's hourly count (the owner signing in must not hand guessers
-    elsewhere a fresh budget). */
+    does the address's count (the owner signing in must not hand guessers elsewhere
+    a fresh run of undelayed tries). */
 export async function clearPasswordFailures(identifier: string, ip: string): Promise<void> {
   await db.delete(rateLimits).where(eq(rateLimits.key, passwordFailKeys(identifier, ip).pair));
 }
 
 /** After a reset, which proved the mailbox: everything that was holding this ADDRESS
-    back — its hourly count and its pair with every IP. The per-IP caps stay. */
+    back from password sign-in — its counts, its waits (lenient and strict) and its
+    pair with every IP. The per-IP caps stay. */
 export async function liftPasswordLockout(identifier: string): Promise<void> {
+  const k = passwordFailKeys(identifier, "");
   await db
     .delete(rateLimits)
-    .where(or(eq(rateLimits.key, passwordFailKeys(identifier, "").account), like(rateLimits.key, `${pairPrefix(identifier)}%`)));
+    .where(
+      or(
+        eq(rateLimits.key, k.account),
+        eq(rateLimits.key, k.gate),
+        eq(rateLimits.key, k.untrusted),
+        eq(rateLimits.key, k.untrustedGate),
+        like(rateLimits.key, `${pairPrefix(identifier)}%`),
+      ),
+    );
 }
 
 /* ── Writing a password ───────────────────────────────────────────────────────

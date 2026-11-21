@@ -23,9 +23,9 @@
      touches them.
    • They are only ever served through app/api/admin/doc/[id]/route.ts, which is a
      STREAMING PASS-THROUGH that makes no access decision of its own: apps/api
-     decides, using the ADMIN_EMAILS allow-list (packages/shared/src/admin.ts).
-     Not ADMIN_PHONES — login is e-mail OTP and most admin profiles have no phone
-     at all. The link is signed, admin-bound and short-lived (apps/api/src/lib/doc-links.ts),
+     decides: admin is profiles.admin_granted_at, granted by the operator CLI
+     (apps/api/src/lib/admin.ts, VULN-006) — never an env list matched against a
+     field the user types. The link is signed, admin-bound and short-lived (apps/api/src/lib/doc-links.ts),
      the document downloads, and every read is audited before a byte is sent.
    • Retention promises below (90 days after the review decision) are a POLICY, and
      the job that keeps it is apps/api/src/routes/cron.ts (GET/POST /cron/purge,

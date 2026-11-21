@@ -1,8 +1,10 @@
 /* pm2 process file — the two Tnajem processes, supervised separately.
  *
  * Since the backend split there is no single process to run: the Next.js front end
- * and the Fastify API are separate, hold different secrets (the web tier has no
- * DATABASE_URL at all) and fail independently. One pm2 app each, started by
+ * and the Fastify API are separate, hold different secrets and fail independently.
+ * The web tier holds NO backend secret: no DATABASE_URL, no DOC_ENCRYPTION_KEY, no
+ * AUTH_SECRET, no CRON_SECRET, no mail/S3/SMS credential (VULN-003 — before that fix
+ * this comment claimed it while the runner loaded the whole .env). One pm2 app each, started by
  * deploy.sh:
  *
  *     pm2 start  ./ecosystem.config.cjs --only tnajem-api --env production
@@ -16,9 +18,11 @@
  * same class of reason: `pm2 start ./ecosystem.config.cjs` must behave identically
  * from the repo root, from a systemd unit, and from a non-login SSH shell.
  *
- * NO SECRETS HERE. Both processes read the repo-root .env themselves (apps/api via
- * src/env.ts, the web runner via scripts/serve-standalone.mjs), and that file is
- * written by .github/workflows/deploy.yml from the "deploy" GitHub Environment.
+ * NO SECRETS HERE. The API reads the repo-root .env itself (src/env.ts); that file
+ * is written by .github/workflows/deploy.yml from the "deploy" GitHub Environment.
+ * The web runner reads ONLY <APP_DIR>/.env.web (the --env-file arg below), which
+ * deploy.sh generates from .env with the allow-list in apps/web/scripts/web-env.mjs,
+ * and it hands the Next server only allow-listed keys even from its own environment.
  * A real environment variable always wins over the file, which is what env_production
  * below relies on.
  */
@@ -74,12 +78,15 @@ module.exports = {
     },
     {
       /* Web — the standalone runner, NOT `next start` (which logs "Ready", binds the
-         port and then answers nothing under output: "standalone"). The runner loads
-         the root .env, runs the preflight, copies .next/static + public/ next to the
+         port and then answers nothing under output: "standalone"). The runner reads
+         .env.web (allow-listed), runs the preflight, copies .next/static + public/ next to the
          traced server, and spawns it. */
       name: "tnajem-web",
       cwd: join(root, "apps", "web"),
       script: "scripts/serve-standalone.mjs",
+      /* .env.web, never .env: the allow-listed copy with no secret in it (VULN-003).
+         A missing file stops the runner — run deploy.sh, which writes it. */
+      args: ["--env-file", join(root, ".env.web")],
       ...common,
       ...log("web"),
       /* The runner spawns a child and forwards SIGINT/SIGTERM to it; give that child

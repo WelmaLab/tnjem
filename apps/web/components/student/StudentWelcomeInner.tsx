@@ -53,6 +53,7 @@ const COPY = {
     // phase-a A3: the number is Tnajem's, for reminders — never the tutor's way to reach you.
     phoneHelp: "Uniquement pour les rappels de Tnajem sur tes séances. Ton prof ne le voit jamais.",
     errPhone: "Ce numéro n'est pas valide.",
+    errPhoneLocked: "Ton numéro te sert à te connecter : il ne se change pas ici.",
 
     subjects: "Les matières qui t'intéressent",
     subjectsHelp: "Optionnel. Choisis-en autant que tu veux.",
@@ -84,6 +85,7 @@ const COPY = {
     phonePh: "+216 …",
     phoneHelp: "نستعملوها كان باش Tnajem تفكّرك بحصصك. أستاذك عمرو ما يشوفها.",
     errPhone: "هذي النمرة موش صحيحة.",
+    errPhoneLocked: "نمرتك هي اللي تدخل بيها : ما تتبدّلش من هوني.",
 
     subjects: "المواد اللي تهمّك",
     subjectsHelp: "اختياري. اختار قدّ ما تحب.",
@@ -183,6 +185,7 @@ export function StudentWelcomeInner({
     if (res.ok) { router.push(done); return; }
     if (res.error === "not-authenticated") setError(c.errAuth);
     else if (res.error === "invalid-phone") invalid("phone", c.errPhone);
+    else if (res.error === "phone-locked") invalid("phone", c.errPhoneLocked); // VULN-006
     else setError(c.errGeneric);
   }
 

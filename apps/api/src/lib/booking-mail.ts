@@ -9,8 +9,12 @@ import { DEFAULT_CLASS_DURATION_MIN } from "@tnajem/shared/live";
 import { mailEnabled, sendMail, type MailExtras } from "@tnajem/shared/mail";
 import { logEvent } from "@tnajem/shared/observability";
 import { db } from "../db";
-import { BOOKING_MAIL, mailLocale, type CancelOutcome, type Coverage, type MailClass, type MailLocale, type MailText } from "./booking-mail-copy";
+import { BOOKING_MAIL, mailLocale, type CancelOutcome, type Coverage, type DigestItem, type MailClass, type MailLocale, type MailText } from "./booking-mail-copy";
 import { mayEmail, unsubscribeFor, type MailPref } from "./notification-prefs-adapter";
+import {
+  claimTutorDigest, gateTutorMail, purgeMailedTutorEvents, requeueTutorMail, tutorsWithDueDigests, unclaimTutorDigest,
+  type TutorMailEvent,
+} from "./tutor-mail-gate"; // VULN-002
 
 /* THE BOOKING EMAILS — who gets what, with which .ics (espace prof v2 · phase 7).
 
@@ -263,6 +267,83 @@ export function coverageOf(row: {
   return { kind: "paid", priceTnd: price, promo };
 }
 
+/* ── VULN-002: the tutor's booking-mail window ───────────────────────────── */
+
+/* A booking or cancellation e-mail to a TUTOR goes through the window in
+   ./tutor-mail-gate.ts: the first one in a window is sent at once, the rest are
+   queued and sent as ONE digest (sendTutorDigest) when the window closes — by the
+   /cron/reminders run, or by the tutor's next event. The student's own e-mails
+   are never held back. */
+
+/** What happened to the tutor's e-mail: a SendResult, or "queued" for the digest. */
+export type TutorResult = SendResult | "queued";
+
+async function throughTutorWindow(t: Recipient, ev: TutorMailEvent, sendNow: () => Promise<SendResult>): Promise<TutorResult> {
+  // The preference first: a tutor who turned booking e-mails off queues nothing.
+  if (!(await mayEmail(t.id, "bookings"))) return "skipped";
+  const gate = await gateTutorMail(ev);
+  if (gate.decision === "queued") return "queued";
+  if (gate.decision === "flush") return sendTutorDigest(t.id);
+  const res = await sendNow();
+  if (res === "failed") await requeueTutorMail(gate.rowId); // carried by the next digest instead
+  return res;
+}
+
+/** Sends this tutor's queued events as ONE e-mail, if the window has closed. Each
+    (student, class) pair appears once, in its last state. */
+export async function sendTutorDigest(tutorProfileId: string): Promise<SendResult> {
+  const events = await claimTutorDigest(tutorProfileId);
+  if (events.length === 0) return "skipped";
+  const t = await recipientOf(tutorProfileId);
+  if (!t) return "skipped"; // no address, blocked or erased: claimed, never retried
+
+  const classIds = [...new Set(events.map((e) => e.classId))];
+  const studentIds = [...new Set(events.map((e) => e.studentId).filter((x): x is string => Boolean(x)))];
+  const classRows = await db
+    .select({ id: classes.id, title: classes.title, scheduledAt: classes.scheduledAt, durationMin: classes.durationMin, tutorFullName: tutors.fullName })
+    .from(classes)
+    .innerJoin(tutors, eq(classes.tutorId, tutors.id))
+    .where(inArray(classes.id, classIds));
+  const studentRows = studentIds.length
+    ? await db.select({ id: profiles.id, fullName: profiles.fullName }).from(profiles).where(inArray(profiles.id, studentIds))
+    : [];
+  const clsOf = new Map(classRows.map((c) => [c.id, mailClass(c, c.tutorFullName)]));
+  const nameOf = new Map(studentRows.map((p) => [p.id, publicDisplayName(p.fullName)]));
+
+  const byPair = new Map<string, DigestItem>();
+  for (const e of events) {
+    const cls = clsOf.get(e.classId);
+    if (!cls) continue;
+    const key = `${e.studentId ?? ""}:${e.classId}`;
+    const prev = byPair.get(key);
+    const event = e.event === "cancelled" ? "cancelled" : "booked";
+    if (prev) {
+      byPair.delete(key); // re-inserted, so the list follows the LATEST event of each pair
+      byPair.set(key, { ...prev, event, late: e.late, changes: prev.changes + 1 });
+    } else {
+      byPair.set(key, { student: (e.studentId && nameOf.get(e.studentId)) || BOOKING_MAIL[t.locale].someone, cls, event, late: e.late, changes: 1 });
+    }
+  }
+  const items = [...byPair.values()];
+  if (items.length === 0) return "skipped";
+
+  const res = await deliverTo(t, "bookings", (unsubscribeUrl) =>
+    BOOKING_MAIL[t.locale].tutorDigest({ first: t.first, items, dashboardUrl: mailLinks.tutorClasses(t.locale), unsubscribeUrl }),
+  );
+  if (res === "failed") await unclaimTutorDigest(events.map((e) => e.id));
+  return res;
+}
+
+/** The /cron/reminders sweep: every tutor whose window has closed with events queued. */
+export async function flushTutorDigests(limit = 200): Promise<{ sent: number; skipped: number; failed: number }> {
+  const out = { sent: 0, skipped: 0, failed: 0 };
+  for (const tutorProfileId of await tutorsWithDueDigests(limit)) {
+    out[await sendTutorDigest(tutorProfileId)] += 1;
+  }
+  await purgeMailedTutorEvents();
+  return out;
+}
+
 /* ── One booking, with its class and tutor ───────────────────────────────── */
 
 async function loadBooking(bookingId: string) {
@@ -313,7 +394,7 @@ const icsClassOf = (r: BookingRow): IcsClass => ({
 /* ── The events ──────────────────────────────────────────────────────────── */
 
 /** A seat was booked: the student's confirmation (+ .ics) and the tutor's notice (+ the class .ics). */
-export async function mailBookingConfirmed(bookingId: string): Promise<{ student: SendResult; tutor: SendResult }> {
+export async function mailBookingConfirmed(bookingId: string): Promise<{ student: SendResult; tutor: TutorResult }> {
   const r = await loadBooking(bookingId);
   if (!r || r.status === "cancelled") return { student: "skipped", tutor: "skipped" };
   const coverage = coverageOf(r);
@@ -343,10 +424,11 @@ export async function mailBookingConfirmed(bookingId: string): Promise<{ student
     );
   }
 
-  let tutor: SendResult = "skipped";
+  let tutor: TutorResult = "skipped";
   const t = await recipientOf(r.tutorProfileId);
   if (t) {
-    tutor = await deliverTo(
+    // VULN-002: at once only if it is the first booking e-mail in the tutor's window.
+    tutor = await throughTutorWindow(t, { tutorProfileId: t.id, studentId: r.studentId, classId: r.classId, event: "booked", late: false }, () => deliverTo(
       t,
       "bookings",
       (unsubscribeUrl) =>
@@ -362,13 +444,13 @@ export async function mailBookingConfirmed(bookingId: string): Promise<{ student
           unsubscribeUrl,
         }),
       { ics: tutorClassIcs({ cls: icsClassOf(r), loc: t.locale, method: "PUBLISH" }), method: "PUBLISH" },
-    );
+    ));
   }
   return { student, tutor };
 }
 
 /** POST /bookings knows the (class, student) pair, not the row id: the unique key finds it. */
-export async function mailBookingConfirmedFor(classId: string, studentId: string): Promise<{ student: SendResult; tutor: SendResult }> {
+export async function mailBookingConfirmedFor(classId: string, studentId: string): Promise<{ student: SendResult; tutor: TutorResult }> {
   const [b] = await db
     .select({ id: bookings.id })
     .from(bookings)
@@ -378,7 +460,7 @@ export async function mailBookingConfirmedFor(classId: string, studentId: string
 }
 
 /** The STUDENT cancelled their seat: their confirmation (+ a CANCEL .ics) and the tutor's notice. */
-export async function mailBookingCancelled(bookingId: string, outcome: CancelOutcome): Promise<{ student: SendResult; tutor: SendResult }> {
+export async function mailBookingCancelled(bookingId: string, outcome: CancelOutcome): Promise<{ student: SendResult; tutor: TutorResult }> {
   const r = await loadBooking(bookingId);
   if (!r) return { student: "skipped", tutor: "skipped" };
   const studentProfile = await loadProfile(r.studentId);
@@ -406,18 +488,22 @@ export async function mailBookingCancelled(bookingId: string, outcome: CancelOut
     );
   }
 
-  let tutor: SendResult = "skipped";
+  let tutor: TutorResult = "skipped";
   const t = await recipientOf(r.tutorProfileId);
   if (t) {
-    tutor = await deliverTo(t, "bookings", (unsubscribeUrl) =>
-      BOOKING_MAIL[t.locale].tutorStudentCancelled({
-        first: t.first,
-        cls: mailClass(r, r.tutorFullName),
-        student: publicDisplayName(studentProfile?.fullName) ?? BOOKING_MAIL[t.locale].someone,
-        late: outcome.late && !outcome.waived && !outcome.grace, // live-fixes-3 · C: not « tardive » inside the grace
-        dashboardUrl: mailLinks.tutorClasses(t.locale),
-        unsubscribeUrl,
-      }),
+    const late = outcome.late && !outcome.waived && !outcome.grace; // live-fixes-3 · C: not « tardive » inside the grace
+    // VULN-002: at once only if it is the first booking e-mail in the tutor's window.
+    tutor = await throughTutorWindow(t, { tutorProfileId: t.id, studentId: r.studentId, classId: r.classId, event: "cancelled", late }, () =>
+      deliverTo(t, "bookings", (unsubscribeUrl) =>
+        BOOKING_MAIL[t.locale].tutorStudentCancelled({
+          first: t.first,
+          cls: mailClass(r, r.tutorFullName),
+          student: publicDisplayName(studentProfile?.fullName) ?? BOOKING_MAIL[t.locale].someone,
+          late,
+          dashboardUrl: mailLinks.tutorClasses(t.locale),
+          unsubscribeUrl,
+        }),
+      ),
     );
   }
   return { student, tutor };

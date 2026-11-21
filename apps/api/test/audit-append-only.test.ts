@@ -1,7 +1,7 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
-import { startApp, stopApp, seedProfile, seedTutor, login, call, sql, type App } from "./support/fx";
+import { startApp, stopApp, seedProfile, seedTutor, login, call, sql, type App, grantAdmin } from "./support/fx";
 
 /* Phase A+ · P3 (D13) — the admin audit log is tamper-proof, and required.
 
@@ -25,7 +25,7 @@ before(async () => {
   const admin = await seedProfile({ role: "tutor" });
   adminId = admin.id;
   process.env.OTP_CHANNEL = "email";
-  process.env.ADMIN_EMAILS = admin.email;
+  await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
   adminCookie = await login(admin.id);
 });
 after(async () => {

@@ -1,12 +1,14 @@
 import type { FastifyRequest } from "fastify";
-import { and, eq, isNull, profiles, consents, tutors } from "@tnajem/db";
-import { otpChannel, OTP_RESEND_COOLDOWN_SEC, OTP_TTL_SEC, type OtpChannel } from "@tnajem/shared/auth-core";
+import { and, eq, isNotNull, isNull, profiles, consents, tutors, sql as raw } from "@tnajem/db";
+import { otpChannel, OTP_RESEND_COOLDOWN_SEC, OTP_TTL_SEC, TRUSTED_BROWSER_COOKIE, type OtpChannel } from "@tnajem/shared/auth-core";
 import { normalizeEmail, normalizePhone, isValidEmail, isValidPhone, isAdult } from "@tnajem/shared";
 import { mailEnabled, sendMail } from "@tnajem/shared/mail";
 import { smsEnabled, sendSms } from "@tnajem/shared/sms";
 import { db } from "../db";
-import { IS_PROD } from "../env";
-import { checkRateLimit, ipBucket, peekRateLimit, rlSubject } from "./rate-limit";
+import { IS_DEV } from "../env";
+import { checkRateLimit, ipBucket } from "./rate-limit";
+import { guardCheck, guardFailure, strictEnter, UNTRUSTED_DELAY, type AttemptGuard } from "./attempt-guard";
+import { nextTrustedCookie, tokenFor, trustedTokenValid } from "./trusted-browser";
 import { createOtp, otpCooldownRemaining, verifyOtpCode } from "./otp";
 import { OTP_MAIL, type OtpPurpose } from "./otp-copy";
 
@@ -34,9 +36,54 @@ export function resolveIdentity(raw: string): { channel: OtpChannel; id: string;
   return { channel, id, ok: channel === "email" ? isValidEmail(id) : isValidPhone(id) };
 }
 
-/** The profiles column the ACTIVE channel signs in with. */
-export function identityColumn(channel: OtpChannel) {
-  return channel === "email" ? profiles.email : profiles.phone;
+/** The profile the ACTIVE channel signs in as: WHERE condition for an identity.
+
+    Under e-mail it is profiles.email. Under OTP_CHANNEL=sms it is profiles.phone,
+    but only a VERIFIED one (VULN-006): a number typed on a profile or storefront
+    form is contact data, and must never be the key to someone else's sign-in, «
+    Mot de passe oublié » or account-status. phone_verified_at is set only by an SMS
+    proof at sign-in (routes/auth.ts). */
+export function identityMatch(channel: OtpChannel, id: string) {
+  return channel === "email"
+    ? eq(profiles.email, id)
+    : and(eq(profiles.phone, id), isNotNull(profiles.phoneVerifiedAt));
+}
+
+/* ── « Trusted browser » (VULN-001 follow-up; lib/trusted-browser.ts) ──────────
+   Does the caller's browser hold a valid token for this identity? The cookie is
+   searched for a token bound to the identity FIRST, with no database access, so a
+   caller without one (any stranger, for any address, account or not) costs and
+   learns nothing. Only then is the account's id and epoch read to check the MAC. */
+export async function browserTrusted(req: FastifyRequest, id: string): Promise<boolean> {
+  const token = tokenFor(req.cookies?.[TRUSTED_BROWSER_COOKIE], id);
+  if (!token) return false;
+  const [p] = await db
+    .select({ id: profiles.id, epoch: profiles.trustedBrowserEpoch })
+    .from(profiles)
+    .where(identityMatch(otpChannel(), id))
+    .limit(1);
+  return p ? trustedTokenValid(token, p.id, id, p.epoch) : false;
+}
+
+/** After a successful sign-in: the browser's new trusted-browser cookie value, for
+    the web to set (apps/web/lib/auth.ts::adoptTrustedBrowser). Redacted in logs (`token`). */
+export function trustThisBrowser(
+  req: FastifyRequest,
+  profile: { id: string; trustedBrowserEpoch: number },
+  id: string,
+): { token: string; expiresAt: string } {
+  return nextTrustedCookie(req.cookies?.[TRUSTED_BROWSER_COOKIE], profile.id, id, profile.trustedBrowserEpoch);
+}
+
+/** Retire every token issued for this account so far (« Se déconnecter partout », a
+    password reset). Returns the new epoch, for a token issued in the same breath. */
+export async function retireTrustedBrowsers(profileId: string): Promise<number> {
+  const [row] = await db
+    .update(profiles)
+    .set({ trustedBrowserEpoch: raw`${profiles.trustedBrowserEpoch} + 1` })
+    .where(eq(profiles.id, profileId))
+    .returning({ epoch: profiles.trustedBrowserEpoch });
+  return row?.epoch ?? 0;
 }
 
 export type SendCodeResult =
@@ -89,8 +136,10 @@ export async function sendCode(req: FastifyRequest, id: string, locale: string |
      gated only on mailEnabled()/smsEnabled(). Those are env-PRESENCE checks, so
      a production deploy shipped without MAIL_* became an oracle — type any
      stranger's address, read their login code off the screen, own the account.
-     Fail closed in production; keep the on-screen code for local dev only. */
-  if (IS_PROD) {
+     Fail closed in production; keep the on-screen code for local dev only.
+     VULN-008: shown ONLY when NODE_ENV is exactly "development" — any other value
+     (staging, Production, test, …) fails closed. */
+  if (!IS_DEV) {
     req.log.error(
       "requestOtp: no OTP provider configured in production — refusing to return " +
         "the code. Set MAIL_HOST/MAIL_USER/MAIL_PASS/MAIL_FROM_ADDRESS (or TWILIO_* " +
@@ -106,39 +155,63 @@ export type ProveCodeResult =
   | { ok: false; error: "too-many-attempts"; retryAfter: number }
   | { ok: false; error: "invalid-code" };
 
-/** Check — and CONSUME — a code for an already-normalised identity, inside the
-    shared brute-force budget. Every route that accepts a code goes through here, so
-    « Mot de passe oublié » cannot become a second, separate guessing budget. */
-export async function proveCode(req: FastifyRequest, id: string, code: string): Promise<ProveCodeResult> {
-  /* Brute-force budget. otp_codes.attempts caps guesses at 5 PER CODE, but that
-     counter is reset by every new code — and requesting one only costs a 60s
-     cooldown. So the pre-existing ceiling was really "5 guesses per minute,
-     forever, per identity" against a 6-digit space. Two throttles close it:
-       • per-identity: 10 guesses / 15 min — with the 5-per-code cap this leaves
-         an attacker ~960 guesses/day against 1,000,000 codes (about 0.1%/day).
-       • per-IP: stops one host farming many identities in parallel.
+/* ── The code-guessing guards (lib/attempt-guard.ts, VULN-001) ─────────────────
+   One per flow, with its own key prefix, so attacking sign-in never delays a reset
+   and the other way round.
+     pair  10 failures for (address, IP) in 15 min → that network waits 15 min
+     delay past 5 failures for the address (any IP) in 15 min, 2 s doubling to 60 s
+     strict  every attempt from a browser WITHOUT a trusted-browser token for the
+           address, any IP: past 3 in 24 h, one at a time, 60 s doubling to 15 min
+           — and SHARED by sign-in and reset (strictPrefix "code"), because both
+           guess the same code row. A trusted browser is never held by it.
+   otp_codes.attempts still caps guesses at 5 PER CODE (otp.ts) — that is what
+   bounds guessing one code; these bound the rate around it. Net effect for a
+   stranger with unlimited IPs: ~96 guesses a day per address against 900,000
+   possible codes (≈ 1 in 9,400 a day), where the lenient path alone allowed 7,200. */
+const CODE_PAIR = { max: 10, windowMs: 15 * 60_000 };
+const CODE_DELAY = { free: 5, baseSec: 2, capSec: 60, windowMs: 15 * 60_000, cleanPairFailures: 2 };
+export const CODE_GUARDS = {
+  login: { prefix: "otp:vfy", pair: CODE_PAIR, delay: CODE_DELAY, strict: UNTRUSTED_DELAY, strictPrefix: "code" },
+  reset: { prefix: "reset:vfy", pair: CODE_PAIR, delay: CODE_DELAY, strict: UNTRUSTED_DELAY, strictPrefix: "code" },
+} satisfies Record<string, AttemptGuard>;
+/** Every attempt from one IP, across addresses, per flow: 30 / 15 min. */
+export const CODE_IP_BUDGET = { max: 30, windowMs: 15 * 60_000 };
+export type CodeScope = keyof typeof CODE_GUARDS;
 
-     Being THROTTLED is reported distinctly as "too-many-attempts". That is a
-     fact about the CALLER, not the account: it is returned for any identity
-     once the budget is spent, so it reveals nothing about whether an account
-     exists. Expiry, by contrast, stays folded into "invalid-code" — telling a
-     caller their code "expired" would confirm one had been issued, which is
-     exactly the enumeration oracle this opacity exists to prevent. */
-  /* ONLY A WRONG CODE SPENDS THE PER-IDENTITY BUDGET. It used to be spent by every
-     attempt, a person's own correct one included; brute force is made of failures,
-     so counting successes bought nothing. The key holds a keyed hash, never the
-     address. The per-IP budget still counts every attempt: it is about the host. */
-  const idKey = `otp:vfy:id:${rlSubject(id)}`;
-  const perId = await peekRateLimit(idKey, 10);
-  if (!perId.ok) return { ok: false, error: "too-many-attempts", retryAfter: perId.retryAfter };
-  const perIp = await checkRateLimit(`otp:vfy:ip:${clientIp(req)}`, 30, 15 * 60_000);
+/** Check — and CONSUME — a code for an already-normalised identity, inside the
+    brute-force guards. Every route that accepts a code goes through here. `scope`
+    picks the counters: « Mot de passe oublié » counts apart from sign-in. */
+export async function proveCode(req: FastifyRequest, id: string, code: string, scope: CodeScope = "login"): Promise<ProveCodeResult> {
+  /* Being HELD BACK is reported distinctly as "too-many-attempts". That is a fact
+     about the CALLER (this network, or this address's recent failures), and it is
+     given for any identity, account or not, so it reveals nothing about whether an
+     account exists. Expiry, by contrast, stays folded into "invalid-code" — telling
+     a caller their code "expired" would confirm one had been issued, which is
+     exactly the enumeration oracle this opacity exists to prevent.
+
+     It used to be a 10-failures-per-ADDRESS budget from any IP: a stranger could
+     spend it and the owner's correct code was refused everywhere (VULN-001). Now the
+     address-wide count only slows networks that have themselves failed; see
+     attempt-guard.ts. Only a wrong code counts there; the per-IP budget still
+     counts every attempt: it is about the host. The keys hold a keyed hash, never
+     the address. */
+  const guard = CODE_GUARDS[scope];
+  const ip = clientIp(req);
+  const trusted = await browserTrusted(req, id);
+  const held = await guardCheck(guard, id, ip, trusted);
+  if (!held.ok) return { ok: false, error: "too-many-attempts", retryAfter: held.retryAfter };
+  const perIp = await checkRateLimit(`${guard.prefix}:ip:${ip}`, CODE_IP_BUDGET.max, CODE_IP_BUDGET.windowMs);
   if (!perIp.ok) return { ok: false, error: "too-many-attempts", retryAfter: perIp.retryAfter };
+  // Last, so a reservation is only spent on an attempt that is then evaluated.
+  const pass = await strictEnter(guard, id, trusted);
+  if (!pass.ok) return { ok: false, error: "too-many-attempts", retryAfter: pass.retryAfter };
 
   const valid = await verifyOtpCode(id, (code || "").trim());
   if (!valid) {
-    await checkRateLimit(idKey, 10, 15 * 60_000);
+    await guardFailure(guard, id, ip);
     return { ok: false, error: "invalid-code" };
   }
+  await pass.succeeded();
   return { ok: true };
 }
 

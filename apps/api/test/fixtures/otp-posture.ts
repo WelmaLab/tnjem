@@ -4,10 +4,13 @@
 import { buildServer } from "../../src/server";
 
 const identifier = process.argv[2];
+// Optional client address, so repeated probes do not share one per-IP OTP bucket.
+const remoteAddress = process.argv[3];
 const app = await buildServer();
 const res = await app.inject({
   method: "POST",
   url: "/auth/otp/request",
+  ...(remoteAddress ? { remoteAddress } : {}),
   payload: { identifier, locale: "fr" },
 });
 // Marked: the server's own log lines share stdout.

@@ -1,7 +1,7 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { startApp, stopApp, seedProfile, login, call, sql, fxEmail, type App } from "./support/fx";
+import { startApp, stopApp, seedProfile, login, call, sql, fxEmail, grantAdmin, type App } from "./support/fx";
 
 /* Phase A · A18.13 (lane L5). /account read "Rôle : Je suis prof" — the sign-up
    BUTTON text reused as a role name — and a parent or an admin was shown "Je suis
@@ -10,11 +10,9 @@ import { startApp, stopApp, seedProfile, login, call, sql, fxEmail, type App } f
    page can name it. accountRole() is the one rule. */
 
 let app: App;
-// Not fx-tagged (it must equal ADMIN_EMAILS), so this file deletes it itself.
+// Not fx-tagged (a fixed address this file chose), so this file deletes it itself.
 const adminEmail = fxEmail(`l5-admin-${randomBytes(6).toString("hex")}`);
 before(async () => {
-  // Read per request by the admin allowlist — set before the first call.
-  process.env.ADMIN_EMAILS = adminEmail;
   app = await startApp();
 });
 after(async () => {
@@ -26,6 +24,7 @@ after(async () => {
 describe("A18.13 — the account page names the role", () => {
   test("GET /me says whether the caller is an admin", async () => {
     const admin = await seedProfile({ role: "tutor", email: adminEmail });
+    await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
     const tutor = await seedProfile({ role: "tutor" });
     const a = await call(app, "GET", "/me", await login(admin.id));
     assert.equal(a.body.isAdmin, true, a.raw);

@@ -2,6 +2,7 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { startApp, stopApp, seedProfile, seedTutor, seedClass, login, call, sql, type App } from "./support/fx";
 import { backdateBooking } from "./support/fx"; // live-fixes-3 · C
+import { endRebookCooldown } from "./support/fx"; // VULN-002: re-booking waits 10 minutes after a cancel
 
 /* phase-a lane L3 (A8) — re-booking a cancelled seat must not reuse the stale row.
 
@@ -66,6 +67,7 @@ describe("A8 · re-booking a cancelled seat", () => {
     assert.equal(first.is_free, true, "the first booking is free (tutor opted in, class free-first)");
 
     await cancel(cookie, first.id);
+    await endRebookCooldown(first.id); // VULN-002
     await sql`update tutors set offers_free_first_session = false where id = ${tutor.id}`;
 
     await book(cookie, klass.id);
@@ -89,6 +91,7 @@ describe("A8 · re-booking a cancelled seat", () => {
     assert.equal(waived.body.retainedTnd, 0, "booked the OLD time → the late cancel is waived");
 
     // Re-booking AFTER the move is choosing the new time.
+    await endRebookCooldown(bk.id); // VULN-002
     await book(cookie, klass.id);
     /* live-fixes-3 · C: outside the 15-minute grace after booking — the move goes back
        further still, so the re-booking is still the one made AFTER it. */
@@ -114,6 +117,7 @@ describe("A8 · re-booking a cancelled seat", () => {
     await backdateBooking(bk.id); // live-fixes-3 · C: outside the 15-minute grace after booking
     const one = await cancel(cookie, bk.id);
     assert.equal(one.body.late, true);
+    await endRebookCooldown(bk.id); // VULN-002
     await book(cookie, klass.id);
     await backdateBooking(bk.id); // live-fixes-3 · C
     const two = await cancel(cookie, bk.id);

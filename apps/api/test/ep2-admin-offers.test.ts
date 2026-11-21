@@ -1,6 +1,6 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { startApp, stopApp, seedProfile, seedTutor, login, call, sql, type App } from "./support/fx";
+import { startApp, stopApp, seedProfile, seedTutor, login, call, sql, type App, grantAdmin } from "./support/fx";
 
 /* espace prof v2 · pro (P7) — GET /admin/tutors/:tutorId/offers: the admin's
    READ-ONLY view of a tutor's monthly offers and subscriptions. Refused to anyone
@@ -14,7 +14,7 @@ const saved = { ADMIN_EMAILS: process.env.ADMIN_EMAILS, OTP_CHANNEL: process.env
 before(async () => {
   app = await startApp();
   const admin = await seedProfile({ role: "tutor" });
-  process.env.ADMIN_EMAILS = admin.email;
+  await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
   process.env.OTP_CHANNEL = "email";
   adminCookie = await login(admin.id);
 });

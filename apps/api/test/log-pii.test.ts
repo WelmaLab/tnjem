@@ -79,10 +79,9 @@ async function login(address: string, role: "student" | "tutor" | undefined, bir
 
 before(async () => {
   // inject() always comes from 127.0.0.1: start from a fresh per-IP OTP budget.
-  await db.delete(rateLimits).where(or(like(rateLimits.key, "otp:vfy:ip:127.0.0.1"), like(rateLimits.key, "otp:req:ip:127.0.0.1")));
+  await db.delete(rateLimits).where(or(like(rateLimits.key, "otp:vfy:ip:127.0.0.1"), like(rateLimits.key, "reset:vfy:ip:127.0.0.1"), like(rateLimits.key, "otp:req:ip:127.0.0.1")));
   // espace prof v2 · phase 2: the password and account-status budgets of the same address.
   await db.delete(rateLimits).where(or(like(rateLimits.key, "pw:%:ip:127.0.0.1"), like(rateLimits.key, "acct:status:ip:127.0.0.1")));
-  process.env.ADMIN_EMAILS = ADMIN;
   for (const k of ["MAIL_HOST", "MAIL_USER", "MAIL_PASS", "MAIL_FROM_ADDRESS"]) process.env[k] = "";
   const capture = (level: string) => (...args: unknown[]) => {
     lines.push(`console.${level} ${args.map((a) => (a instanceof Error ? `${a.name}: ${a.message}` : typeof a === "string" ? a : JSON.stringify(a))).join(" ")}`);
@@ -105,6 +104,8 @@ describe("security: no personal data reaches a log line", () => {
     await login(STUDENT, "student", 1995);
     await login(OTHER, "student", 1996);
     await login(ADMIN, "tutor", 1985); // phase-a lane L2 (A14): /signup/prof asks an age now
+    // VULN-006: admin is profiles.admin_granted_at, granted by the operator CLI.
+    await db.update(profiles).set({ adminGrantedAt: new Date() }).where(eq(profiles.email, ADMIN));
 
     // Profile writes carrying a phone number, then the unique-phone conflict.
     assert.equal((await call("POST", "/profile/student", STUDENT, { fullName: "Pii Student", phone: PHONE })).body?.ok, true);
@@ -116,7 +117,7 @@ describe("security: no personal data reaches a log line", () => {
     const found = await call("POST", "/admin/accounts/find", ADMIN, { email: STUDENT });
     assert.equal((found.body?.account as { email?: string } | undefined)?.email, STUDENT);
 
-    // A throttled identity: wrong codes until the budget is spent.
+    // A throttled identity: wrong codes until the progressive delay holds this network (VULN-001).
     await call("POST", "/auth/otp/request", null, { identifier: OTHER, locale: "fr" });
     let last: Record<string, unknown> | null = null;
     for (let i = 0; i < 12; i++) {

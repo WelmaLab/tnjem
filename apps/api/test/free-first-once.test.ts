@@ -2,6 +2,7 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { startApp, stopApp, seedProfile, seedTutor, seedClass, login, call, sql, type App } from "./support/fx";
 import { backdateBooking } from "./support/fx"; // live-fixes-3 · C
+import { endRebookCooldown } from "./support/fx"; // VULN-002
 
 /* phase-a lane L3 (A6) — the free first session is given ONCE per student per tutor (D2).
 
@@ -136,6 +137,7 @@ describe("A6 · the free first session: once per student per tutor", () => {
     assert.equal((await booking(b.id, s.id)).is_free, false, "another class of the same tutor");
 
     await call(app, "POST", "/bookings/cancel", s.cookie, { bookingId: (await booking(b.id, s.id)).id });
+    await endRebookCooldown((await booking(a.id, s.id)).id); // VULN-002: re-booking waits 10 minutes after a cancel
     await book(s.cookie, a.id);
     assert.equal((await booking(a.id, s.id)).is_free, false, "re-booking the late-cancelled class");
   });

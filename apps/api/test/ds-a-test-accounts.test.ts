@@ -1,7 +1,7 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { startApp, stopApp, seedProfile, seedTutor, seedClass, login, call, sql, type App, type Tutor } from "./support/fx";
+import { startApp, stopApp, seedProfile, seedTutor, seedClass, login, call, sql, type App, type Tutor, grantAdmin } from "./support/fx";
 import { getHomeTutors } from "../src/lib/home-tutors";
 
 /* december-sprint · A (D11) — TEST ACCOUNTS.
@@ -26,7 +26,7 @@ const saved = { ADMIN_EMAILS: process.env.ADMIN_EMAILS, OTP_CHANNEL: process.env
 before(async () => {
   app = await startApp();
   const admin = await seedProfile({ role: "tutor" });
-  process.env.ADMIN_EMAILS = admin.email;
+  await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
   process.env.OTP_CHANNEL = "email";
   adminCookie = await login(admin.id);
 

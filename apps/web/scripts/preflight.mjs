@@ -34,9 +34,12 @@ function refuse(lines) {
   process.exit(1);
 }
 
-/** @param {"dev" | "start"} mode */
-export async function preflight(mode) {
-  const production = mode === "start" || process.env.NODE_ENV === "production";
+/** @param {"dev" | "start"} mode
+    @param {Record<string, string | undefined>} [env] the environment the server will
+    run with. serve-standalone.mjs passes the Next child's allow-listed env, which it
+    never copies into its own process.env (VULN-003). */
+export async function preflight(mode, env = process.env) {
+  const production = mode === "start" || env.NODE_ENV === "production";
 
   /* Dev reads the same root files next.config.mjs does. The Docker runner has no
      .env and no dotenv: the host injects the environment, so a failed import is
@@ -52,8 +55,8 @@ export async function preflight(mode) {
     }
   }
 
-  const apiUrlSet = Boolean(process.env.API_URL?.trim());
-  const demoRequested = process.env.TNAJEM_DEMO === "1";
+  const apiUrlSet = Boolean(env.API_URL?.trim());
+  const demoRequested = env.TNAJEM_DEMO === "1";
 
   if (production) {
     if (demoRequested) {
@@ -72,7 +75,7 @@ export async function preflight(mode) {
        root and every 404): Next's origin is http://127.0.0.1:PORT, NextURL turns
        127.x into "localhost", and the rewrite is proxied to itself — over TLS when
        nginx says X-Forwarded-Proto: https. See serve-standalone.mjs. */
-    const host = (process.env.HOSTNAME ?? "").trim();
+    const host = (env.HOSTNAME ?? "").trim();
     if (/^(127(\.\d{1,3}){3}|::1|\[::1\])$/.test(host)) {
       refuse([
         `HOSTNAME is a loopback literal (${host}). Next proxies its own middleware rewrites`,

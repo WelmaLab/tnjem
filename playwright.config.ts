@@ -30,7 +30,24 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   globalTeardown: "./e2e/global-teardown.ts",
   use: { baseURL: BASE, trace: "retain-on-failure" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      testIgnore: /sec-001b-trusted-browser\.spec\.ts$/,
+    },
+    /* The trusted-browser spec arms an identity-wide strict wait in rate_limits and then
+       asserts a stranger is held by it. Eighteen other specs call resetRateLimits(),
+       which empties that table; under --workers=2 one of them can wipe the wait
+       mid-test. So this spec runs alone, after every other spec, on one worker. */
+    {
+      name: "chromium-after-all",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /sec-001b-trusted-browser\.spec\.ts$/,
+      dependencies: ["chromium"],
+      workers: 1,
+    },
+  ],
 
   /* `next start` DOES NOT WORK with output:"standalone" — it logs Ready, listens,
      and never answers. And the standalone bundle ships without .next/static and
@@ -106,8 +123,9 @@ export default defineConfig({
            .next/standalone/.e2e-storage for the server while the seeder writes to
            <repo>/.e2e-storage. The doc route then 404s on a file that exists. */
         STORAGE_DIR: resolve(process.env.E2E_STORAGE_DIR ?? ".e2e-storage"),
-        /* Pin the admin allowlist to a seeded identity so admin.spec.ts does not
-           depend on whoever happens to be in the developer's .env. */
+        /* Notification only since VULN-006 (admin is profiles.admin_granted_at, which
+           e2e/support/seed.ts::seedAdmin sets). Pinned so a verification submitted by
+           a spec never mails whoever happens to be in the developer's .env. */
         ADMIN_EMAILS: "e2e-admin@tnajem.invalid",
         API_URL: "http://127.0.0.1:4000",
         /* phase-a lane L1 (A12): pinned UNSET, so zero-contact-copy.spec.ts proves the

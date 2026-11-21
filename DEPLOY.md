@@ -54,12 +54,22 @@ Both processes read the repo-root `.env` (and `.env.local`, which wins). A real
 environment variable beats both — that is deliberate, so systemd, a container or
 CI can configure the API without editing a file.
 
+**The web server only ever sees an allow-list** (VULN-003): `API_URL`,
+`NEXT_PUBLIC_*`, `SENTRY_DSN/ENVIRONMENT/RELEASE`, `NODE_ENV`, `PORT`, `HOSTNAME`,
+`ALLOW_MINORS`, `OTP_CHANNEL`, `PAYMENTS_ENABLED`, `TNAJEM_DEMO` (refused in
+production), plus OS basics. The list, with the reason for each key, lives in
+`apps/web/scripts/web-env.mjs`. On the server `deploy.sh` writes
+`<APP_DIR>/.env.web` from `.env` with that list and pm2 starts the web runner on it, so
+`DATABASE_URL`, `DOC_ENCRYPTION_KEY`, `AUTH_SECRET`, `CRON_SECRET` and the mail/S3/SMS
+credentials never reach the Next process. Locally, `npm run start:standalone` parses
+the root `.env` and passes the same allow-list to the Next child.
+
 ```
 # ── Required by the API ────────────────────────────────────────────────────
 NODE_ENV=production                        # unset is treated as production too — see below
 DATABASE_URL=postgresql://tnajem:strongpass@127.0.0.1:5432/tnajem   # NO ?schema=public
 AUTH_SECRET=<run: openssl rand -hex 32>
-ADMIN_EMAILS=you@example.com               # who may approve tutors at /admin/verifications
+ADMIN_EMAILS=you@example.com               # who is E-MAILED about new verifications — grants NO access (admins: §5.4)
 STORAGE_DIR=/var/lib/tnajem/storage        # PERSISTENT, ABSOLUTE — see below
 CRON_SECRET=<run: openssl rand -hex 32>    # protects /cron/purge — see §7
 DOC_ENCRYPTION_KEY=<run: openssl rand -hex 32>  # seals ID scans at rest — see below; LOSE IT = scans unreadable
@@ -130,10 +140,12 @@ the client bundle and invite someone to "fix" it by exposing port 4000 publicly.
 **The web app has no `DATABASE_URL` and must not be given one.** If you find
 yourself adding it, something has been ported backwards.
 
-**`ADMIN_EMAILS`, not `ADMIN_PHONES`.** Login is e-mail OTP; most admin profiles
-have no phone number at all, so a phone allow-list rejects every admin — which
-previously showed up as a 403 on every identity-document view. `ADMIN_PHONES` is
-still read when `OTP_CHANNEL=sms`, which is not the shipped configuration.
+**No environment variable makes anyone an admin** (security audit VULN-006). Admin
+is a column on the account, `profiles.admin_granted_at`, set on the server with
+`npm run admin:grant` (§5.4 « Admin accounts »). `ADMIN_EMAILS` only says who is
+e-mailed when a tutor submits a verification; `ADMIN_PHONES` is gone and does
+nothing. It used to be matched against `profiles.phone` under `OTP_CHANNEL=sms`
+— a field anyone types on their own profile, so anyone could make themselves admin.
 
 **`AUTH_SECRET` is a hard requirement in production.** It is the key every OTP hash
 is derived from (`sha256(identifier:code:AUTH_SECRET)`), so a deploy that forgets
@@ -296,7 +308,7 @@ by hand over ssh:
 | file | where it runs | what it is |
 | --- | --- | --- |
 | `.github/workflows/deploy.yml` | GitHub runner | writes `.env` from the `deploy` environment, ships it, calls `deploy.sh` |
-| `deploy.sh` | the VPS | install → build both → migrate → `db:check` → reload pm2 → smoke |
+| `deploy.sh` | the VPS | install → write `.env.web` → build both → migrate → `db:check` → reload pm2 → smoke |
 | `ecosystem.config.cjs` | the VPS | the two pm2 apps: `tnajem-api`, `tnajem-web` |
 
 ### 5.1 First-run server prep (you, once)
@@ -321,7 +333,8 @@ there, so the major on the box is whatever you put there. Both Dockerfiles pin 2
 | secret | example / note |
 | --- | --- |
 | `SERVER_HOST` `SERVER_USER` `SERVER_PORT` | the VPS, the deploying user, `22` |
-| `SERVER_SSH_KEY` | the **private** key, whole file including the BEGIN/END lines |
+| `SERVER_SSH_KEY` | the **private** key, whole file including the BEGIN/END lines. Only the deploy step sees it |
+| `SERVER_KNOWN_HOSTS` | the server's host keys (`ssh-keyscan` output, fingerprints checked against the box — ops/PIPELINE_SETUP.md). ssh/scp run with `StrictHostKeyChecking=yes` against it |
 | `APP_DIR` | `/var/www/tnajem` — **re-point it if you copied this environment from another project**; the deploy refuses to run in a checkout of a different repo, but get it right anyway |
 | `DATABASE_URL` `AUTH_SECRET` `DOC_ENCRYPTION_KEY` `CRON_SECRET` | §3. Losing `DOC_ENCRYPTION_KEY` makes every stored ID scan unreadable |
 | `NEXT_PUBLIC_SITE_URL` `CORS_ORIGINS` `TRUSTED_PROXIES` `COOKIE_DOMAIN` | §3. `NEXT_PUBLIC_SITE_URL` is **baked into the bundle at build time** |
@@ -361,7 +374,7 @@ after that point is a real, visible failure.
 
 To do the same thing by hand (also the way to run it before the first `git push`):
 ```
-cd /var/www/tnajem && bash deploy.sh          # .env must already be in place, mode 600
+cd /var/www/tnajem && bash deploy.sh          # .env must already be in place, mode 600; deploy.sh writes .env.web
 ```
 
 `npm ci --include=dev` is not a typo. Root `devDependencies` hold `tsx`, `typescript`,
@@ -376,6 +389,10 @@ pm2 status                     # both apps, uptime, restarts, memory
 pm2 logs tnajem-api            # or tnajem-web; files are in <APP_DIR>/logs/
 pm2 reload ./ecosystem.config.cjs --only tnajem-web --env production
 ```
+Changed a key the web reads at runtime (`ALLOW_MINORS`, `OTP_CHANNEL`,
+`PAYMENTS_ENABLED`, `SENTRY_*`) by hand in `.env`? Regenerate the web's copy before
+that reload: `node apps/web/scripts/web-env.mjs .env .env.web`. Never edit `.env.web`.
+
 If `next build` is OOM-killed on a small VPS (the log just says `Killed`), add swap or
 `NODE_OPTIONS=--max-old-space-size=1024 bash deploy.sh`. The web app is one pm2 app, not
 a cluster: its process is a supervisor that spawns the Next server, so cluster mode would
@@ -394,6 +411,23 @@ past one worker means lowering `DB_POOL_MAX` in the same change (SCALABILITY.md 
 > behind nginx's `X-Forwarded-Proto: https` that proxy speaks TLS to a plain-HTTP
 > port, and `GET /` (the site root) answers **500**. The preflight refuses to start
 > with a loopback literal. Containers use `HOSTNAME=0.0.0.0` (the Dockerfile sets it).
+
+#### Admin accounts
+
+Admin is `profiles.admin_granted_at` and nothing else — no env variable grants it.
+The person signs up on the site first (any role), then the operator runs, on the
+server, as the deploy user:
+
+```
+cd /var/www/tnajem                                  # APP_DIR
+npm run admin:grant  -- <their-account-email>       # or the profile id
+npm run admin:list                                  # who is admin (ids and dates only)
+npm run admin:revoke -- <their-account-email>
+```
+It reads `DATABASE_URL` from `.env`, takes effect on the account's next request,
+and writes an `admin_actions` row (`admin.grant` / `admin.revoke`) for each change.
+An admin cannot be blocked from `/admin/accounts`: revoke first. `npm run db:check`
+warns (it does not fail) while no account is an admin.
 
 ### 5.5 systemd instead of pm2 (alternative)
 
@@ -635,7 +669,7 @@ What to change before this is a production compose file rather than a local one:
 
 The E2E overlay (`docker-compose.e2e.yml`) is **test-only** and must never be part
 of a deploy: it bind-mounts a working directory over the storage volume, pins the
-admin allow-list to a test identity, and points mail at a local sink.
+admin notification address to a test identity, and points mail at a local sink.
 
 ---
 
@@ -868,12 +902,12 @@ doesn't exist yet.
   the files on disk are two halves of one record. ID docs are served only via the
   admin-gated `/api/admin/doc/[id]` route on the web app — which is a **streaming
   pass-through that makes no access decision of its own**. The API decides, using
-  `ADMIN_EMAILS`. Never serve them from the public web root.
+  `profiles.admin_granted_at` (§5.4 « Admin accounts »). Never serve them from the public web root.
 - Schema changes: add a numbered file to `packages/db/sql/` and run `npm run db:sql`
   (idempotent, transactional). `db:push` is deliberately disabled — it is not
   PG18-safe (see §4).
 - **Only verified tutors are public** (`/explore`, `/<slug>`, sitemap). Approve them
-  at `/admin/verifications` — access is limited to the addresses in `ADMIN_EMAILS`.
+  at `/admin/verifications` — access is limited to accounts granted with `npm run admin:grant`.
 - **What each plan actually grants.** A `Plan` carries exactly two levers —
   `maxClasses` (open classes at once) and `exploreBoost` (ranking on `/explore`).
   Nothing else in the product asks what plan a tutor is on.
@@ -892,7 +926,7 @@ doesn't exist yet.
   verification, priority support) are **not built** and are marked "Bientôt" on
   the page. Granting Prestige today hands out a stronger Explore boost and nothing
   more. Source of truth: `packages/shared/src/plans.ts`.
-- **Plans are granted by hand at `/admin/plans`**, same allowlist. There is no
+- **Plans are granted by hand at `/admin/plans`**, same admins. There is no
   checkout: payments are off, so a grant hands out entitlements and bills nobody.
   While `PAYMENTS_ENABLED` is unset every tutor is on the `pilot` plan (no limits);
   **the day you set it, ungranted tutors drop to `gratuit` — one open class.**

@@ -39,6 +39,7 @@ const copy = bilingual({
     saved: "Ton profil est enregistré.",
     errName: "Écris ton prénom (et ton nom) : 2 caractères minimum.",
     errPhone: "Ce numéro n'est pas valide.",
+    errPhoneLocked: "Ton numéro te sert à te connecter : il ne se change pas ici.",
     errPhoneTaken: "Ce numéro est déjà utilisé par un autre compte.",
     errAuth: "Ta session a expiré. Reconnecte-toi.",
     errGeneric: "L'enregistrement n'a pas marché. Réessaie.",
@@ -61,6 +62,7 @@ const copy = bilingual({
     saved: "البروفايل متاعك تسجّل.",
     errName: "اكتب إسمك (ولقبك) : حرفين على الأقل.",
     errPhone: "هذي النمرة موش صحيحة.",
+    errPhoneLocked: "نمرتك هي اللي تدخل بيها : ما تتبدّلش من هوني.",
     errPhoneTaken: "النمرة هاذي مستعملة في حساب آخر.",
     errAuth: "الجلسة متاعك سالات. عاود ادخل.",
     errGeneric: "التسجيل ما مشاش. عاود حاول.",
@@ -129,6 +131,7 @@ export function ProfileMoiTab({ initial, onSaved }: { initial: MoiInitial; onSav
     }
     if (res.error === "invalid-phone") invalid("phone", c.errPhone);
     else if (res.error === "phone-unavailable") invalid("phone", c.errPhoneTaken);
+    else if (res.error === "phone-locked") invalid("phone", c.errPhoneLocked); // VULN-006
     else if (res.error === "not-authenticated") setErr({ field: null, text: c.errAuth });
     else if (res.error && /name/.test(res.error)) invalid("name", c.errName);
     else setErr({ field: null, text: c.errGeneric });

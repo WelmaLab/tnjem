@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import {
   startApp, stopApp, seedProfile, seedTutor, seedClass, login, call, sql, fxClientIp, type App,
 } from "./support/fx";
+import { grantAdmin } from "./support/fx"; // VULN-006
 
 /* Espace prof v2 · Phase 5 B — promotions, 20 % maximum.
 
@@ -19,7 +20,7 @@ const saved = { ADMIN_EMAILS: process.env.ADMIN_EMAILS, OTP_CHANNEL: process.env
 before(async () => {
   app = await startApp();
   const admin = await seedProfile({ role: "tutor" });
-  process.env.ADMIN_EMAILS = admin.email;
+  await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
   process.env.OTP_CHANNEL = "email";
   adminCookie = await login(admin.id);
 });

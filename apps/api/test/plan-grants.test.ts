@@ -2,6 +2,7 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { classLimitLabel, classLimitRule } from "@tnajem/shared";
 import { startApp, stopApp, seedProfile, seedTutor, login, call, sql, type App } from "./support/fx";
+import { grantAdmin } from "./support/fx"; // VULN-006
 
 /* phase-a lane L3 (A25) — plan limits: the copy says "séances", and a pilot grant
    can never take capability away.
@@ -25,7 +26,7 @@ before(async () => {
   const admin = await seedProfile({ role: "tutor" });
   adminId = admin.id;
   // Read per request by requireAdmin / paymentsEnabled (lazy), so this is enough.
-  process.env.ADMIN_EMAILS = admin.email;
+  await grantAdmin(admin.id); // VULN-006: admin is profiles.admin_granted_at
   process.env.OTP_CHANNEL = "email";
   delete process.env.PAYMENTS_ENABLED; // the pilot
   adminCookie = await login(admin.id);

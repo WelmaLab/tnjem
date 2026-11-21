@@ -141,7 +141,17 @@ export const profiles = pgTable("profiles", {
   /* student-space-v1 · pages (0042): when the student last opened « Mes fiches ».
      A fiche they may open created after it is « Nouveau ». NULL = never opened. */
   lastSeenFichesAt: timestamp("last_seen_fiches_at", { withTimezone: true }),
-
+  /* VULN-006 (0046). Admin is THIS column, never an env allow-list matched against
+     a field the user types. Set/cleared only by the operator CLI (bin/admin.ts). */
+  adminGrantedAt: timestamp("admin_granted_at", { withTimezone: true }),
+  /* VULN-006 (0046). Set when an SMS code proved `phone` at sign-in; a number typed
+     on a form stays NULL (contact data), and changing the number clears it. Phone
+     sign-in matches a verified number only. */
+  phoneVerifiedAt: timestamp("phone_verified_at", { withTimezone: true }),
+  /* VULN-001 follow-up (0048). Covered by every trusted-browser token's MAC
+     (apps/api/src/lib/trusted-browser.ts); bumped by « Se déconnecter partout » and
+     a password reset, which retires every token issued before. */
+  trustedBrowserEpoch: integer("trusted_browser_epoch").notNull().default(0),
 
 });
 
@@ -910,6 +920,10 @@ export const notifications = pgTable("notifications", {
   aboutProfileId: uuid("about_profile_id"),
   readAt: timestamp("read_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  /* VULN-002 (0047): optional. A notify() carrying the same (profile_id,
+     collapse_key) inside its window UPDATES this row instead of inserting another
+     one — a book/cancel loop on one class leaves one row, not one per event. */
+  collapseKey: text("collapse_key"),
 }, (t) => ({
   /* getNotifications(): `where profile_id = ? order by created_at desc limit 50`
      → backward index scan, no sort, no heap scan of other users' rows. */
@@ -918,6 +932,27 @@ export const notifications = pgTable("notifications", {
      btree indexes NULLs, so IS NULL is a real index condition here. This is also
      the index a future unread-badge count would use. */
   profileReadIdx: index("notifications_profile_id_read_at_idx").on(t.profileId, t.readAt),
+  // VULN-002 (0047): partial (WHERE collapse_key IS NOT NULL) in the SQL.
+  profileCollapseIdx: index("notifications_profile_id_collapse_key_idx").on(t.profileId, t.collapseKey),
+}));
+
+/* VULN-002 (0047) — booking / cancellation events bound for a tutor's inbox.
+   mailed_at set = it went out (immediate, or inside a digest); null = queued for the
+   next digest (apps/api/src/lib/tutor-mail-digest.ts). No name and no address is
+   stored: the digest reads them when it is sent. Short-lived (purged after 7 days). */
+export const tutorMailDigest = pgTable("tutor_mail_digest", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tutorProfileId: uuid("tutor_profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+  studentId: uuid("student_id").references(() => profiles.id, { onDelete: "cascade" }),
+  classId: uuid("class_id").notNull().references(() => classes.id, { onDelete: "cascade" }),
+  /** booked | cancelled (CHECK tutor_mail_digest_event_known). */
+  event: text("event").notNull(),
+  late: boolean("late").notNull().default(false),
+  immediate: boolean("immediate").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  mailedAt: timestamp("mailed_at", { withTimezone: true }),
+}, (t) => ({
+  tutorMailedIdx: index("tutor_mail_digest_tutor_mailed_idx").on(t.tutorProfileId, t.mailedAt),
 }));
 
 /* Slugs erased tutors held (0022), stored as a hash: an old storefront address must

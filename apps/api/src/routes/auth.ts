@@ -12,7 +12,7 @@ import {
 import { db } from "../db";
 import { createSession, destroyProfileSessions, destroySession, getSession } from "../lib/session";
 // espace prof v2 · phase 2: the send / prove / post-login steps are shared with routes/passwords.ts.
-import { identityColumn, postLoginState, proveCode, resolveIdentity, sendCode } from "../lib/auth-flow";
+import { identityMatch, postLoginState, proveCode, resolveIdentity, retireTrustedBrowsers, sendCode, trustThisBrowser } from "../lib/auth-flow";
 import { issuePasswordGrant } from "../lib/password";
 
 /* auth-write. Ported from apps/web/app/actions.ts, branch for branch.
@@ -87,7 +87,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const { channel, id, ok } = resolveIdentity(input.identifier);
     if (!ok) return { ok: false, error: "invalid-code" };
 
-    // The two brute-force throttles and the atomic consume: lib/auth-flow.ts::proveCode.
+    // The brute-force guards (sign-in scope) and the atomic consume: lib/auth-flow.ts::proveCode.
     const proof = await proveCode(req, id, input.code);
     if (!proof.ok) return proof;
 
@@ -112,9 +112,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     /* Look the account up by the identity column the ACTIVE channel owns. Under
        OTP_CHANNEL=sms that is profiles.phone; under email, profiles.email. Both
        are nullable-and-unique, so the channels coexist without either forcing a
-       value on the other. */
-    const idColumn = identityColumn(channel);
-    let [profile] = await db.select().from(profiles).where(eq(idColumn, id)).limit(1);
+       value on the other.
+       VULN-006: under sms, a VERIFIED phone only (identityMatch). A number someone
+       typed on their profile is not an account, so whoever proves it never lands
+       in the account of whoever typed it. */
+    const match = identityMatch(channel, id);
+    let [profile] = await db.select().from(profiles).where(match).limit(1);
     let created = false;
 
     if (!profile) {
@@ -146,7 +149,18 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       // Only the ACTIVE channel's column is written. The other stays null until
       // the user supplies it — the phone is an optional CONTACT collected during
       // onboarding, not a login credential.
-      const identity = channel === "email" ? { email: id } : { phone: id };
+      /* VULN-006: under sms the code just proved this number — the one place
+         phone_verified_at is ever set. */
+      const identity = channel === "email" ? { email: id } : { phone: id, phoneVerifiedAt: new Date() };
+      if (channel === "sms") {
+        /* VULN-006: an UNVERIFIED holder of this number (typed on a form, or a
+           contact phone from e-mail sign-in) loses it to the person who proved it.
+           Their account is untouched otherwise; they are not told who. */
+        await db
+          .update(profiles)
+          .set({ phone: null, phoneVerifiedAt: null })
+          .where(and(eq(profiles.phone, id), isNull(profiles.phoneVerifiedAt)));
+      }
       /* ON CONFLICT DO NOTHING, then read. A concurrent request that also owns this
          identity may have created the profile a moment ago; the unique index turns
          that into a no-op here instead of an unhandled 500 (it used to be one). */
@@ -161,7 +175,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         profile = inserted;
         created = true;
       } else {
-        [profile] = await db.select().from(profiles).where(eq(idColumn, id)).limit(1);
+        [profile] = await db.select().from(profiles).where(match).limit(1);
         if (!profile) return { ok: false, error: "invalid-code" };
       }
     } else if (profile.role === "student" && profile.birthYear == null && birthYear != null) {
@@ -231,6 +245,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         : {}),
       // For the web to set the cookie — see the header. Redacted in logs.
       session: { token, expiresAt: expiresAt.toISOString() },
+      /* VULN-001 follow-up: this browser is now trusted for this account — the web
+         sets it as the httpOnly tnajem_tb cookie (lib/trusted-browser.ts). */
+      trustedBrowser: trustThisBrowser(req, profile, id),
     };
   });
 
@@ -239,6 +256,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const session = await getSession(req);
     if (!session) return { ok: false, error: "not-authenticated" };
     const ended = await destroyProfileSessions(session.profile.id);
+    /* VULN-001 follow-up: and every trusted browser is forgotten, this one included.
+       Plain logout leaves the token alone: it marks the device, not the session. */
+    await retireTrustedBrowsers(session.profile.id);
     return { ok: true, ended };
   });
 

@@ -8,6 +8,11 @@
 #
 #      cd /var/www/tnajem && bash deploy.sh
 #
+#  Two env files. .env (written by the workflow) holds every secret and is read by
+#  the API and the db:* scripts. .env.web is GENERATED below from .env with the web
+#  allow-list (apps/web/scripts/web-env.mjs): the web process reads only that file
+#  and holds no backend secret (VULN-003). Edit .env, never .env.web.
+#
 #  Order matters. Install and BUILD first, while nothing is touched: a failed
 #  build aborts here (set -e) and the running processes keep serving the previous
 #  release. Only then migrate, check the configuration, and restart.
@@ -19,7 +24,7 @@
 set -euo pipefail
 
 # ── Node on PATH ─────────────────────────────────────────────────────────────
-# appleboy/ssh-action gives a NON-LOGIN, NON-INTERACTIVE shell: ~/.bashrc and
+# The workflow's `ssh host "<script>"` gives a NON-LOGIN, NON-INTERACTIVE shell: ~/.bashrc and
 # ~/.profile are never read, so nvm's shim is absent and `node` does not exist.
 # This must be here as well as in the workflow, because a hand-run over plain ssh
 # hits exactly the same wall.
@@ -92,11 +97,21 @@ mkdir -p logs
 step "Installing dependencies (root, workspaces)"
 npm ci --include=dev
 
+# ── 1b. The web tier's env file — allow-listed, no secret ─────────────────────
+# Regenerated on every deploy so it can never drift from .env. Prints key names only.
+# Mode 600 (owner only). The web runner refuses to start without it.
+step "Writing .env.web from .env (web allow-list, no secrets)"
+node apps/web/scripts/web-env.mjs .env .env.web
+
 # ── 2. Build both apps, before anything is changed ───────────────────────────
 step "Building the API (tsup -> apps/api/dist/server.js)"
 npm run build -w @tnajem/api
 
 step "Building the web app (next build --webpack -> standalone)"
+# THE BUILD STILL SEES THE FULL .env: next.config.mjs loads the root .env into the
+# build process. Only NEXT_PUBLIC_* (and next.config's own TNAJEM_DEMO_ACTIVE) are
+# inlined into the bundle, so no secret reaches the output — the RUNNING server is
+# what the allow-list protects (VULN-003).
 # NEXT_PUBLIC_SITE_URL and NEXT_PUBLIC_DEFAULT_MEET_BASE are BAKED IN HERE, from
 # the .env written above — setting them only at runtime ships production canonical
 # links and sitemap on a staging box. The workflow never writes the meet base empty

@@ -5,7 +5,17 @@ import { otpChannel, SESSION_IDLE_DAYS, sessionTokenHash } from "@tnajem/shared/
 import { db } from "../db";
 import { createSession, getSession } from "../lib/session";
 import { checkRateLimit, rlSubject } from "../lib/rate-limit";
-import { clientIp, identityColumn, postLoginState, proveCode, resolveIdentity, sendCode } from "../lib/auth-flow";
+import {
+  browserTrusted,
+  clientIp,
+  identityMatch,
+  postLoginState,
+  proveCode,
+  resolveIdentity,
+  retireTrustedBrowsers,
+  sendCode,
+  trustThisBrowser,
+} from "../lib/auth-flow";
 import {
   clearPasswordFailures,
   currentPasswordSchema,
@@ -63,9 +73,11 @@ function refusal(error: z.ZodError): { status: 200; body: { ok: false; error: "w
     : { status: 400, body: { error: "bad-request" } };
 }
 
-/** The identity this account signs in with under the active channel. */
-function signInIdentity(p: { email: string | null; phone: string | null }): string | null {
-  return otpChannel() === "email" ? p.email : p.phone;
+/** The identity this account signs in with under the active channel. Under sms, a
+    VERIFIED phone only (VULN-006): a typed number is contact data, not an identity. */
+function signInIdentity(p: { email: string | null; phone: string | null; phoneVerifiedAt: Date | null }): string | null {
+  if (otpChannel() === "email") return p.email;
+  return p.phoneVerifiedAt ? p.phone : null;
 }
 
 export async function passwordRoutes(app: FastifyInstance): Promise<void> {
@@ -92,7 +104,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     const [p] = await db
       .select({ hash: profiles.passwordHash })
       .from(profiles)
-      .where(eq(identityColumn(channel), id))
+      .where(identityMatch(channel, id)) // VULN-006: a verified phone only
       .limit(1);
     return { ok: true, exists: Boolean(p), hasPassword: Boolean(p?.hash) };
   });
@@ -100,9 +112,10 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
   /* ── POST /auth/password/login ────────────────────────────────────────────
      One answer for every failure that could tell an address apart: unknown,
      password-less and wrong-password all get INVALID_CREDENTIALS after one argon2
-     verify (lib/password.ts's dummy hash for the first two). Locked — 5 failures for
-     this address from this IP, 50 from this IP in 15 minutes, or 20 for this address
-     in an hour (lib/password.ts) — is "too-many-attempts": a fact about the caller,
+     verify (lib/password.ts's dummy hash for the first two). Held back — 5 failures
+     for this address from this IP, 50 from this IP in 15 minutes, or the address's
+     short progressive wait (≤ 60 s, and only for networks that have failed for it:
+     lib/password.ts, VULN-001) — is "too-many-attempts": a fact about the caller,
      given whether or not the address has an account. */
   app.post("/auth/password/login", async (req, reply) => {
     const parsed = loginBody.safeParse(req.body);
@@ -115,15 +128,19 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     /* The per-IP cap counts failures (50 / 15 min) and is checked before any hashing,
        so it is also what bounds the argon2 work one host can ask for. A success costs a
        hash too, but only a holder of the right password can ask for one. */
-    const lock = await passwordLockout(id, ip);
+    /* VULN-001 follow-up: a browser holding a trusted-browser token for this address
+       keeps the lenient rules; any other meets the strict identity-wide delay too. */
+    const trusted = await browserTrusted(req, id);
+    const lock = await passwordLockout(id, ip, trusted);
     if (!lock.ok) return { ok: false, error: "too-many-attempts", retryAfter: lock.retryAfter };
 
-    const [profile] = await db.select().from(profiles).where(eq(identityColumn(channel), id)).limit(1);
+    const [profile] = await db.select().from(profiles).where(identityMatch(channel, id)).limit(1); // VULN-006
     const good = await verifyPassword(profile?.passwordHash, input.password);
     if (!profile || !profile.passwordHash || !good) {
       await recordPasswordFailure(id, ip);
       return INVALID_CREDENTIALS;
     }
+    await lock.succeeded();
     await clearPasswordFailures(id, ip);
 
     // After the password is proven, like the code path: this answer only reaches the owner.
@@ -138,6 +155,8 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
       ...state,
       // For the web to set the cookie (auth.ts header). Redacted in logs.
       session: { token, expiresAt: expiresAt.toISOString() },
+      // VULN-001 follow-up: this browser is now trusted for this account (web sets tnajem_tb).
+      trustedBrowser: trustThisBrowser(req, profile, id),
     };
   });
 
@@ -162,7 +181,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     if (!limit.ok) return { ok: false, error: "too-many-attempts", retryAfter: limit.retryAfter };
 
     const [p] = await db
-      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, locale: profiles.locale })
+      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, phoneVerifiedAt: profiles.phoneVerifiedAt, locale: profiles.locale })
       .from(profiles)
       .where(eq(profiles.id, me.id))
       .limit(1);
@@ -201,7 +220,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     const ip = clientIp(req);
 
     const [p] = await db
-      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, locale: profiles.locale })
+      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, phoneVerifiedAt: profiles.phoneVerifiedAt, locale: profiles.locale })
       .from(profiles)
       .where(eq(profiles.id, me.id))
       .limit(1);
@@ -209,12 +228,13 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     if (!p.hash) return { ok: false, error: "no-password" };
 
     const lockKey = signInIdentity(p) ?? me.id;
-    const lock = await passwordLockout(lockKey, ip);
+    const lock = await passwordLockout(lockKey, ip, await browserTrusted(req, lockKey));
     if (!lock.ok) return { ok: false, error: "too-many-attempts", retryAfter: lock.retryAfter };
     if (!(await verifyPassword(p.hash, input.currentPassword))) {
       await recordPasswordFailure(lockKey, ip);
       return { ok: false, error: "wrong-password" };
     }
+    await lock.succeeded();
     await clearPasswordFailures(lockKey, ip);
 
     const stored = await storePassword({ profileId: me.id, password: input.newPassword, event: "change", expect: p.hash, keepToken: session.token });
@@ -233,7 +253,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return reply.code(400).send({ error: "bad-request" });
 
     const [p] = await db
-      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, locale: profiles.locale })
+      .select({ hash: profiles.passwordHash, email: profiles.email, phone: profiles.phone, phoneVerifiedAt: profiles.phoneVerifiedAt, locale: profiles.locale })
       .from(profiles)
       .where(eq(profiles.id, session.profile.id))
       .limit(1);
@@ -245,7 +265,8 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
   });
 
   /* ── POST /auth/password/reset — « Mot de passe oublié » ──────────────────
-     A code proves the mailbox (the SAME budget as a code sign-in: proveCode), then
+     A code proves the mailbox (proveCode, with the RESET counters: a stranger
+     hammering sign-in cannot delay « Mot de passe oublié », VULN-001), then
      the new password replaces whatever was there and EVERY session ends — this
      device arrives with none and gets a fresh one. The policy is checked before
      the code is spent, so a refused password does not burn it. A reset also lifts
@@ -260,17 +281,22 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
     const { channel, id, ok } = resolveIdentity(input.identifier);
     if (!ok) return { ok: false, error: "invalid-code" };
 
-    const proof = await proveCode(req, id, input.code);
+    const proof = await proveCode(req, id, input.code, "reset");
     if (!proof.ok) return proof;
 
     // The code is proven, so these answers only ever reach the mailbox's owner.
-    const [profile] = await db.select().from(profiles).where(eq(identityColumn(channel), id)).limit(1);
+    // VULN-006: under sms, a VERIFIED phone only — never an account that merely typed the number.
+    const [profile] = await db.select().from(profiles).where(identityMatch(channel, id)).limit(1);
     if (!profile) return { ok: false, error: "no-account" };
     if (profile.blockedAt) return { ok: false, error: "account-blocked" };
 
     const stored = await storePassword({ profileId: profile.id, password: input.password, event: "reset", expect: profile.passwordHash ?? null });
     if (!stored.ok) return { ok: false, error: "conflict" };
     await liftPasswordLockout(id);
+    /* VULN-001 follow-up: a reset retires every trusted-browser token issued before
+       (a thief's browser that once signed in loses the lenient path), then trusts
+       this one under the new epoch. */
+    const epoch = await retireTrustedBrowsers(profile.id);
     sendPasswordNotice(profile, "reset");
 
     const { token, expiresAt } = await createSession(profile.id);
@@ -281,6 +307,7 @@ export async function passwordRoutes(app: FastifyInstance): Promise<void> {
       ...state,
       ended: stored.ended,
       session: { token, expiresAt: expiresAt.toISOString() },
+      trustedBrowser: trustThisBrowser(req, { id: profile.id, trustedBrowserEpoch: epoch }, id),
     };
   });
 

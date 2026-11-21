@@ -3,10 +3,10 @@ import { cookies } from "next/headers";
 import {
   SESSION_COOKIE,
   ROLE_HINT_COOKIE,
+  TRUSTED_BROWSER_COOKIE,
   SESSION_DAYS,
   OTP_RESEND_COOLDOWN_SEC,
   OTP_TTL_SEC,
-  warnIfSecretMissing,
 } from "@tnajem/shared/auth-core";
 
 /* COOKIES ONLY.
@@ -34,7 +34,9 @@ export {
   isValidEmail,
 } from "@tnajem/shared";
 
-warnIfSecretMissing();
+/* No warnIfSecretMissing() here (VULN-003): the web process is deliberately given
+   no AUTH_SECRET (scripts/web-env.mjs), so the check would print a false "FATAL
+   CONFIG" on every production boot. The API, which does hash OTPs, still runs it. */
 
 /* NON-SENSITIVE UI hint, readable by the client. It lets <SiteHeader> render the
    right nav link WITHOUT a getMe() round-trip on every page load — the request
@@ -69,6 +71,22 @@ export async function adoptSession(token: string, expiresAt: Date, role?: string
     expires: expiresAt,
   });
   if (role) await setRoleHint(role, expiresAt);
+}
+
+/** Mark this browser as trusted for the account that just signed in (VULN-001
+    follow-up). apps/api returns the whole cookie value (up to five signed tokens,
+    newest first, never an address); this is its only writer. httpOnly — page script
+    has no business reading it — and NOT cleared by destroySession(): it marks the
+    device, not the session, so signing out keeps the lenient sign-in path for the
+    next time. « Se déconnecter partout » and a password reset retire it server-side. */
+export async function adoptTrustedBrowser(value: string, expiresAt: Date): Promise<void> {
+  (await cookies()).set(TRUSTED_BROWSER_COOKIE, value, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: expiresAt,
+  });
 }
 
 /** Clear both cookies. The API deletes the session ROW; this is the other half.
